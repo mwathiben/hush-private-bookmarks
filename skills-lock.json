@@ -21,6 +21,11 @@
       "sourceType": "github",
       "computedHash": "e9cb3fb65b4dbf526fcda341a702262d7ec433d0a32882175b1a027616c7999d"
     },
+    "algorithmic-art": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "7c446629c20a537aba3496490550bbfddf71b3bb71904c9c0056c9daa025a330"
+    },
     "anachb": {
       "source": "mitsuhiko/agent-commands",
       "sourceType": "github",
@@ -56,10 +61,30 @@
       "sourceType": "github",
       "computedHash": "83eeea10d27e504e0129a55f8d3f36170df35c99803a80478bd79ae753364a56"
     },
+    "biome": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "3190360ffda3422cfcf8341c029a5afb7f26eda0b868ed2d85a36982b5379161"
+    },
+    "brainstorming": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "5cafa1558b0b6bd4d4c71f23d5567b7fcbbcdb4b0a50b0c5f69a80a3cebaf9b8"
+    },
+    "brand-guidelines": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "cf41642f38f35bcae5bbf59215f0ee629d5f6a54b4811454f6cb93bc9b12b69e"
+    },
     "cairo-vulnerability-scanner": {
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "b98229b62fb3b80121aca49d4a60d0595d0d46b5d8080643495d2f6d053ead73"
+    },
+    "canvas-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "21e7c68d336893e4f2aa8d269854fd5e253c89cfc6dd0e74fa487fe7e96abdeb"
     },
     "cargo-fuzz": {
       "source": "trailofbits/skills",
@@ -76,6 +101,11 @@
       "sourceType": "github",
       "computedHash": "fdd68caadec582e7f9c1a5b1dbd4e379c70c3be9f3c62e50dba278c0c7dea1db"
     },
+    "chrome-extension-wxt": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "358fdde5e3a86cef1345e02d564ae7c0a7038c54fddb1be5f767832be62bcbf0"
+    },
     "clarify-spec": {
       "source": "svenja-dev/claude-code-skills",
       "sourceType": "github",
@@ -85,6 +115,11 @@
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "75560cb1ca50dad654900d40c11e91714056cea9f4c03b9ec475c5bc2cf3325e"
+    },
+    "cloudflare-workers": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "25ffa491d7d83fd23608ceb29e67d064d65340d9745f4f2cb1b96d13db9ea853"
     },
     "code-maturity-assessor": {
       "source": "trailofbits/skills",
@@ -151,6 +186,21 @@
       "sourceType": "github",
       "computedHash": "669502489a0900134071037e6cb80a3300a279e6e3449537db66b90ddbe3b864"
     },
+    "dispatching-parallel-agents": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "534432f7d0af6f567ec505ef251e6bbf0a8f2d12a34d9da9517fb131dd9c8646"
+    },
+    "doc-coauthoring": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "62cd7744438ee2aecc986c520bb603988a78ff6aaaf70a471bf4584fe0b78dae"
+    },
+    "docx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "150be87ff7b18f273ad07da303adb1cf2ca21cc3e76db7a2cf0373405178a278"
+    },
     "dwarf-expert": {
       "source": "trailofbits/skills",
       "sourceType": "github",
@@ -161,10 +211,40 @@
       "sourceType": "github",
       "computedHash": "6446632e31bee1e5520d6bebe7cc69c1556cc9323f0623bca04a23d978c4e0c8"
     },
+    "erc-8004": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "74d2d8494cf21639307b653aacd9dd7c404ccaab259c5c0cea66f8b0ed3c2741"
+    },
+    "executing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "7311ed85870f37e9af1e8354c500e7c4161893d845031eed43dd1d55157da83a"
+    },
+    "express": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "df0a705a1f52619bf96ad64d073e5cebd0e231df9b59754809083eba8b91523e"
+    },
+    "finishing-a-development-branch": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "9edba9a38684c060fdc38290f640e1dc0c37de286723ac9be73bacacf7cd6f3d"
+    },
     "firebase-apk-scanner": {
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "8c211b1ffbbd6762ffe447ae7013efdb86294103643160d09688037ca7c3a588"
+    },
+    "founder-playbook": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "59666a6a56e2f9d604734deb8709ea1e2e897989d3ead240695fcd5f33394ceb"
+    },
+    "foundry-solidity": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "74b9045747f2bf2ba2b40460e8875c035d37fadf127fc6f35e4f5c02f6f0f1ab"
     },
     "frontend-code-review": {
       "source": "langgenius/dify",
@@ -172,9 +252,9 @@
       "computedHash": "affbe67082bd8329d044657752f998bdd4d388dd05ca6250f4f9af7d2b642586"
     },
     "frontend-design": {
-      "source": "mitsuhiko/agent-commands",
+      "source": "anthropics/skills",
       "sourceType": "github",
-      "computedHash": "7c650eb77d72437f3e70a333888dce9d5648a5b6e2c43c448f4901932ed1e9b1"
+      "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
     },
     "frontend-testing": {
       "source": "langgenius/dify",
@@ -190,6 +270,11 @@
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "e3bfb724bf26b191f6f0990b51c0a84dccd39b4011df933cac99a2049f56effb"
+    },
+    "gh-cli": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "79bd006b304c429b5b6b67d4ec774671bab96f3812bf9b6c930c77ef0cebf6f3"
     },
     "ghidra": {
       "source": "mitsuhiko/agent-commands",
@@ -221,10 +306,20 @@
       "sourceType": "github",
       "computedHash": "c77874cd6bd08c9e540e02cd7645f76325bc3186986465a18b828fa00a9678d6"
     },
+    "impactful-writing": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "a0703ee6dbf9b099cd0cfcfe861a2b6c7898348b8a3b6508984712ef2811ae68"
+    },
     "insecure-defaults": {
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "2167ff8580dbf65add1b2cfc968714c1ee2723bcf10619b12b4bb7ae3d612b9d"
+    },
+    "internal-comms": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "6e7e5d2f3bfa91e6ce302e629ff639bc82d95d2ce3454383531093cbeb8b38b0"
     },
     "interpreting-culture-index": {
       "source": "trailofbits/skills",
@@ -256,6 +351,11 @@
       "sourceType": "github",
       "computedHash": "1d8968952d4d020fd768b0c3bf2d1e8f528d5dbf75e015ae4bce9f1038f53397"
     },
+    "mcp-builder": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "f08cbdec74dba480ec5217363446dae154b7576b8c3d9b4cb17aff234f15973b"
+    },
     "mermaid": {
       "source": "mitsuhiko/agent-commands",
       "sourceType": "github",
@@ -265,6 +365,11 @@
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "cf3f5314887a7726b3a18be574dcb4c753e74ce5105d5496d1f18c802c9e4e77"
+    },
+    "mui": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "d948fb02f497077f0c306aa30bc3ff939a8a74d89034a0260a6f3d1d0d36e470"
     },
     "multi-agent-patterns": {
       "source": "svenja-dev/claude-code-skills",
@@ -280,6 +385,16 @@
       "source": "mitsuhiko/agent-commands",
       "sourceType": "github",
       "computedHash": "5496a4d7580119308ca50e97a0fb92268c7499dbd02caf11ad4a9d7a38f93a38"
+    },
+    "nextjs": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "18a7d59f2a07711d010ec4e9e1dccbf47630feb56534dff0d0324571d32612e7"
+    },
+    "nodejs": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "f308e5f23c235d370a3abe50fc075c019bee16b74601bdc0080fcaa7a796dcba"
     },
     "oebb-scotty": {
       "source": "mitsuhiko/agent-commands",
@@ -301,6 +416,11 @@
       "sourceType": "github",
       "computedHash": "71c7bc80e79d39d23491f2103635bd40e50d975a7dd9233dc1e49d11519827aa"
     },
+    "pdf": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "37226d4220d844377e6b2a386c51a011df4cd130855ff0b80bcc22f9c28abd57"
+    },
     "pi-share": {
       "source": "mitsuhiko/agent-commands",
       "sourceType": "github",
@@ -311,10 +431,20 @@
       "sourceType": "github",
       "computedHash": "76bd2a4e6a25617693ec824e2acb4407856ae9b7f4fd8da3db5b2bceae14199f"
     },
+    "pptx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "2275e4d8dba1790d52f6619b3e2fed04edc948beef545a2ad18e4a1be644426d"
+    },
     "preview-testing": {
       "source": "svenja-dev/claude-code-skills",
       "sourceType": "github",
       "computedHash": "28c7c255bb4ad51634027fa704dcc5a952478d15de68ce6b0b606af53ac519c9"
+    },
+    "prisma": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "6ff908d47716f4543d426d6e5ec33a229c2c60a52583b5562dbe6b0a6749c06c"
     },
     "project-development": {
       "source": "svenja-dev/claude-code-skills",
@@ -331,15 +461,45 @@
       "sourceType": "github",
       "computedHash": "fd3ed2726e3802c0d95b02e5f09284417d7dd064e0a352cd3a36e0f0a7aca979"
     },
+    "python-dev": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "98820b1ef01195572c93744fbade55c40c54a810f5051cd98349887791063fdf"
+    },
     "qa-checklist": {
       "source": "svenja-dev/claude-code-skills",
       "sourceType": "github",
       "computedHash": "d6c3c626c59d81ad8d904901f365feeff3ce2f4a8e1b9f6247f61d71b5fc8768"
     },
+    "react": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "1141bc204d1aebba183d0f4abc165cca3b52350c184b41853da38c053f8b80d6"
+    },
+    "react-typescript": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "25d25a46aab49f7b5aecbf62aac3c65a0ee4df124309b2c89d0fdeb9d8ed678f"
+    },
+    "receiving-code-review": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "2760c85d4f4117b0006e7ba755f4bbd61f8f4c185f347999763c97f507274e30"
+    },
     "reddit-research": {
       "source": "svenja-dev/claude-code-skills",
       "sourceType": "github",
       "computedHash": "8e71a7206c9aac12b34991c54b641712296117f46eeed8e34470e55decdbc962"
+    },
+    "requesting-code-review": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "93a837ba79c3c3f0b3e503fd9d8b54c638337d73d200c1af3bca9607264bf0e0"
+    },
+    "route-tester": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "b26dce77fe36404f9df99f7e59d16a7c0968b910d2f067252e6ebca8e0d2c47f"
     },
     "ruzzy": {
       "source": "trailofbits/skills",
@@ -471,6 +631,16 @@
       "sourceType": "github",
       "computedHash": "7c3f73a2860f70a9e432624fb9241b394e4dfc76748e804bfda7bc16714de7f2"
     },
+    "shadcn": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "87bbd8ccee51384edbe07a18343487fecb5b782e53ec2d7456d4c853633992d4"
+    },
+    "shadcn-tailwind": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "c28bd4cdc790417ab5d97024791af51f49add0ca6febde75a5e30556dd65211c"
+    },
     "shadcn-ui": {
       "source": "jezweb/claude-skills",
       "sourceType": "github",
@@ -481,15 +651,55 @@
       "sourceType": "github",
       "computedHash": "d36dd0be70f230718775c1d32223418f577d10c0b3f6487842de49ed6161633b"
     },
+    "skill-creator": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "d63b991c8360baa56489367f5a6d439f18c5b420a417ecec19d5bac236558741"
+    },
+    "skill-developer": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "ff4db7b493db0d697d918dc49e60106e5e88d9a086d6a6fc78435b62b1b9409c"
+    },
+    "skill-factory": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "a85e6957e5c7c507cf1f5940de9cbf40745ea5ae527311f6ada1160ef0b6c689"
+    },
+    "skill-finder": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "520afc3a0a1ae0e5434669782668137f0309da2fceb918033d159d2eba761285"
+    },
     "skill-improver": {
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "97f6d3a45435feceae9ad520548a6b5f5ea43e8fa20b26b8f36137b615b42d75"
     },
+    "slack-gif-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "e6ba2e516960ee584328162d2e16aa7fc7c800d807b87866c20f19c8419644f9"
+    },
     "social-media-content": {
       "source": "svenja-dev/claude-code-skills",
       "sourceType": "github",
       "computedHash": "777f10432b48e90e4bcfe5551ef026589bb55882f98aaf55ab3bf02b0ef25d17"
+    },
+    "solana-compression": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "21b13b2c987beba03eb51282727c5dfdbdad5c9ae0094f5d6b0740b7dee57d30"
+    },
+    "solana-development": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "200591a202681b6e82d01e6192c8a4cd5bb248bbc1112b28d59a763b461f26f0"
+    },
+    "solana-security": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "59a03dd2743e58238ccf6ed21f69ffa8c3665001c4a42371548a1180aef0af19"
     },
     "solana-vulnerability-scanner": {
       "source": "trailofbits/skills",
@@ -506,6 +716,11 @@
       "sourceType": "github",
       "computedHash": "8e1db7ac5e6ac85ff9f07e8de2ccc3a9ee1f2164190c01d56a80ddceeca6ae63"
     },
+    "subagent-driven-development": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "1f5831dbfcddda9ac3e706f2ca81a3887fef9598159966d27ef672d86e255242"
+    },
     "substrate-vulnerability-scanner": {
       "source": "trailofbits/skills",
       "sourceType": "github",
@@ -521,20 +736,60 @@
       "sourceType": "github",
       "computedHash": "b35b1c10b20e4b3852eecefa5eff86f017f1c969c29cbdc87d65e8d17c9cbc96"
     },
+    "systematic-debugging": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "72e9ab72627e4fd8ed26a582e82309a98ecdc4f6e1c99418430ac05682c9e91d"
+    },
     "tailwind-theme-builder": {
       "source": "jezweb/claude-skills",
       "sourceType": "github",
       "computedHash": "da374e337aa164d77b310b952aebf3fa99c8f7f0440a9bad3f22af2eacecdca4"
+    },
+    "tailwindcss": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "b1341efcc0dbeaa4c59ab4396f6a4688ad8bdf4073a35ed9e2b3b451041c8ae5"
+    },
+    "tanstack": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "ca4a428c8fefc3441e3ef2a83823036a44f4135957689ba13bf93d1133626e8a"
+    },
+    "tanstack-query": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "3dceb7426dd0be5fab8bfbabe55550aa53e3f952eade3e38d38dc1d3970eeef5"
+    },
+    "tanstack-router": {
+      "source": "blencorp/claude-code-kit",
+      "sourceType": "github",
+      "computedHash": "ae795d4d6cd03b457280a9dbcc0b1f3ac3528ab40116bc1f12b1d008020c2e8f"
     },
     "tdd-strict": {
       "source": "svenja-dev/claude-code-skills",
       "sourceType": "github",
       "computedHash": "946c0302786b5ecee0e9a8b1ec77df441b89dac6d91e60c2e07a8e5c6fc27421"
     },
+    "template-skill": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "daf176f2cd0030d321982d3e813fd1a794a0b4744c5a92d2931a37001bb40fb9"
+    },
+    "test-driven-development": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "126f1ebf6ccd414f42544f6e83d8cc5adb089e1108eaffb7c400701e37eecd9f"
+    },
     "testing-handbook-generator": {
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "7b486c8cd405c7b28c45e77948ecc50c39dc1c761d5eabf705b237381aecf363"
+    },
+    "theme-factory": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "0290eabfd6fea9fcfd59c12de15e3f4046593185089956802b6d48ba1d07f428"
     },
     "tmux": {
       "source": "mitsuhiko/agent-commands",
@@ -566,25 +821,85 @@
       "sourceType": "github",
       "computedHash": "9af354d267b9002b1ceff4a3d658a57df763978ebcdb7b6e998da386b30f60e9"
     },
+    "using-git-worktrees": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "52bbb4b6e80918e83e92a1514f3b3757712154c2a8a42de24919e48a794c54fc"
+    },
+    "using-superpowers": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "4310d74a75f89e81f999bfa5b10886be977f95ee0c7fc1d547f94e32c7c8d7f3"
+    },
     "uv": {
       "source": "mitsuhiko/agent-commands",
       "sourceType": "github",
       "computedHash": "bdd2d0895f1e7c77bc76c448632ce7e94f17ef2819965143ad797c44df1fe896"
+    },
+    "uv-ruff-python-tools": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "c1bbe7421271492518fb596aafa60debfb4cd4a103ebb1dacd1592a9d8f9ddc0"
     },
     "variant-analysis": {
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "2d94e9b0a9de17bb5b545cd0af8453e7889bf5a16af0decd3ad78c2f9f1b492c"
     },
+    "verification-before-completion": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "9b446f0c7fe1cfb560b1d34439523b1a76d5f177290007b2c053a1c749a4a8ba"
+    },
+    "vite": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "4cde766a3b47ed353c69414c93982e5991809dee14c43c0940269825a957e9b1"
+    },
+    "web-artifacts-builder": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "8506451d6d3a3494ddca091b0f0ff7a9961ddd4301df2b6264dd3f98bed75b0a"
+    },
     "web-browser": {
       "source": "mitsuhiko/agent-commands",
       "sourceType": "github",
       "computedHash": "9d29e6626c71335b8fabb7628caca0c6ac59ff699477bcddc6fe2f9e1f079cd3"
     },
+    "web3-protocol-gtm": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "4e97ad7e33f333be6c2aa6aa4e34f42020612bd6c2b5f1c862360bd30d826b83"
+    },
+    "webapp-testing": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "5a6a18c0137cfbabec058e86fc1c8f6919d846a7b2a34ee978cc8ced866ee2e5"
+    },
+    "writing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "8c536ae03ef3ab1fa974c0e50a65d803acddf5d4ee7cac68ab25a39b9e338611"
+    },
+    "writing-skills": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "90371e81ed49a9d9a5eb5a36f62e75586939253f85096e8d50fd1f6b8bacf2a8"
+    },
     "wycheproof": {
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "6e5be59e662d1a59d42974d7cf534aa82c791140066e2d99c3edb82de3e5f225"
+    },
+    "x402": {
+      "source": "tenequm/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "1b77b1e113b407fdcbb523ffdac9a831591380e7f82c847b3fda2254a3c1454a"
+    },
+    "xlsx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "cb7fba2177d0d35d14b3244272b25d1b05246e99b3468a087fe06c84193dbd20"
     },
     "yara-rule-authoring": {
       "source": "trailofbits/skills",
