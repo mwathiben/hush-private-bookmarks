@@ -171,6 +171,11 @@
       "sourceType": "github",
       "computedHash": "cb7037964e5dbc26f51eec9ea362cba690e250da1d60a4354e75da682e8b3fe6"
     },
+    "design-an-interface": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "f3f225914515407b8224e8ec6187db337c5e65bad0703936a0acb3f802947a7d"
+    },
     "designing-workflow-skills": {
       "source": "trailofbits/skills",
       "sourceType": "github",
@@ -205,6 +210,11 @@
       "source": "trailofbits/skills",
       "sourceType": "github",
       "computedHash": "e9c3c22731cae6bc9bcce38ffc3dc4ed881354e39af2f09339a4e21cec998e93"
+    },
+    "edit-article": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "922d31674172a2c797690f2567effb6e2886206d8697e7591ac1f7e86b09c844"
     },
     "entry-point-analyzer": {
       "source": "trailofbits/skills",
@@ -286,6 +296,11 @@
       "sourceType": "github",
       "computedHash": "370bfedba5d3e2a397f3dd8aa1c35a41aafaa91af7fa757f655e74d7aa249535"
     },
+    "git-guardrails-claude-code": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "a04bf71be9abc44ca3b00e2f1740b37d2e471abadd20d43a31bccff7135baedf"
+    },
     "github": {
       "source": "mitsuhiko/agent-commands",
       "sourceType": "github",
@@ -360,6 +375,11 @@
       "source": "mitsuhiko/agent-commands",
       "sourceType": "github",
       "computedHash": "1851eb53f87cbb61b9e466a8bd7f3eb802e39f3ead6f56ee2bf0c39cbcbd1384"
+    },
+    "migrate-to-shoehorn": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "67fdd18f8f4f7c89b3003eb944220679272738c1deb680719fd2e282495d87f4"
     },
     "modern-python": {
       "source": "trailofbits/skills",
@@ -490,6 +510,11 @@
       "source": "svenja-dev/claude-code-skills",
       "sourceType": "github",
       "computedHash": "8e71a7206c9aac12b34991c54b641712296117f46eeed8e34470e55decdbc962"
+    },
+    "request-refactor-plan": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "a7b49636e02bda862533a7a38d20f49202fb6e931371246aed032f2ddec71664"
     },
     "requesting-code-review": {
       "source": "obra/superpowers",
@@ -631,6 +656,11 @@
       "sourceType": "github",
       "computedHash": "7c3f73a2860f70a9e432624fb9241b394e4dfc76748e804bfda7bc16714de7f2"
     },
+    "setup-pre-commit": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "f2ce8663857d919cf7e4146cd716b0aee1757b85123b758e6e7d98fcbaf14054"
+    },
     "shadcn": {
       "source": "blencorp/claude-code-kit",
       "sourceType": "github",
@@ -766,6 +796,11 @@
       "sourceType": "github",
       "computedHash": "ae795d4d6cd03b457280a9dbcc0b1f3ac3528ab40116bc1f12b1d008020c2e8f"
     },
+    "tdd": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "e4453d2f51a009f6b49876cc4d46ce452194c54ea931d4a552a0eb0e9dd24c27"
+    },
     "tdd-strict": {
       "source": "svenja-dev/claude-code-skills",
       "sourceType": "github",
@@ -875,6 +910,11 @@
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "5a6a18c0137cfbabec058e86fc1c8f6919d846a7b2a34ee978cc8ced866ee2e5"
+    },
+    "write-a-skill": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "3b58a16bde08f84ed490cd449ecdc40289216d660e070c485f53bc2d1ed2b843"
     },
     "writing-plans": {
       "source": "obra/superpowers",
