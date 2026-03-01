@@ -1,0 +1,600 @@
+{
+  "version": 1,
+  "skills": {
+    "address-sanitizer": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "9d8cf2a9576dadd5db170365c05234d73f0d01b3ba864b7b86eabb4da6d8d279"
+    },
+    "aflpp": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "49a392281fdd4fa58d3127eda9d8f095e021062075583be38e83b18d4522f54f"
+    },
+    "agentic-actions-auditor": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "89fbba5e7104eabeb7c56bc2b3838659c767d4c30115d3f5442a0ccf197b6fdb"
+    },
+    "algorand-vulnerability-scanner": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "e9cb3fb65b4dbf526fcda341a702262d7ec433d0a32882175b1a027616c7999d"
+    },
+    "anachb": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "111890d80c8ff049f6e60ae670b088b58faa2ca4df2dfa688571f7e8576663e4"
+    },
+    "apple-mail": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "1fe358fd03774776c4ddeba3ef3d682209028570b762bec38cc91813997d7b4c"
+    },
+    "ask-questions-if-underspecified": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "49f0e8c2b94fb240ae1e90ea94ff0d1c56d5ca6ed22de5f9b1bfd6e7b71b93b2"
+    },
+    "atheris": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "cf24b4f17f3d5cba1bda1a75ab38d00bc02b017ae653829fd621ced0946a5b5c"
+    },
+    "audit-context-building": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "9df5f536d7a304db5a147866bec0709e10ddc09202dfdaee3de0c14ec7740ba3"
+    },
+    "audit-prep-assistant": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "f2b0be48af7673edb657abb2732cdae6b29b9f96c1380b89aa95f0a77d7cfb53"
+    },
+    "backend-code-review": {
+      "source": "langgenius/dify",
+      "sourceType": "github",
+      "computedHash": "83eeea10d27e504e0129a55f8d3f36170df35c99803a80478bd79ae753364a56"
+    },
+    "cairo-vulnerability-scanner": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "b98229b62fb3b80121aca49d4a60d0595d0d46b5d8080643495d2f6d053ead73"
+    },
+    "cargo-fuzz": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "61b3051676b0e61c47b05a1b5dfc3dfef628beed8037180cddf6046e400c6613"
+    },
+    "cc-prompt-builder": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "554faf45cf2b91bbcaca9c8fa73bbca12815c906043fcd3def50fdb18bf24ca3"
+    },
+    "changelog-generator": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "fdd68caadec582e7f9c1a5b1dbd4e379c70c3be9f3c62e50dba278c0c7dea1db"
+    },
+    "clarify-spec": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "56685b479fdde8dd93bc1ca03be8610d885c9839ea48f0b5f27426553966f86d"
+    },
+    "claude-in-chrome-troubleshooting": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "75560cb1ca50dad654900d40c11e91714056cea9f4c03b9ec475c5bc2cf3325e"
+    },
+    "code-maturity-assessor": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "1af266c36cb27d39708da47454cc6c7b63c206d0d7a0269ac3edc6c0ecb3803e"
+    },
+    "code-quality-gate": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "ccdd41a5eb2a3d839eeb44a84486731fa5da3ed99f03de9c62e6de66b1ece143"
+    },
+    "codeql": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "af7d769804b2e33b35e7cc6fae398e3e28d1d220a8ecf6c2180df9c18b79664c"
+    },
+    "commit": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "0a08e96a40516cf012ad43b3ab2081f5400664f207de0835a8bc109f6a99f80e"
+    },
+    "component-refactoring": {
+      "source": "langgenius/dify",
+      "sourceType": "github",
+      "computedHash": "0bf67719f12666b608aa10f3b5330f34a314327d17be8476439e7518d9b13f57"
+    },
+    "constant-time-analysis": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "c281512318b534add66d879e548c286c741a7efc7fa9645f1699b04b6625957e"
+    },
+    "constant-time-testing": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "5a7a6cb7595ecb6320bfc7b83db5443f566a4e2b4b2cc729baf5813197abb3c6"
+    },
+    "cosmos-vulnerability-scanner": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "f766da7f5cf389a9d8ceed81e0ef5b9d03c633ca386bb603b8f0b8b933f6303e"
+    },
+    "coverage-analysis": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "b12399366fc1cb3172c217fb63351bfb6f425eb2c03159bc27f9177b516593d7"
+    },
+    "debug-buttercup": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "cb7037964e5dbc26f51eec9ea362cba690e250da1d60a4354e75da682e8b3fe6"
+    },
+    "designing-workflow-skills": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "0c04df24a18da87178314e5e939b9746843ee2376345682f754acfeca3405bb6"
+    },
+    "devcontainer-setup": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "7d68c6105151638f7ecf9f6d95f43430e31d0a6707a8419a92f8da42d0837019"
+    },
+    "differential-review": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "669502489a0900134071037e6cb80a3300a279e6e3449537db66b90ddbe3b864"
+    },
+    "dwarf-expert": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "e9c3c22731cae6bc9bcce38ffc3dc4ed881354e39af2f09339a4e21cec998e93"
+    },
+    "entry-point-analyzer": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "6446632e31bee1e5520d6bebe7cc69c1556cc9323f0623bca04a23d978c4e0c8"
+    },
+    "firebase-apk-scanner": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "8c211b1ffbbd6762ffe447ae7013efdb86294103643160d09688037ca7c3a588"
+    },
+    "frontend-code-review": {
+      "source": "langgenius/dify",
+      "sourceType": "github",
+      "computedHash": "affbe67082bd8329d044657752f998bdd4d388dd05ca6250f4f9af7d2b642586"
+    },
+    "frontend-design": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "7c650eb77d72437f3e70a333888dce9d5648a5b6e2c43c448f4901932ed1e9b1"
+    },
+    "frontend-testing": {
+      "source": "langgenius/dify",
+      "sourceType": "github",
+      "computedHash": "5ca97df9ccc5d41db50b67720a102b6e86966df6884a21c3bf13f6a3cb063e5d"
+    },
+    "fuzzing-dictionary": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "76003bc44ae35724ffd6c1e84ad61f994e3874c62d2d4b6ef2bce4c43e094f9f"
+    },
+    "fuzzing-obstacles": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "e3bfb724bf26b191f6f0990b51c0a84dccd39b4011df933cac99a2049f56effb"
+    },
+    "ghidra": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "c47dcf511538bdcfa628e1850001fc04e857785a89c9c2805729549c94a33986"
+    },
+    "git-cleanup": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "370bfedba5d3e2a397f3dd8aa1c35a41aafaa91af7fa757f655e74d7aa249535"
+    },
+    "github": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "611b090fbdabbb82dca470dfa831d66a650acb8ea6043cdfc37ad038bc7598ae"
+    },
+    "google-workspace": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "f17c11e1a2c025e58b7a7c4330d56ffe45fa02ba9bc6c3e28bb651ad7d9c79dc"
+    },
+    "guidelines-advisor": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "5de95a62725cbe0425457e8e4783c66f84b1624a74efa4a75e6938bd366c2d42"
+    },
+    "harness-writing": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "c77874cd6bd08c9e540e02cd7645f76325bc3186986465a18b828fa00a9678d6"
+    },
+    "insecure-defaults": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "2167ff8580dbf65add1b2cfc968714c1ee2723bcf10619b12b4bb7ae3d612b9d"
+    },
+    "interpreting-culture-index": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "10612fad20d9b5637dcd9152c20f47cf157acc828ac68fd9f9939d8c498a0f94"
+    },
+    "kaizen": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "08b52019b7767ff56e30322f2761c3849f2fd1f23e5f51f7e4461b9e6ea354ee"
+    },
+    "let-fate-decide": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "647da5a58eebfdbd259ce442e9bcf50ca666850dbdc19e65239ec2513edf7b55"
+    },
+    "libafl": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "7daf0561dcbf815e9733210b0d2903cf9474fe327c9aaae2171ae82b848e4963"
+    },
+    "libfuzzer": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "c6fdbb69bcf4c61002896a68226ad84fe55101eb1be2aa28d5f6aac9211ce348"
+    },
+    "linkedin-engagement": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "1d8968952d4d020fd768b0c3bf2d1e8f528d5dbf75e015ae4bce9f1038f53397"
+    },
+    "mermaid": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "1851eb53f87cbb61b9e466a8bd7f3eb802e39f3ead6f56ee2bf0c39cbcbd1384"
+    },
+    "modern-python": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "cf3f5314887a7726b3a18be574dcb4c753e74ce5105d5496d1f18c802c9e4e77"
+    },
+    "multi-agent-patterns": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "7ad70ec9557b8f675b69593960c71a78068ac0d7e27ce60f31b11386e685ecbf"
+    },
+    "multi-llm-advisor": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "b774b9adfc9934c74607c6aa2154b49172d2550c9ed2965bee719edacd2ef2aa"
+    },
+    "native-web-search": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "5496a4d7580119308ca50e97a0fb92268c7499dbd02caf11ad4a9d7a38f93a38"
+    },
+    "oebb-scotty": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "76b466bbbe1fbee57a2892c2e82d14c58f49058468fa1917d1b193d5ac7ce7e0"
+    },
+    "openscad": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "f215caa02db01b8d5abfc64bb547713e0eeb0bb55ce8fb7a042b7c5195617230"
+    },
+    "orpc-contract-first": {
+      "source": "langgenius/dify",
+      "sourceType": "github",
+      "computedHash": "c8e2cd3387fcba68919204ca082c7a148ca9a2dea84428f3c7f622e25f8a5c92"
+    },
+    "ossfuzz": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "71c7bc80e79d39d23491f2103635bd40e50d975a7dd9233dc1e49d11519827aa"
+    },
+    "pi-share": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "5d3213c2e1a75f50587f46ae36cd0a7da5fd1322d8eec4b5ce2f46339dfc9c51"
+    },
+    "playwright-dev": {
+      "source": "microsoft/playwright",
+      "sourceType": "github",
+      "computedHash": "76bd2a4e6a25617693ec824e2acb4407856ae9b7f4fd8da3db5b2bceae14199f"
+    },
+    "preview-testing": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "28c7c255bb4ad51634027fa704dcc5a952478d15de68ce6b0b606af53ac519c9"
+    },
+    "project-development": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "60df48a599d07d826f7f5453d34d62793d0b1b80d42dac39800b0181652cdcd5"
+    },
+    "prompt-architect": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "acd011bb8da9a5bee757a3d7c6d7689fa5df6710e77106e93b0250b5fc54e09b"
+    },
+    "property-based-testing": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "fd3ed2726e3802c0d95b02e5f09284417d7dd064e0a352cd3a36e0f0a7aca979"
+    },
+    "qa-checklist": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "d6c3c626c59d81ad8d904901f365feeff3ce2f4a8e1b9f6247f61d71b5fc8768"
+    },
+    "reddit-research": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "8e71a7206c9aac12b34991c54b641712296117f46eeed8e34470e55decdbc962"
+    },
+    "ruzzy": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "885928a0de9eb501086befdcc2f8ee34b78f88bc6f6d80086ab69fcddccc37b4"
+    },
+    "safe-git-guard": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "7d5ff2ed195727ea9e9e2c8dea52cded8a11b89e170fb02a0008b56fc9319459"
+    },
+    "sarif-parsing": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "899a05f274da373467fa3e6dbfdda201735c05ca09e4705827f953923f3044df"
+    },
+    "seatbelt-sandboxer": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "2b16f67a9025e6c521d04c1cd455b355948c72caa3d025c2b59182a9af14ddac"
+    },
+    "second-opinion": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "b050ba684eb0a29afe54c493e78592721bc4570899a1bb123651206f37f8c79b"
+    },
+    "secure-workflow-guide": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "9c5c1642c8c4a6f21de6622a4881e7ebe7767a04fe07d14cf34ade14d442831e"
+    },
+    "semgrep": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "b753bac6f8e5c6900c75ed9d9048a9f71d38535b3865e9693125cf1c86aec593"
+    },
+    "semgrep-rule-creator": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "17d5d1025fa8f75c8d7fcdeaf159db46c4f19932c44865360d0403f6252f7a72"
+    },
+    "semgrep-rule-variant-creator": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "e3114a3301a43d9b8d65eab95c88e4a0dd34b2d79c61cf321d719d69c2e940e4"
+    },
+    "sentry": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "d26bd8df76849f060d96b252d96b84ff6cba16304eededba7f88942ccaa859cc"
+    },
+    "sentry-cocoa-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "5e7e3e57ddcf5dba87a378426d2ac73915b194eacd77456efd51a37eea8d4a19"
+    },
+    "sentry-code-review": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "6edacf092016d336486073620c7ff8e8d44309d6260825320f16545ba1a7f8c2"
+    },
+    "sentry-create-alert": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "dd0385b20be33d9f872fa05f8b396e52273b0f7bdf8f17e37b81d3aa9f30a995"
+    },
+    "sentry-dotnet-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "54d7d960fd75eaa38f0570e78f1bc259f2bc16771a2da304656277307cfdc7e1"
+    },
+    "sentry-fix-issues": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "6dcf01ec6a3abb3f6754d1c202437503006cbafae49e99a1f09af3b5ac1069e9"
+    },
+    "sentry-go-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "b6aead649e3e9fa80ca09381e28f1b3c83677cc6a2437e16f75e41067f9abb3a"
+    },
+    "sentry-nextjs-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "d49bb4f9ad21d8c1ca3562e03cd269ef6d7b90598f05a2d43d594ce661ed4526"
+    },
+    "sentry-otel-exporter-setup": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "d5f501d1594b16efe6ffd0e5fc9322075e36131e65546d779654640c5e07679d"
+    },
+    "sentry-pr-code-review": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "b5fe59c669bd4e633745786d41a9e4c5d0be930a69eeca2d69e45c6ddd9069b9"
+    },
+    "sentry-python-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "89a98d362ed0ae3ae02ac459072f58ba765ac52e8cf3cb52ee89ff6a0d6868ad"
+    },
+    "sentry-react-native-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "89f79da0832352bc81dc6b168de23219874672b4400b3e8a14346fed24fc64c4"
+    },
+    "sentry-react-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "81ee39eec37803231a7610ed1234ca56f5c86d3e50e4aea1896ddba646c6ff06"
+    },
+    "sentry-ruby-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "21cb62b443c5bf3efc819cc34135d4e70ecf806ebb284932f6aa56d5a082eda4"
+    },
+    "sentry-sdk-skill-creator": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "d64b78c1c8b754920351cf53ead7a0728718df83f3bb37c7f7070a9cbdf6253d"
+    },
+    "sentry-setup-ai-monitoring": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "46fe09cbca41f959d464bc446b0a3b6058968635ef658203da5e540b6764a5ac"
+    },
+    "sentry-svelte-sdk": {
+      "source": "getsentry/sentry-for-claude",
+      "sourceType": "github",
+      "computedHash": "7c3f73a2860f70a9e432624fb9241b394e4dfc76748e804bfda7bc16714de7f2"
+    },
+    "shadcn-ui": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "computedHash": "cd631c67f61e7bc001576d4b3063bacef6602f0555e5dae414b9893a0a540de9"
+    },
+    "sharp-edges": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "d36dd0be70f230718775c1d32223418f577d10c0b3f6487842de49ed6161633b"
+    },
+    "skill-improver": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "97f6d3a45435feceae9ad520548a6b5f5ea43e8fa20b26b8f36137b615b42d75"
+    },
+    "social-media-content": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "777f10432b48e90e4bcfe5551ef026589bb55882f98aaf55ab3bf02b0ef25d17"
+    },
+    "solana-vulnerability-scanner": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "ef420867cdd984e7d7c900300c8c7257b671260c7d7b5ca2671ca2413967a495"
+    },
+    "spec-to-code-compliance": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "61db811b22aee71ad861974d3a2959ccd431ed2e7f92a933c03da42d94174057"
+    },
+    "strict-typescript-mode": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "8e1db7ac5e6ac85ff9f07e8de2ccc3a9ee1f2164190c01d56a80ddceeca6ae63"
+    },
+    "substrate-vulnerability-scanner": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "6adad8d67d8560b28c996ff452a7428586c295c49bdf9982567248d79858b333"
+    },
+    "summarize": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "8d6d6e18420eb13e13ae673f42fc0473052bb643cf3740b4ac132ab4a7a6abd9"
+    },
+    "supply-chain-risk-auditor": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "b35b1c10b20e4b3852eecefa5eff86f017f1c969c29cbdc87d65e8d17c9cbc96"
+    },
+    "tailwind-theme-builder": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "computedHash": "da374e337aa164d77b310b952aebf3fa99c8f7f0440a9bad3f22af2eacecdca4"
+    },
+    "tdd-strict": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "946c0302786b5ecee0e9a8b1ec77df441b89dac6d91e60c2e07a8e5c6fc27421"
+    },
+    "testing-handbook-generator": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "7b486c8cd405c7b28c45e77948ecc50c39dc1c761d5eabf705b237381aecf363"
+    },
+    "tmux": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "41351b0ba7908e76acd57f7f0ee25218613f6fafdd27386afe9f4f483e5a5944"
+    },
+    "token-integration-analyzer": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "8d76f82ac7e8d7826761c594c46bc7c8d832e9b3320390353215b19b6cf47bdd"
+    },
+    "ton-vulnerability-scanner": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "f0a2fd2f66bbcd017934a3179b4eb692d3c069731d142192cc9096cd598357d6"
+    },
+    "ui-freeze": {
+      "source": "svenja-dev/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "0739e4c0767806532297851f909aaaf80fca3a6591c8502633a24070cd0c91bc"
+    },
+    "update-changelog": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "4b16e5b89377b23b64c2c9f93cedf35b1807bf3073db7024c2bcba54ef76d60d"
+    },
+    "using-gh-cli": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "9af354d267b9002b1ceff4a3d658a57df763978ebcdb7b6e998da386b30f60e9"
+    },
+    "uv": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "bdd2d0895f1e7c77bc76c448632ce7e94f17ef2819965143ad797c44df1fe896"
+    },
+    "variant-analysis": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "2d94e9b0a9de17bb5b545cd0af8453e7889bf5a16af0decd3ad78c2f9f1b492c"
+    },
+    "web-browser": {
+      "source": "mitsuhiko/agent-commands",
+      "sourceType": "github",
+      "computedHash": "9d29e6626c71335b8fabb7628caca0c6ac59ff699477bcddc6fe2f9e1f079cd3"
+    },
+    "wycheproof": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "6e5be59e662d1a59d42974d7cf534aa82c791140066e2d99c3edb82de3e5f225"
+    },
+    "yara-rule-authoring": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "4e51ef9426a097df9ba13573a33481eeca3b9a2647abeca0a0f1302875c87d7a"
+    },
+    "zeroize-audit": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "f2b8153a710e4668a985588d230eee0435c87c16bd5fba160c5a613e3167b78e"
+    }
+  }
+}
