@@ -3,7 +3,7 @@
 ## Project
 Hush Private Bookmarks: Privacy-first browser extension for hidden bookmarks.
 WXT + React + TypeScript + Tailwind CSS + shadcn/ui.
-GPL-3.0 license (derivative of Holy Private Bookmarks).
+GPL-3.0 license. Repo: hush-private-bookmarks.
 
 ## Architecture Rules
 - lib/ contains ZERO React/DOM imports. Pure TypeScript only.
