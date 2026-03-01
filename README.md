@@ -1,2 +1,3 @@
-# hush-private-bookmarks
-Private bookmark manager with AES-256-GCM encryption
+# WXT + React
+
+This template should help get you started developing with React in WXT.
