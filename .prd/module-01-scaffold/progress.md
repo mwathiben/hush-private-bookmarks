@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | SCAFFOLD-008 | Update CLAUDE.md with Progress Logging Protocol and Licensing Rules | ✅ | 1 |
 | SCAFFOLD-001 | Configure WXT project with manifest permissions and clean boilerplate | ✅ | 1 |
-| SCAFFOLD-002 | Strict TypeScript configuration (tsconfig.json) | ⬜ | 0 |
+| SCAFFOLD-002 | Strict TypeScript configuration (tsconfig.json) | ✅ | 1 |
 | SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui initialization with dark mode | ⬜ | 0 |
 | SCAFFOLD-004 | Vitest configuration with coverage thresholds | ⬜ | 0 |
 | SCAFFOLD-005 | Playwright E2E configuration with extension loading fixture | ⬜ | 0 |
@@ -17,7 +17,7 @@
 | SCAFFOLD-011 | GitHub Actions CI pipeline | ⬜ | 0 |
 | SCAFFOLD-012 | Full scaffold integration verification | ⬜ | 0 |
 
-**Critical Path**: 008 -> 001 -> 002 -> 003/004/006 -> 007 -> 009 -> 010 -> 012
+**Critical Path**: 008 -> 001 -> 002 -> 003/004/006 -> 005 -> 007 -> 009 -> 010 -> 011 -> 012
 
 ---
 
@@ -179,3 +179,80 @@ Fixes applied during self-review:
 - Removed fragile React.ReactElement return type from App.tsx (let TS infer from JSX)
 - Replaced README.md WXT boilerplate with project description
 - Regenerated package-lock.json with correct package name
+
+---
+
+## Session: 2026-03-02T19:52:00Z
+
+**Task**: SCAFFOLD-002 - Strict TypeScript configuration (tsconfig.json)
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Created tsconfig-validation.test.ts (RED phase) — 12 assertions, 5 failed for right reason (missing flags)
+- Added 5 strict compiler flags to tsconfig.json: noUncheckedIndexedAccess, noUnusedLocals, noUnusedParameters, noImplicitReturns, noFallthroughCasesInSwitch
+- noImplicitReturns and noFallthroughCasesInSwitch added beyond PRD scope per 2026 best practice research (user-approved)
+- Fixed pre-existing issue: wxt-config.test.ts Manifest interface had `permissions?: string[]` (optional) but our manifest always declares permissions — changed to required `permissions: string[]`
+- Verified no weakening of inherited strict settings from .wxt/tsconfig.json
+- Confirmed no custom `paths` in tsconfig.json (WXT docs: use wxt.config.ts alias option)
+- Updated PRD acceptance criteria with 2 additional flags
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/unit/config/tsconfig-validation.test.ts | 12 assertions: 5 strict flags, 2 preserved settings, 2 safety checks, 2 inherited WXT checks, 1 no-weakening check |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| tsconfig.json | Added 5 strict compilerOptions flags (+5 lines) |
+| tests/unit/config/wxt-config.test.ts | Changed `permissions?: string[]` to `permissions: string[]` (pre-existing type safety fix) |
+| .prd/module-01-scaffold/prd.json | Updated SCAFFOLD-002: passes=true, attempt_count=1, added 2 acceptance criteria, updated description, passing_stories=3 |
+
+### Acceptance Criteria Verification
+
+1. ✅ tsconfig.json has noUncheckedIndexedAccess: true
+2. ✅ tsconfig.json has noUnusedLocals: true and noUnusedParameters: true
+3. ✅ tsconfig.json has noImplicitReturns: true (2026 best practice addition)
+4. ✅ tsconfig.json has noFallthroughCasesInSwitch: true (2026 best practice addition)
+5. ✅ tsconfig.json extends .wxt/tsconfig.json
+6. ✅ strict: true inherited from .wxt/tsconfig.json
+7. ✅ Path aliases @/* inherited from .wxt/tsconfig.json
+8. ✅ tsconfig.json does NOT define custom paths (WXT manages aliases)
+9. ✅ `tsc --noEmit` passes with zero errors
+
+### Verification Results
+
+```text
+$ npx vitest run tests/unit/config/tsconfig-validation.test.ts
+✓ tests/unit/config/tsconfig-validation.test.ts (12 tests) 11ms
+Test Files  1 passed (1)
+Tests       12 passed (12)
+
+$ npx tsc --noEmit
+(exit 0, no errors)
+
+$ npx vitest run
+✓ tests/unit/config/wxt-config.test.ts (7 tests) 11ms
+✓ tests/unit/config/tsconfig-validation.test.ts (12 tests) 13ms
+Test Files  2 passed (2)
+Tests       19 passed (19)
+
+$ npx wxt build
+Built extension in 1.660 s
+Σ Total size: 203.36 kB
+
+Agent-browser E2E:
+- Extension loaded in Chromium ✅
+- Popup rendered with "Hush" heading ✅
+- Zero console errors ✅
+```
+
+### Self-Review Results
+
+Deslop: all pass — no slop, no comments, no over-engineering.
+Code review: all pass — matches acceptance criteria, no scope creep, pre-existing issue fixed.
+Web research: confirmed 2026 best practice for 5 strict flags. Skipped exactOptionalPropertyTypes (library compatibility risk with shadcn/ui).
+Tracer bullet: traced all 6 TS files in project — only wxt-config.test.ts needed a fix.

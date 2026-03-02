@@ -110,7 +110,7 @@
             "category": "infrastructure",
             "priority": "CRITICAL",
             "title": "Strict TypeScript configuration (tsconfig.json)",
-            "description": "Enhance tsconfig.json with additional strict flags beyond what WXT provides. WXT's generated .wxt/tsconfig.json already sets strict: true and provides @/* path aliases. This story adds noUncheckedIndexedAccess (critical for safe array/object access), noUnusedLocals, and noUnusedParameters.",
+            "description": "Enhance tsconfig.json with additional strict flags beyond what WXT provides. WXT's generated .wxt/tsconfig.json already sets strict: true and provides @/* path aliases. This story adds noUncheckedIndexedAccess (critical for safe array/object access), noUnusedLocals, noUnusedParameters, noImplicitReturns, and noFallthroughCasesInSwitch (added per 2026 best practice research).",
             "story_points": 3,
             "steps": [
                 "RED: Write tests/unit/config/tsconfig-validation.test.ts — behavioral test that verifies: (1) create a temp .ts file with implicit any usage and verify tsc catches it, (2) verify @/lib/* imports resolve (create a minimal lib/types.ts stub if needed for the test)",
@@ -125,9 +125,12 @@
             "acceptance_criteria": [
                 "tsconfig.json has noUncheckedIndexedAccess: true",
                 "tsconfig.json has noUnusedLocals: true and noUnusedParameters: true",
+                "tsconfig.json has noImplicitReturns: true (added per 2026 best practice)",
+                "tsconfig.json has noFallthroughCasesInSwitch: true (added per 2026 best practice)",
                 "tsconfig.json extends .wxt/tsconfig.json (already true)",
                 "strict: true inherited from .wxt/tsconfig.json (already true)",
                 "Path aliases @/* inherited from .wxt/tsconfig.json (already true)",
+                "tsconfig.json does NOT define custom paths (WXT manages aliases via wxt.config.ts)",
                 "`tsc --noEmit` passes with zero errors"
             ],
             "definition_of_done": [
@@ -137,8 +140,8 @@
             ],
             "verification": "tsc --noEmit && npx vitest run tests/unit/config/tsconfig-validation.test.ts",
             "estimated_effort": "small",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "SCAFFOLD-001",
                 "SCAFFOLD-008"
@@ -614,7 +617,7 @@
     "total_story_points": 48,
     "total_stories": 12,
     "metadata": {
-        "passing_stories": 2,
+        "passing_stories": 3,
         "build_plan_day": "Day 1 (first half)",
         "session_protocol": "One Claude Code session for scaffold. Review all config files. Run tsc --noEmit. Run vitest. Verify extension loads. Commit.",
         "quality_gate": "All config tests pass. tsc clean. wxt build succeeds. Extension loads in Chrome. shadcn/ui components render in popup shell."

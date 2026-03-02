@@ -7,7 +7,7 @@ const MANIFEST_PATH = resolve(process.cwd(), '.output/chrome-mv3/manifest.json')
 interface Manifest {
   name: string;
   description: string;
-  permissions?: string[];
+  permissions: string[];
   optional_permissions?: string[];
   host_permissions?: string[];
   manifest_version: number;
