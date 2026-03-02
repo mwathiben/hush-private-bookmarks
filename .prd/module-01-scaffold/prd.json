@@ -1,0 +1,818 @@
+{
+    "project": {
+        "name": "Module 1: Project Scaffold",
+        "description": "Configure the existing WXT + React + TypeScript project with all remaining configuration files, shared type definitions, CLAUDE.md updates, shadcn/ui initialization, Sentry with zero-PII beforeSend filter, and CI pipeline. This module produces the foundation every subsequent module builds on. No feature code is written here — only infrastructure, configuration, and conventions.",
+        "version": "1.1.0",
+        "created": "2026-03-01",
+        "updated": "2026-03-02",
+        "parent_plan": "Hush Consolidated Build Plan — Day 1 (first half)"
+    },
+    "user_stories": [
+        {
+            "id": "SCAFFOLD-008",
+            "category": "infrastructure",
+            "priority": "CRITICAL",
+            "title": "Update CLAUDE.md with Progress Logging Protocol and Licensing Rules",
+            "description": "CLAUDE.md already exists with module boundary rules, crypto rules, Sentry rules, error handling, and import rules. This story adds the missing sections: Progress Logging Protocol (governing how .prd/ progress files are maintained) and Licensing & Architecture Rules (GPL-3.0, ProGate pattern, hush-sync separation). Also verify all existing content matches Build Plan conventions.",
+            "story_points": 3,
+            "steps": [
+                "RED: Create verify-claude-md.sh that greps CLAUDE.md for required phrases covering BOTH existing content AND new sections: 'Zero React/DOM imports' or 'zero DOM', 'empty catch' or 'no empty catch', 'PBKDF2', '600,000' or '600000', 'AES-256-GCM', 'beforeSend', 'Progress Logging Protocol', 'progress.md', 'NEVER overwrite previous entries', 'GPL-3.0', 'useProGate', 'hush-sync', 'Option B readiness'. Script exits non-zero if any phrase is missing. Run it — it should fail because Progress Logging Protocol and Licensing sections don't exist yet.",
+                "GREEN: Update CLAUDE.md — append Progress Logging Protocol section with rules: (1) Each module has a prd.json and a companion progress.md file in .prd/. (2) After completing each story, append a session entry to the module's progress.md — NEVER overwrite previous entries. (3) Each entry format: '## Session: {ISO timestamp}' + '**Task**: {story_id} - {story_title}' + '**Status**: PASSED or FAILED (attempt {n})'. (4) Required subsections: '### Work Done' (bullet points), '### Files Created' (table: File | Purpose), '### Files Modified' (table: File | Changes), '### Acceptance Criteria Verification' (numbered checklist with ✅/❌), '### Verification Results' (exact command output). (5) If FAILED, add '### Failure Analysis' with root cause before retrying. (6) After appending to progress.md, update prd.json: set story's 'passes' to true, increment 'attempt_count', update 'metadata.passing_stories'. (7) Update Story Tracker table at top of progress.md. (8) After ALL stories complete, append '## Module Summary'. (9) Reference progress_log.format_rules in each prd.json for authoritative rules.",
+                "Append Licensing & Architecture Rules section: (1) The hush repo is GPL-3.0. Every file is GPL-3.0. (2) Holy Private Bookmarks attribution preserved in extracted files (crypto.ts, data-model.ts). (3) Pro features are GPL-3.0 but gated by ExtensionPay license checks via useProGate() hook. (4) All Pro-gated features keep business logic in lib/ (not components) for Option B readiness. (5) The sync backend (hush-sync) is a SEPARATE proprietary repo. Never import sync backend code into hush. (6) lib/sync-client.ts talks to backend via HTTPS API only — zero backend logic in the extension.",
+                "Run verify-claude-md.sh — should now pass. Delete the script afterwards.",
+                "REFACTOR: Verify every rule traces back to Build Plan Section 3 or 4"
+            ],
+            "files": [
+                "CLAUDE.md"
+            ],
+            "acceptance_criteria": [
+                "CLAUDE.md exists at project root (already true — verify unchanged)",
+                "Contains module boundary rules (lib/ = no DOM, components = no chrome.storage) — already present",
+                "Contains error handling convention (no empty catch blocks) — already present",
+                "Contains crypto rules (PBKDF2 iterations, no ECB, no hardcoded IVs) — already present",
+                "Contains React + shadcn rules (functional only, no Redux) — already present",
+                "Contains Sentry rules (beforeSend strips URLs and bookmark titles) — already present",
+                "Contains line count targets for all major files — already present",
+                "Contains import rules (WXT browser global, type imports) — already present",
+                "NEW: Contains Progress Logging Protocol section with all 9 rules",
+                "NEW: Contains Licensing & Architecture Rules section with GPL-3.0, ProGate pattern, Option B readiness, hush-sync separation"
+            ],
+            "definition_of_done": [
+                "CLAUDE.md exists at project root",
+                "verify-claude-md.sh passes (all key phrases present including new sections)",
+                "Every rule traces back to Build Plan Section 3 or 4",
+                "Progress Logging Protocol section is complete with all 9 rules",
+                "Licensing & Architecture Rules section is complete"
+            ],
+            "verification": "bash verify-claude-md.sh (all phrases found, exit 0)",
+            "estimated_effort": "small",
+            "passes": true,
+            "attempt_count": 1,
+            "depends_on": []
+        },
+        {
+            "id": "SCAFFOLD-001",
+            "category": "infrastructure",
+            "priority": "CRITICAL",
+            "title": "Configure WXT project with manifest permissions and clean boilerplate",
+            "description": "The WXT project is already initialized with React module, all dependencies installed, and entrypoints scaffolded. This story configures wxt.config.ts with correct manifest permissions (storage, contextMenus, activeTab, history, bookmarks — NO clipboardRead/Write), renames the package, cleans up template boilerplate, and removes the unused content script.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write tests/unit/config/wxt-config.test.ts that imports or reads wxt.config.ts output and asserts: permissions include 'storage', 'contextMenus', 'activeTab', 'history', 'bookmarks'; permissions do NOT include 'clipboardRead' or 'clipboardWrite'; the built manifest has the correct name and description",
+                "GREEN: Update wxt.config.ts — add manifest.permissions array, set manifest.name to 'Hush Private Bookmarks', set manifest.description, configure @wxt-dev/module-react (already present)",
+                "Update package.json — change name from 'wxt-react-starter' to 'hush-private-bookmarks', update version to '0.1.0', update description",
+                "Clean up entrypoints/popup/App.tsx — remove counter demo, WXT/React logos, replace with 'Hush' placeholder text",
+                "Remove entrypoints/popup/App.css (template styles)",
+                "Clean up entrypoints/popup/style.css — remove template styles, prepare for Tailwind replacement in SCAFFOLD-003",
+                "Remove entrypoints/content.ts (not needed for Hush — no content script injection)",
+                "Update entrypoints/background.ts — remove console.log, add empty onInstalled handler",
+                "Run `wxt build` and verify it produces a valid extension package",
+                "Run config test to verify permissions"
+            ],
+            "files": [
+                "wxt.config.ts",
+                "package.json",
+                "entrypoints/popup/App.tsx",
+                "entrypoints/popup/main.tsx",
+                "entrypoints/background.ts",
+                "tests/unit/config/wxt-config.test.ts"
+            ],
+            "acceptance_criteria": [
+                "wxt.config.ts declares permissions: storage, contextMenus, activeTab, history, bookmarks",
+                "wxt.config.ts does NOT declare clipboardRead or clipboardWrite permissions",
+                "wxt.config.ts integrates @wxt-dev/module-react (already true)",
+                "package.json name is 'hush-private-bookmarks'",
+                "`wxt build` completes without errors",
+                "Extension loads in Chrome as unpacked and popup renders 'Hush' text",
+                "entrypoints/background.ts uses WXT defineBackground() pattern with no console.log",
+                "entrypoints/content.ts is removed",
+                "Template boilerplate (counter, logos) is removed from popup",
+                "Config validation test passes"
+            ],
+            "definition_of_done": [
+                "`wxt build` exits 0",
+                "Extension loads in chrome://extensions as unpacked",
+                "Popup shows 'Hush' placeholder text",
+                "npx vitest run tests/unit/config/wxt-config.test.ts passes",
+                "No clipboardRead/clipboardWrite in built manifest.json",
+                "No console.log in source files"
+            ],
+            "verification": "wxt build && npx vitest run tests/unit/config/wxt-config.test.ts",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-002",
+            "category": "infrastructure",
+            "priority": "CRITICAL",
+            "title": "Strict TypeScript configuration (tsconfig.json)",
+            "description": "Enhance tsconfig.json with additional strict flags beyond what WXT provides. WXT's generated .wxt/tsconfig.json already sets strict: true and provides @/* path aliases. This story adds noUncheckedIndexedAccess (critical for safe array/object access), noUnusedLocals, and noUnusedParameters.",
+            "story_points": 3,
+            "steps": [
+                "RED: Write tests/unit/config/tsconfig-validation.test.ts — behavioral test that verifies: (1) create a temp .ts file with implicit any usage and verify tsc catches it, (2) verify @/lib/* imports resolve (create a minimal lib/types.ts stub if needed for the test)",
+                "GREEN: Update tsconfig.json — add to compilerOptions: noUncheckedIndexedAccess: true, noUnusedLocals: true, noUnusedParameters: true. Keep existing: extends .wxt/tsconfig.json, jsx: react-jsx, allowImportingTsExtensions: true",
+                "Run `tsc --noEmit` and verify zero errors on existing entrypoint files",
+                "REFACTOR: Verify .wxt/tsconfig.json strict settings are not weakened by our overrides"
+            ],
+            "files": [
+                "tsconfig.json",
+                "tests/unit/config/tsconfig-validation.test.ts"
+            ],
+            "acceptance_criteria": [
+                "tsconfig.json has noUncheckedIndexedAccess: true",
+                "tsconfig.json has noUnusedLocals: true and noUnusedParameters: true",
+                "tsconfig.json extends .wxt/tsconfig.json (already true)",
+                "strict: true inherited from .wxt/tsconfig.json (already true)",
+                "Path aliases @/* inherited from .wxt/tsconfig.json (already true)",
+                "`tsc --noEmit` passes with zero errors"
+            ],
+            "definition_of_done": [
+                "`tsc --noEmit` exits 0",
+                "tsconfig validation test passes",
+                "@/lib/* imports resolve correctly"
+            ],
+            "verification": "tsc --noEmit && npx vitest run tests/unit/config/tsconfig-validation.test.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-001",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-003",
+            "category": "infrastructure",
+            "priority": "CRITICAL",
+            "title": "Tailwind CSS v4 + shadcn/ui initialization with dark mode",
+            "description": "Configure Tailwind CSS v4 (already installed as @tailwindcss/vite plugin) with shadcn/ui for component primitives. Tailwind v4 uses CSS-based configuration — no tailwind.config.ts needed. Dark mode via class strategy in CSS. Initialize shadcn/ui (which auto-detects Tailwind v4) and add base components: Dialog, Input, Button, Alert.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write tests/unit/config/styling-setup.test.ts that verifies: (1) globals.css exists and contains '@import \"tailwindcss\"', (2) components/ui/ directory contains button.tsx, input.tsx, dialog.tsx, alert.tsx files",
+                "GREEN: Create app.css (or globals.css) with Tailwind v4 setup: '@import \"tailwindcss\"' directive, CSS custom properties for shadcn/ui theming (light and dark themes using OKLCH colors), dark mode class variant",
+                "Run `npx shadcn@latest init` — the CLI detects Tailwind v4 and generates components.json with correct configuration. If prompted: style=default, base-color=neutral, css-variables=yes",
+                "Run `npx shadcn@latest add dialog input button alert` to install base components",
+                "Verify components/ui/ directory contains dialog.tsx, input.tsx, button.tsx, alert.tsx",
+                "Update entrypoints/popup/main.tsx to import the global CSS file",
+                "Update entrypoints/popup/App.tsx to render a shadcn Button with Tailwind classes to verify integration",
+                "Ensure @tailwindcss/vite is registered in wxt.config.ts vite plugins (may already be handled by WXT)",
+                "Run `wxt build` and verify popup renders styled button",
+                "REFACTOR: Verify shadcn components use @/components/ui path alias correctly"
+            ],
+            "files": [
+                "app.css",
+                "components.json",
+                "components/ui/dialog.tsx",
+                "components/ui/input.tsx",
+                "components/ui/button.tsx",
+                "components/ui/alert.tsx",
+                "entrypoints/popup/App.tsx",
+                "entrypoints/popup/main.tsx",
+                "lib/utils.ts",
+                "tests/unit/config/styling-setup.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Global CSS file uses Tailwind v4 '@import \"tailwindcss\"' (NOT v3 @tailwind directives)",
+                "No tailwind.config.ts file exists (v4 uses CSS-based config)",
+                "Dark mode configured via CSS class strategy",
+                "shadcn/ui CSS variables defined in global CSS using OKLCH color format",
+                "components/ui/ contains Dialog, Input, Button, Alert",
+                "Popup renders a styled shadcn Button component",
+                "No shadcn primitives were modified after installation (pristine copies)",
+                "lib/utils.ts created by shadcn init (cn() utility)"
+            ],
+            "definition_of_done": [
+                "`wxt build` passes with Tailwind v4 and shadcn integrated",
+                "Popup shows styled button when loaded as unpacked extension",
+                "components/ui/ has 4 base components",
+                "Styling setup test passes",
+                "`tsc --noEmit` still passes",
+                "No tailwind.config.ts exists in project root"
+            ],
+            "verification": "wxt build && tsc --noEmit && npx vitest run tests/unit/config/styling-setup.test.ts",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-002",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-004",
+            "category": "infrastructure",
+            "priority": "CRITICAL",
+            "title": "Vitest configuration with coverage thresholds",
+            "description": "Configure Vitest (already installed) with v8 coverage provider, jsdom environment for component tests, and enforcement thresholds: 80% branch coverage for lib/, 60% for entrypoints/. The test runner must work with WXT's TypeScript setup and path aliases.",
+            "story_points": 3,
+            "steps": [
+                "RED: Write tests/unit/config/vitest-config.test.ts — behavioral test that verifies: (1) vitest can resolve @/lib/* imports, (2) coverage reporter runs and produces output",
+                "GREEN: Create vitest.config.ts with: coverage.provider = 'v8', environment = 'jsdom', coverage thresholds for lib/ (branches: 80, functions: 80, lines: 80, statements: 80) and entrypoints/ (branches: 60, functions: 60, lines: 60, statements: 60)",
+                "Configure resolve.alias to match WXT path aliases (@/* -> project root)",
+                "Write tests/unit/sanity.test.ts (assert 1 + 1 === 2) to verify runner works",
+                "Run `npx vitest run` and verify the sanity test passes with coverage output"
+            ],
+            "files": [
+                "vitest.config.ts",
+                "tests/unit/config/vitest-config.test.ts",
+                "tests/unit/sanity.test.ts"
+            ],
+            "acceptance_criteria": [
+                "vitest.config.ts uses v8 coverage provider",
+                "jsdom environment configured for component tests",
+                "Coverage thresholds: 80% for lib/, 60% for entrypoints/",
+                "Path aliases resolve in test files (@/lib, @/components)",
+                "`npx vitest run` executes and reports coverage",
+                "Sanity test passes"
+            ],
+            "definition_of_done": [
+                "`npx vitest run` exits 0 with coverage report",
+                "Sanity test passes",
+                "Vitest config test passes",
+                "`tsc --noEmit` still passes"
+            ],
+            "verification": "npx vitest run && npx vitest run tests/unit/config/vitest-config.test.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-002",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-005",
+            "category": "infrastructure",
+            "priority": "HIGH",
+            "title": "Playwright E2E configuration with extension loading fixture",
+            "description": "Configure Playwright (already installed) for browser extension E2E testing. Create a custom fixture that loads the built extension via --load-extension flag in Chromium. Tests directory: tests/e2e/.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write tests/e2e/sanity.test.ts that uses the extension fixture to load the built extension and asserts the popup page contains 'Hush' text",
+                "GREEN: Create playwright.config.ts with: testDir: 'tests/e2e', Chromium project only (extensions require new headless mode), timeout: 30s, retries: 1 in CI",
+                "Create tests/e2e/fixtures/extension.ts with a custom fixture that: runs `wxt build` if needed, launches Chromium with --disable-extensions-except and --load-extension pointing to .output/chrome-mv3, exposes an extensionId fixture for navigating to chrome-extension://[id]/popup.html",
+                "Run `npx playwright install chromium` to ensure browser binary is available",
+                "Run `npx playwright test` and verify the sanity test loads the extension popup",
+                "REFACTOR: Ensure fixture cleans up browser context after each test"
+            ],
+            "files": [
+                "playwright.config.ts",
+                "tests/e2e/fixtures/extension.ts",
+                "tests/e2e/sanity.test.ts"
+            ],
+            "acceptance_criteria": [
+                "playwright.config.ts targets Chromium with extension loading support",
+                "Custom fixture loads built extension via --load-extension flag",
+                "Fixture exposes extensionId for navigating to popup/manager pages",
+                "Sanity test navigates to popup and finds expected content",
+                "Tests run in CI-compatible mode (new headless with extension support)"
+            ],
+            "definition_of_done": [
+                "`npx playwright test` exits 0 with sanity test passing",
+                "Extension popup loads in Playwright-controlled browser",
+                "Fixture properly sets up and tears down browser context",
+                "`tsc --noEmit` still passes"
+            ],
+            "verification": "wxt build && npx playwright test tests/e2e/sanity.test.ts",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-001",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-006",
+            "category": "infrastructure",
+            "priority": "HIGH",
+            "title": "ESLint v10 flat config enforcing project conventions",
+            "description": "Configure ESLint v10 (already installed) with flat config format (eslint.config.js). Rules enforce Build Plan conventions: no empty catch blocks, no console.log in production, prefer-const, explicit-function-return-type. ESLint v10 uses flat config exclusively — .eslintrc.json is not supported.",
+            "story_points": 3,
+            "steps": [
+                "RED: Write tests/unit/config/eslint-config.test.ts — behavioral test that: (1) reads eslint.config.js and verifies it exports an array, (2) verifies the config includes typescript-eslint plugin",
+                "GREEN: Create eslint.config.js using flat config format: import tseslint from '@typescript-eslint/eslint-plugin', configure rules: no-empty: error, no-console: warn, prefer-const: error, @typescript-eslint/explicit-function-return-type: warn, @typescript-eslint/no-unused-vars: error",
+                "Configure ignores array for: .wxt/, .output/, node_modules/, .prd/, coverage/, test-results/",
+                "Run `npx eslint .` on existing files and fix any violations",
+                "Add scripts to package.json: 'lint': 'eslint .'",
+                "REFACTOR: Ensure ESLint config is compatible with WXT-generated files in .wxt/"
+            ],
+            "files": [
+                "eslint.config.js",
+                "tests/unit/config/eslint-config.test.ts"
+            ],
+            "acceptance_criteria": [
+                "eslint.config.js exists (NOT .eslintrc.json — ESLint v10 flat config only)",
+                "no-empty rule is set to 'error' (catches silent catch blocks)",
+                "no-console rule is set to 'warn' (flags console.log in production code)",
+                "prefer-const rule is set to 'error'",
+                "explicit-function-return-type is configured",
+                "ESLint runs cleanly on all existing files",
+                ".wxt/, .output/, .prd/ directories are excluded via ignores"
+            ],
+            "definition_of_done": [
+                "`npx eslint .` exits 0 (no --ext flag needed in v10)",
+                "ESLint config test passes",
+                "package.json has lint script",
+                "`tsc --noEmit` still passes"
+            ],
+            "verification": "npx eslint . && npx vitest run tests/unit/config/eslint-config.test.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-002",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-007",
+            "category": "infrastructure",
+            "priority": "CRITICAL",
+            "title": "Shared type definitions (lib/types.ts)",
+            "description": "Create lib/types.ts with all shared type definitions that form the contract between modules. These types must match the Holy PB data format exactly for backward compatibility. Types include: Bookmark, Folder, BookmarkTree, EncryptedStore, PasswordSet, RecoveryPhrase, CryptoConfig, StorageError, and Result<T, E> utility type.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write tests/unit/lib/types.test.ts that verifies type definitions compile correctly by creating valid instances of each type and asserting TypeScript accepts them. Test that invalid shapes are rejected (use @ts-expect-error annotations for negative tests)",
+                "GREEN: Create lib/types.ts with interfaces: Bookmark { type: 'bookmark'; title: string; url: string; dateAdded: number; id: string }, Folder { type: 'folder'; name: string; children: BookmarkNode[]; dateAdded: number; id: string }, BookmarkNode (Bookmark | Folder discriminated union), BookmarkTree (root Folder), EncryptedStore { salt: string; encrypted: string; iv: string; iterations: number }, PasswordSet { id: string; name: string; store: EncryptedStore; createdAt: number }, RecoveryPhrase { words: string[]; derivedKeyHash: string }, CryptoConfig { iterations: number; algorithm: string; keyLength: number }",
+                "Create error types in lib/errors.ts: DecryptionError, InvalidPasswordError, StorageError (with context field), ImportError — all extending Error",
+                "Create Result<T, E> utility type: { success: true; data: T } | { success: false; error: E }",
+                "Ensure all types use 'type' keyword for imports (import type { Bookmark } from '@/lib/types')",
+                "Run `tsc --noEmit` to verify all types compile",
+                "REFACTOR: Add JSDoc comments to each interface explaining its role and which Holy PB structure it maps to"
+            ],
+            "files": [
+                "lib/types.ts",
+                "lib/errors.ts",
+                "tests/unit/lib/types.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Bookmark interface has type: 'bookmark', title, url, dateAdded, id fields",
+                "Folder interface has type: 'folder', name, children (BookmarkNode[]), dateAdded, id fields",
+                "BookmarkNode is a discriminated union of Bookmark | Folder",
+                "EncryptedStore has salt, encrypted, iv, iterations fields matching Holy PB format",
+                "PasswordSet interface supports multiple independent encrypted collections",
+                "RecoveryPhrase interface supports BIP39 mnemonic data",
+                "Error types in lib/errors.ts: DecryptionError, InvalidPasswordError, StorageError, ImportError all extend Error with context",
+                "Result<T, E> utility type provides type-safe success/failure handling",
+                "All types compile under strict TypeScript with noUncheckedIndexedAccess"
+            ],
+            "definition_of_done": [
+                "`tsc --noEmit` passes with lib/types.ts and lib/errors.ts",
+                "Type validation test passes (both positive and negative cases)",
+                "All interfaces have JSDoc comments",
+                "No circular imports between lib/ modules",
+                "`npx eslint lib/` passes"
+            ],
+            "verification": "tsc --noEmit && npx vitest run tests/unit/lib/types.test.ts && npx eslint lib/",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-002",
+                "SCAFFOLD-004",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-009",
+            "category": "infrastructure",
+            "priority": "HIGH",
+            "title": "Sentry initialization with zero-PII beforeSend filter",
+            "description": "Configure @sentry/browser (already installed) with Sentry initialization for both background.ts and popup entry. The critical requirement: beforeSend MUST strip URLs and bookmark titles from all error reports. No breadcrumbs. No session replay. DSN injected at build time via import.meta.env.WXT_SENTRY_DSN.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write tests/unit/lib/sentry-config.test.ts that imports the Sentry initialization module and asserts: beforeSend function exists, beforeSend strips URLs from error events (test with a mock error containing a URL), beforeSend strips bookmark titles from error context, breadcrumbs are disabled, session replay is disabled",
+                "GREEN: Create lib/sentry.ts with initSentry() function that calls Sentry.init() with: dsn from import.meta.env.WXT_SENTRY_DSN (build-time injection — WXT exposes WXT_-prefixed env vars to client code), beforeSend that strips request.url, strips any string matching URL patterns from extra context, strips bookmark-related fields. Set integrations to exclude BrowserTracing breadcrumbs and session replay",
+                "Create .env.example with WXT_SENTRY_DSN=your-dsn-here as documentation for contributors",
+                "Update entrypoints/background.ts to call initSentry() in defineBackground setup",
+                "Update entrypoints/popup/main.tsx to call initSentry() before React root render",
+                "Run Sentry config tests to verify PII stripping works",
+                "REFACTOR: Extract beforeSend filter to a separate pure function for testability"
+            ],
+            "files": [
+                "lib/sentry.ts",
+                ".env.example",
+                "tests/unit/lib/sentry-config.test.ts"
+            ],
+            "acceptance_criteria": [
+                "lib/sentry.ts exports initSentry() function",
+                "beforeSend strips URLs from error events (request.url, breadcrumb URLs)",
+                "beforeSend strips bookmark titles from error extra/context fields",
+                "Breadcrumbs are disabled (no navigation or click tracking)",
+                "Session replay is NOT included",
+                "DSN loaded via import.meta.env.WXT_SENTRY_DSN (build-time injection)",
+                "initSentry() called in both background.ts and popup main.tsx",
+                "beforeSend filter is a pure function with its own unit tests",
+                ".env.example documents the WXT_SENTRY_DSN variable"
+            ],
+            "definition_of_done": [
+                "npx vitest run tests/unit/lib/sentry-config.test.ts passes",
+                "beforeSend correctly strips URLs (verified by test with mock error event)",
+                "No breadcrumb integrations enabled",
+                "`tsc --noEmit` passes",
+                "`npx eslint lib/sentry.ts` passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/sentry-config.test.ts && tsc --noEmit && npx eslint lib/sentry.ts",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-001",
+                "SCAFFOLD-002",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-010",
+            "category": "infrastructure",
+            "priority": "HIGH",
+            "title": "Directory structure + .gitignore + i18n locales + icons + licensing files",
+            "description": "Create the full directory structure from the Build Plan architecture diagram. Copy _locales from Holy PB fork (10 locales: ar, de, en, es, fr, hy, it, ru, uk, zh_CN). Create icon placeholders. Update .gitignore for coverage and Playwright results. Create React Error Boundary shell component. Verify GPL-3.0 LICENSE exists. Create NOTICE file with Holy Private Bookmarks attribution.",
+            "story_points": 3,
+            "steps": [
+                "RED: Write tests/unit/config/project-structure.test.ts that asserts directories exist: lib/, components/ui/, hooks/, entrypoints/popup/, tests/unit/, tests/e2e/, public/_locales/, public/icons/, .prd/",
+                "GREEN: Create directories with .gitkeep files where needed: hooks/, public/icons/, tests/e2e/, .prd/module-01-scaffold/",
+                "Verify LICENSE file exists at project root and contains GPL-3.0 text (already created in initial commit)",
+                "Create NOTICE file with Holy Private Bookmarks attribution: original repo (github.com/OSV-IT-Studio/holy-private-bookmarks), GPL-3.0 license, derived files list (crypto.ts, data-model.ts, _locales/)",
+                "Clone Holy PB to /tmp/holy-pb-reference if not already cloned. Copy src/_locales/ (NOT root _locales/) to public/_locales/ — 10 locales: ar, de, en, es, fr, hy, it, ru, uk, zh_CN. Each contains messages.json.",
+                "Create public/icons/ with placeholder PNG files (16x16, 48x48, 128x128)",
+                "Create components/ErrorBoundary.tsx — React error boundary that catches uncaught exceptions, displays user-visible error state with 'Report Bug' link to GitHub issue template, and captures to Sentry",
+                "Update .gitignore — add: coverage/, test-results/, playwright-report/, *.tsbuildinfo, .env (keep existing entries for node_modules, .output, .wxt)",
+                "Run project structure test"
+            ],
+            "files": [
+                "NOTICE",
+                ".gitignore",
+                "components/ErrorBoundary.tsx",
+                "public/_locales/en/messages.json",
+                "public/icons/.gitkeep",
+                "tests/unit/config/project-structure.test.ts"
+            ],
+            "acceptance_criteria": [
+                "All directories from architecture diagram exist (lib/, components/ui/, hooks/, tests/)",
+                "public/_locales/ contains 10 locale directories: ar, de, en, es, fr, hy, it, ru, uk, zh_CN",
+                "public/icons/ has placeholder icon files at 3 sizes",
+                "ErrorBoundary.tsx catches errors, renders fallback UI, captures to Sentry",
+                ".gitignore excludes .output/, .wxt/, node_modules/, coverage/, test-results/",
+                "No generated files tracked in git",
+                "LICENSE file exists and contains GPL-3.0 text (verify only — already exists)",
+                "NOTICE file attributes Holy Private Bookmarks with repo URL and derived file list"
+            ],
+            "definition_of_done": [
+                "Project structure test passes",
+                "`tsc --noEmit` passes (ErrorBoundary compiles)",
+                "git status shows no ignored files being tracked",
+                "`wxt build` still succeeds with new directory structure",
+                "LICENSE contains 'GNU GENERAL PUBLIC LICENSE'",
+                "NOTICE references Holy Private Bookmarks"
+            ],
+            "verification": "npx vitest run tests/unit/config/project-structure.test.ts && tsc --noEmit && wxt build",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-001",
+                "SCAFFOLD-003",
+                "SCAFFOLD-009",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-011",
+            "category": "ci",
+            "priority": "HIGH",
+            "title": "GitHub Actions CI pipeline",
+            "description": "Create the CI pipeline that runs on every push: tsc --noEmit, eslint, vitest --coverage, playwright test. Nightly builds against Chrome Canary, Firefox Nightly, Edge Dev. This is the automated quality gate — no code merges without passing CI.",
+            "story_points": 5,
+            "steps": [
+                "RED: Validate workflow YAML structure is correct (use actionlint if available)",
+                "GREEN: Create .github/workflows/ci.yml with: trigger on push and pull_request to main, job 'typecheck' (tsc --noEmit), job 'lint' (npx eslint .), job 'unit-tests' (vitest run --coverage), job 'e2e-tests' (wxt build, playwright test), all jobs on ubuntu-latest with Node.js 20",
+                "Create .github/workflows/nightly.yml with: cron trigger (daily at 3am UTC), jobs that build extension for Chrome Canary, Firefox Nightly, Edge Dev channels using WXT browser targets",
+                "Add caching for node_modules (actions/cache with package-lock.json hash)",
+                "Upload coverage reports and Playwright results as artifacts",
+                "E2E job needs xvfb-run for headless Chromium with extension support in CI",
+                "Add branch protection rules reminder in CLAUDE.md (require CI pass before merge)"
+            ],
+            "files": [
+                ".github/workflows/ci.yml",
+                ".github/workflows/nightly.yml"
+            ],
+            "acceptance_criteria": [
+                "CI triggers on push and pull_request to main",
+                "CI runs tsc, eslint (flat config, no --ext), vitest, playwright in sequence",
+                "Node.js 20 used across all jobs",
+                "node_modules cached with package-lock.json hash",
+                "Coverage and Playwright artifacts uploaded",
+                "E2E tests use xvfb-run for CI headless support",
+                "Nightly workflow builds for Chrome Canary, Firefox Nightly, Edge Dev",
+                "Nightly runs on cron schedule"
+            ],
+            "definition_of_done": [
+                "CI YAML is valid (actionlint or act --dryrun passes)",
+                "Nightly YAML is valid",
+                "Both workflows reference correct Node.js version and caching strategy",
+                "CI pipeline would pass if pushed (all existing tests pass locally)"
+            ],
+            "verification": "npx vitest run && tsc --noEmit && npx eslint .",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-004",
+                "SCAFFOLD-005",
+                "SCAFFOLD-006",
+                "SCAFFOLD-008"
+            ]
+        },
+        {
+            "id": "SCAFFOLD-012",
+            "category": "testing",
+            "priority": "HIGH",
+            "title": "Full scaffold integration verification",
+            "description": "End-to-end verification that all scaffold pieces work together. Build the extension, run all tests (unit + e2e), verify coverage reporting, verify lint passes, verify the extension loads and popup renders with styled shadcn components. This is the quality gate for Day 1 first half.",
+            "story_points": 3,
+            "steps": [
+                "RED: Write tests/unit/integration/scaffold-smoke.test.ts that verifies: lib/types.ts can be imported, lib/errors.ts can be imported, lib/sentry.ts can be imported, components/ErrorBoundary.tsx can be imported, all imports resolve via @/* path aliases",
+                "GREEN: Fix any integration issues surfaced by the smoke test (path resolution, circular dependencies, missing exports)",
+                "Run the full verification sequence: tsc --noEmit → eslint . → vitest run --coverage → wxt build → playwright test",
+                "Verify bundle size: wxt build output should be well under 200KB gzipped (scaffold only, minimal code)",
+                "Verify coverage report generates correctly (even if thresholds aren't met yet — lib/ has minimal code)",
+                "REFACTOR: Create package.json scripts: 'verify': 'tsc --noEmit && eslint . && vitest run && wxt build', 'test:e2e': 'playwright test'"
+            ],
+            "files": [
+                "tests/unit/integration/scaffold-smoke.test.ts"
+            ],
+            "acceptance_criteria": [
+                "tsc --noEmit passes (zero type errors)",
+                "ESLint passes (zero errors) using flat config",
+                "All Vitest tests pass",
+                "wxt build produces valid extension package",
+                "Playwright E2E sanity test passes",
+                "All @/* path aliases resolve correctly across test and source files",
+                "package.json has 'verify' and 'test:e2e' scripts"
+            ],
+            "definition_of_done": [
+                "`npm run verify` exits 0 (all checks pass)",
+                "`npx playwright test` exits 0",
+                "Extension loads in Chrome and popup renders styled content",
+                "Bundle size < 200KB gzipped",
+                "Scaffold smoke test passes",
+                "Ready to hand off to Module 2 (Crypto)"
+            ],
+            "verification": "npm run verify && npx playwright test tests/e2e/sanity.test.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "SCAFFOLD-001",
+                "SCAFFOLD-002",
+                "SCAFFOLD-003",
+                "SCAFFOLD-004",
+                "SCAFFOLD-005",
+                "SCAFFOLD-006",
+                "SCAFFOLD-007",
+                "SCAFFOLD-008",
+                "SCAFFOLD-009",
+                "SCAFFOLD-010",
+                "SCAFFOLD-011"
+            ]
+        }
+    ],
+    "pre_existing_issues": [
+        {
+            "issue": "shadcn/ui init may need manual components.json path adjustment for WXT project structure",
+            "severity": "MEDIUM",
+            "action": "Test shadcn init early (SCAFFOLD-003), fix paths if needed"
+        },
+        {
+            "issue": "Playwright extension loading requires new headless mode (--headless=new) — CI needs xvfb-run",
+            "severity": "HIGH",
+            "action": "Address in SCAFFOLD-005 fixture and SCAFFOLD-011 CI pipeline with xvfb-run"
+        },
+        {
+            "issue": "Holy PB _locales contain translation strings for the original extension — will need Hush-specific strings later",
+            "severity": "LOW",
+            "action": "Copy structure in SCAFFOLD-010, update strings in UI module PRDs"
+        },
+        {
+            "issue": "@tailwindcss/vite plugin may need explicit registration in wxt.config.ts Vite plugins",
+            "severity": "MEDIUM",
+            "action": "Verify in SCAFFOLD-003 — WXT may auto-detect the plugin"
+        },
+        {
+            "issue": "ESLint v10 typescript-eslint integration may need @typescript-eslint/parser v8+ for flat config compatibility",
+            "severity": "MEDIUM",
+            "action": "Verify plugin versions in SCAFFOLD-006 — v8.56.1 is already installed"
+        }
+    ],
+    "critical_path": "008 -> 001 -> 002 -> 003/004/006 -> 007 -> 009 -> 010 -> 012",
+    "total_story_points": 48,
+    "total_stories": 12,
+    "metadata": {
+        "passing_stories": 1,
+        "build_plan_day": "Day 1 (first half)",
+        "session_protocol": "One Claude Code session for scaffold. Review all config files. Run tsc --noEmit. Run vitest. Verify extension loads. Commit.",
+        "quality_gate": "All config tests pass. tsc clean. wxt build succeeds. Extension loads in Chrome. shadcn/ui components render in popup shell."
+    },
+    "progress_log": {
+        "file": ".prd/module-01-scaffold/progress.md",
+        "format_rules": [
+            "Append a new session entry after completing each story (do NOT overwrite previous entries)",
+            "Each entry starts with `## Session: {ISO timestamp}` followed by `**Task**: {story_id} - {story_title}`",
+            "Set **Status**: PASSED or FAILED (attempt {n})",
+            "Include ### Work Done section with bullet points describing what was implemented",
+            "Include ### Files Created table (File | Purpose) for any new files",
+            "Include ### Files Modified table (File | Changes) for any changed files",
+            "Include ### Acceptance Criteria Verification with numbered checklist using ✅ or ❌",
+            "Include ### Verification Results showing exact command output (tsc, vitest, eslint, etc.)",
+            "If story FAILED, include ### Failure Analysis with root cause before retrying",
+            "After all stories complete, append a ## Module Summary with total pass/fail counts and any notes for the next module",
+            "Update the story's `passes` field to true and increment `attempt_count` in the prd.json after each attempt",
+            "Update `metadata.passing_stories` count in the prd.json after each story passes"
+        ]
+    },
+    "context": {
+        "starting_state": {
+            "description": "The repo is already initialized from the WXT React template. All npm dependencies are installed. CLAUDE.md exists with most conventions. Entrypoint stubs exist with template boilerplate. No lib/, hooks/, or test files exist yet. No ESLint, Vitest, or Playwright configs exist yet.",
+            "repo_exists": true,
+            "git_initialized": true,
+            "git_commits": 9,
+            "git_branch": "main",
+            "npm_packages_installed": true,
+            "files_that_exist": [
+                "wxt.config.ts (minimal — only enables @wxt-dev/module-react, no manifest config)",
+                "tsconfig.json (extends .wxt/tsconfig.json, has jsx: react-jsx)",
+                ".wxt/tsconfig.json (auto-generated — strict: true, @/* path aliases)",
+                "package.json (name: wxt-react-starter, all deps installed)",
+                "package-lock.json",
+                "CLAUDE.md (comprehensive — missing Progress Logging Protocol and Licensing sections)",
+                "LICENSE (GPL-3.0)",
+                ".gitignore (basic — missing coverage/, test-results/, playwright-report/)",
+                "entrypoints/popup/App.tsx (template counter demo with WXT/React logos)",
+                "entrypoints/popup/main.tsx (React root render)",
+                "entrypoints/popup/App.css (template styles)",
+                "entrypoints/popup/style.css (template styles)",
+                "entrypoints/background.ts (defineBackground with console.log)",
+                "entrypoints/content.ts (content script — not needed, to be removed)",
+                "assets/react.svg (template asset)",
+                "README.md (boilerplate)"
+            ],
+            "files_that_do_not_exist_yet": [
+                "vitest.config.ts",
+                "playwright.config.ts",
+                "eslint.config.js",
+                "app.css (Tailwind v4 global styles)",
+                "components.json (shadcn/ui config)",
+                "lib/types.ts",
+                "lib/errors.ts",
+                "lib/sentry.ts",
+                "lib/utils.ts (created by shadcn init)",
+                "components/ui/*.tsx (shadcn components)",
+                "components/ErrorBoundary.tsx",
+                "hooks/ (empty directory)",
+                "NOTICE",
+                ".env.example",
+                ".github/workflows/ci.yml",
+                ".github/workflows/nightly.yml",
+                ".prd/ (PRD management directory)",
+                "tests/ (all test files)"
+            ],
+            "installed_dependencies": {
+                "production": {
+                    "@scure/bip39": "^2.0.1",
+                    "@sentry/browser": "^10.40.0",
+                    "react": "^19.2.4",
+                    "react-dom": "^19.2.4"
+                },
+                "dev": {
+                    "@playwright/test": "^1.58.2",
+                    "@tailwindcss/vite": "^4.2.1",
+                    "@testing-library/jest-dom": "^6.9.1",
+                    "@testing-library/react": "^16.3.2",
+                    "@types/react": "^19.2.13",
+                    "@types/react-dom": "^19.2.3",
+                    "@typescript-eslint/eslint-plugin": "^8.56.1",
+                    "@typescript-eslint/parser": "^8.56.1",
+                    "@vitest/coverage-v8": "^4.0.18",
+                    "@wxt-dev/module-react": "^1.1.5",
+                    "eslint": "^10.0.2",
+                    "jsdom": "^28.1.0",
+                    "playwright": "^1.58.2",
+                    "prettier": "^3.8.1",
+                    "tailwindcss": "^4.2.1",
+                    "typescript": "^5.9.3",
+                    "vitest": "^4.0.18",
+                    "wxt": "^0.20.18"
+                }
+            }
+        },
+        "external_dependencies": [
+            {
+                "name": "Holy Private Bookmarks",
+                "repo_url": "https://github.com/OSV-IT-Studio/holy-private-bookmarks",
+                "license": "GPL-3.0",
+                "clone_required": true,
+                "clone_instructions": "Clone to /tmp/holy-pb-reference. READ-ONLY reference — do NOT build Hush inside this clone.",
+                "files_to_extract": {
+                    "src/_locales/": "Copy entire directory to public/_locales/ in SCAFFOLD-010. 10 locales: ar, de, en, es, fr, hy, it, ru, uk, zh_CN. Source path is src/_locales/ (NOT root _locales/).",
+                    "js/crypto-wrapper.js": "Reference for Module 2 (crypto.ts). 174 lines. PBKDF2 600K + AES-256-GCM. Do NOT extract in this module.",
+                    "js/shared.js": "Reference for Module 4 (data-model.ts). 888 lines. Do NOT extract in this module."
+                }
+            }
+        ],
+        "tech_stack": {
+            "runtime": "Node.js 20 LTS",
+            "package_manager": "npm",
+            "framework": "WXT 0.20.18 (wxt.dev) — already initialized",
+            "ui_framework": "React 19.2.4 with TypeScript 5.9.3",
+            "styling": "Tailwind CSS v4.2.1 with @tailwindcss/vite plugin (CSS-based config, NOT tailwind.config.ts) + shadcn/ui",
+            "testing_unit": "Vitest 4.0.18 with @vitest/coverage-v8",
+            "testing_e2e": "Playwright 1.58.2 — @playwright/test",
+            "linting": "ESLint 10.0.2 with flat config (eslint.config.js) + @typescript-eslint v8",
+            "error_tracking": "@sentry/browser 10.40.0",
+            "browser_targets": "Chrome 120+, Edge 120+, Firefox 115+"
+        },
+        "licensing": {
+            "extension_license": "GPL-3.0. Every file in the hush repo is GPL-3.0.",
+            "license_file": "Already exists at project root.",
+            "attribution": "NOTICE file at project root attributing Holy Private Bookmarks (github.com/OSV-IT-Studio/holy-private-bookmarks, GPL-3.0). Derived files: crypto.ts, data-model.ts, _locales/.",
+            "pro_features": "Pro features are GPL-3.0 but gated by ExtensionPay license checks. Code is open source; functionality is gated.",
+            "sync_backend": "The sync backend (hush-sync) is a SEPARATE proprietary repo. Not part of this module.",
+            "pro_gate_pattern": "All Pro-gated features use lib/pro-gate.ts with useProGate() hook. Introduced in Module 16a."
+        },
+        "read_first": [
+            "This PRD file (read all stories and dependencies before starting)",
+            "CLAUDE.md (exists — read before every story)",
+            ".wxt/tsconfig.json (understand what WXT provides before adding tsconfig overrides)"
+        ],
+        "outputs": [
+            {
+                "file": "CLAUDE.md",
+                "consumed_by": "Every subsequent module",
+                "description": "Updated with Progress Logging Protocol and Licensing Rules"
+            },
+            {
+                "file": "lib/types.ts",
+                "consumed_by": "Module 2 (Crypto), Module 3 (Storage), Module 4 (Data Model), all subsequent",
+                "description": "Shared type definitions"
+            },
+            {
+                "file": "lib/errors.ts",
+                "consumed_by": "All modules that handle errors",
+                "description": "Centralized error classes"
+            },
+            {
+                "file": "wxt.config.ts",
+                "consumed_by": "All modules that add entrypoints or permissions",
+                "description": "Configured with manifest permissions and React module"
+            },
+            {
+                "file": "vitest.config.ts",
+                "consumed_by": "All modules that write tests",
+                "description": "Vitest with coverage thresholds and path aliases"
+            },
+            {
+                "file": "playwright.config.ts",
+                "consumed_by": "All modules that write E2E tests",
+                "description": "Playwright with extension loading fixture"
+            },
+            {
+                "file": "eslint.config.js",
+                "consumed_by": "All modules (linting)",
+                "description": "ESLint v10 flat config with project conventions"
+            },
+            {
+                "file": "lib/sentry.ts",
+                "consumed_by": "All entrypoints",
+                "description": "Sentry init with zero-PII beforeSend filter"
+            }
+        ]
+    },
+    "execution_rules": {
+        "mandatory": [
+            "Read this ENTIRE prd.json before starting any story",
+            "Read CLAUDE.md before every story",
+            "Follow the critical_path dependency order — never start a story before its depends_on stories pass",
+            "Run the verification command listed in each story after completing it",
+            "Append to .prd/module-01-scaffold/progress.md after each story (follow progress_log.format_rules exactly)",
+            "Update this prd.json after each story: set passes=true, increment attempt_count, update metadata.passing_stories",
+            "Clone Holy Private Bookmarks to /tmp/holy-pb-reference ONCE at the start — do NOT re-clone for each story",
+            "Do NOT install npm packages that are already in package.json — all dependencies are pre-installed"
+        ],
+        "forbidden": [
+            "Do NOT run npx wxt@latest init — the project is already initialized",
+            "Do NOT create tailwind.config.ts — Tailwind v4 uses CSS-based configuration",
+            "Do NOT create .eslintrc.json — ESLint v10 uses flat config (eslint.config.js) exclusively",
+            "Do NOT use @tailwind base/components/utilities directives — Tailwind v4 uses @import 'tailwindcss'",
+            "Do NOT use eslint --ext flag — removed in ESLint v10",
+            "Do NOT modify files in .wxt/ — these are auto-generated by WXT",
+            "Do NOT build the Hush extension inside the Holy PB reference clone",
+            "Do NOT add clipboardRead or clipboardWrite permissions to the manifest"
+        ]
+    }
+}
