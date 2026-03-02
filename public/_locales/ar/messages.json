@@ -1,9 +1,9 @@
 {
   "Name": {
-    "message": "Holy Private Bookmarks — مدير الإشارات المرجعية المشفرة محلياً"
+    "message": "Hush Private Bookmarks — مدير الإشارات المرجعية المشفرة محلياً"
   },
   "extensionName": {
-    "message": "Holy Private Bookmarks"
+    "message": "Hush Private Bookmarks"
   },
   "extensionDescription": {
     "message": "إشارات مرجعية خاصة تماماً مع كلمة مرور رئيسية ومجلدات وتشفير"
@@ -171,7 +171,7 @@
     "message": "ملف نسخ احتياطي غير صالح"
   },
   "clearHistoryConfirm": {
-    "message": "⚠️ حذف جميع إدخالات سجل المتصفح للنطاقات الموجودة في Holy Private Bookmarks الخاصة بك؟"
+    "message": "⚠️ حذف جميع إدخالات سجل المتصفح للنطاقات الموجودة في Hush Private Bookmarks الخاصة بك؟"
   },
   "noBookmarks": {
     "message": "لم يتم العثور على إشارات مرجعية - لا شيء لمسحه."
@@ -205,14 +205,14 @@
       }
     }
   },
-  "addToHoly": {
-    "message": "إضافة إلى Holy Private Bookmarks"
+  "addToHush": {
+    "message": "إضافة إلى Hush Private Bookmarks"
   },
   "cannotAddPage": {
     "message": "لا يمكن إضافة هذه الصفحة (لا يوجد رابط صالح)"
   },
   "supportPageTitle": {
-    "message": "دعم المشروع — Holy Private Bookmarks"
+    "message": "دعم المشروع — Hush Private Bookmarks"
   },
   "supportTitle": {
     "message": "دعم المشروع"
@@ -367,14 +367,16 @@
   "rename": {
     "message": "إعادة تسمية"
   },
-  "renameFolder": {
-    "message": "إعادة تسمية المجلد"
-  },
   "deleteFolder": {
     "message": "حذف المجلد"
   },
   "deleteFolderConfirm": {
-    "message": "حذف المجلد \"{0}\"؟"
+    "message": "حذف المجلد \"$name$\"؟",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "deleteFolderWarning": {
     "message": "سيتم حذف كل المحتوى بشكل دائم."
@@ -392,7 +394,12 @@
     "message": "لا يمكن حذف مجلد \"جميع الإشارات المرجعية\""
   },
   "foldersCount": {
-    "message": "{0} مجلدات"
+    "message": "$count$ مجلدات",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "bookmarkAdded": {
     "message": "تمت إضافة الإشارة المرجعية"
@@ -410,7 +417,12 @@
     "message": "مجلد الوجهة غير صالح"
   },
   "bookmarksMoved": {
-    "message": "تم نقل {0} إشارة مرجعية"
+    "message": "تم نقل $count$ إشارة مرجعية",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "moveFailed": {
     "message": "فشل نقل الإشارات المرجعية"
@@ -419,7 +431,12 @@
     "message": "لم يتم تحديد إشارات مرجعية"
   },
   "moveBookmarksTitle": {
-    "message": "نقل {0} إشارة مرجعية"
+    "message": "نقل $count$ إشارة مرجعية",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "selectDestinationFolder": {
     "message": "حدد مجلد الوجهة:"
@@ -440,10 +457,7 @@
     "message": "إلغاء التحديد"
   },
   "deleteSelectedConfirm": {
-    "message": "حذف الإشارة المرجعية المحددة؟"
-  },
-  "deleteSelectedConfirm": {
-    "message": "حذف {count} إشارة مرجعية محددة$plural$؟",
+    "message": "حذف $count$ إشارة مرجعية محددة$plural$؟",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -454,7 +468,7 @@
     }
   },
   "bookmarksDeleted": {
-    "message": "تم حذف {count} إشارات مرجعية",
+    "message": "تم حذف $count$ إشارات مرجعية",
     "placeholders": {
       "count": {
         "content": "$1"

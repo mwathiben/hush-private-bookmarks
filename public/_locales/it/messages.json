@@ -1,9 +1,9 @@
 {
   "Name": {
-    "message": "Holy Private Bookmarks — Gestore di segnalibri locali crittografati"
+    "message": "Hush Private Bookmarks — Gestore di segnalibri locali crittografati"
   },
   "extensionName": {
-    "message": "Holy Private Bookmarks"
+    "message": "Hush Private Bookmarks"
   },
   "extensionDescription": {
     "message": "Segnalibri completamente privati con password principale, cartelle e crittografia"
@@ -171,7 +171,7 @@
     "message": "File di backup non valido"
   },
   "clearHistoryConfirm": {
-    "message": "⚠️ Eliminare TUTTE le voci della cronologia del browser per i domini presenti nei tuoi Holy Private Bookmarks?"
+    "message": "⚠️ Eliminare TUTTE le voci della cronologia del browser per i domini presenti nei tuoi Hush Private Bookmarks?"
   },
   "noBookmarks": {
     "message": "Nessun segnalibro trovato — nulla da cancellare."
@@ -205,14 +205,14 @@
       }
     }
   },
-  "addToHoly": {
-    "message": "Aggiungi a Holy Private Bookmarks"
+  "addToHush": {
+    "message": "Aggiungi a Hush Private Bookmarks"
   },
   "cannotAddPage": {
     "message": "Impossibile aggiungere questa pagina (URL non valido)"
   },
   "supportPageTitle": {
-    "message": "Supporta il progetto — Holy Private Bookmarks"
+    "message": "Supporta il progetto — Hush Private Bookmarks"
   },
   "supportTitle": {
     "message": "Supporta il Progetto"
@@ -367,14 +367,16 @@
   "rename": {
     "message": "Rinomina"
   },
-  "renameFolder": {
-    "message": "Rinomina cartella"
-  },
   "deleteFolder": {
     "message": "Elimina cartella"
   },
   "deleteFolderConfirm": {
-    "message": "Eliminare la cartella \"{0}\"?"
+    "message": "Eliminare la cartella \"$name$\"?",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "deleteFolderWarning": {
     "message": "Tutto il contenuto verrà eliminato permanentemente."
@@ -392,7 +394,12 @@
     "message": "Impossibile eliminare la cartella \"Tutti i segnalibri\""
   },
   "foldersCount": {
-    "message": "{0} cartelle"
+    "message": "$count$ cartelle",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "bookmarkAdded": {
     "message": "Segnalibro aggiunto"
@@ -410,7 +417,15 @@
     "message": "Cartella di destinazione non valida"
   },
   "bookmarksMoved": {
-    "message": "{0} segnalibro{1} spostato"
+    "message": "$count$ segnalibro$plural$ spostato",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
   },
   "moveFailed": {
     "message": "Impossibile spostare i segnalibri"
@@ -419,7 +434,15 @@
     "message": "Nessun segnalibro selezionato"
   },
   "moveBookmarksTitle": {
-    "message": "Sposta {0} segnalibro{1}"
+    "message": "Sposta $count$ segnalibro$plural$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
   },
   "selectDestinationFolder": {
     "message": "Seleziona cartella di destinazione:"
@@ -440,10 +463,7 @@
     "message": "Annulla selezione"
   },
   "deleteSelectedConfirm": {
-    "message": "Eliminare il segnalibro selezionato?"
-  },
-  "deleteSelectedConfirm": {
-    "message": "Eliminare {count} segnalibro$plural$ selezionato?",
+    "message": "Eliminare $count$ segnalibro$plural$ selezionato?",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -454,7 +474,7 @@
     }
   },
   "bookmarksDeleted": {
-    "message": "{count} segnalibri eliminati",
+    "message": "$count$ segnalibri eliminati",
     "placeholders": {
       "count": {
         "content": "$1"

@@ -1,9 +1,9 @@
 {
   "Name": {
-    "message": "Holy Private Bookmarks — Зашифрованный менеджер локальных закладок"
+    "message": "Hush Private Bookmarks — Зашифрованный менеджер локальных закладок"
   },
   "extensionName": {
-    "message": "Holy Private Bookmarks"
+    "message": "Hush Private Bookmarks"
   },
   "extensionDescription": {
     "message": "Полностью приватные закладки с мастер-паролем, папками и шифрованием"
@@ -171,7 +171,7 @@
     "message": "Неверный файл резервной копии"
   },
   "clearHistoryConfirm": {
-    "message": "⚠️ Удалить ВСЕ записи истории браузера для доменов, присутствующих в ваших Holy Private Bookmarks?"
+    "message": "⚠️ Удалить ВСЕ записи истории браузера для доменов, присутствующих в ваших Hush Private Bookmarks?"
   },
   "noBookmarks": {
     "message": "Закладки не найдены — нечего очищать."
@@ -205,14 +205,14 @@
       }
     }
   },
-  "addToHoly": {
-    "message": "Добавить в Holy Private Bookmarks"
+  "addToHush": {
+    "message": "Добавить в Hush Private Bookmarks"
   },
   "cannotAddPage": {
     "message": "Невозможно добавить эту страницу (нет действительного URL)"
   },
   "supportPageTitle": {
-    "message": "Поддержать проект — Holy Private Bookmarks"
+    "message": "Поддержать проект — Hush Private Bookmarks"
   },
   "supportTitle": {
     "message": "Поддержите проект"
@@ -371,7 +371,12 @@
     "message": "Удалить папку"
   },
   "deleteFolderConfirm": {
-    "message": "Удалить папку \"{0}\"?"
+    "message": "Удалить папку \"$name$\"?",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "deleteFolderWarning": {
     "message": "Все содержимое будет безвозвратно удалено."
@@ -389,7 +394,12 @@
     "message": "Нельзя удалить папку \"Все закладки\""
   },
   "foldersCount": {
-    "message": "{0} папок(и)"
+    "message": "$count$ папок(и)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "bookmarkAdded": {
     "message": "Закладка добавлена"
@@ -407,7 +417,12 @@
     "message": "Неверная папка назначения"
   },
   "bookmarksMoved": {
-    "message": "Перемещено {0} закладок(и)"
+    "message": "Перемещено $count$ закладок(и)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "moveFailed": {
     "message": "Не удалось переместить закладки"
@@ -416,7 +431,12 @@
     "message": "Не выбрано ни одной закладки"
   },
   "moveBookmarksTitle": {
-    "message": "Переместить {0} закладку(и)"
+    "message": "Переместить $count$ закладку(и)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "selectDestinationFolder": {
     "message": "Выберите папку назначения:"
@@ -437,7 +457,7 @@
     "message": "Отменить выделение"
   },
   "deleteSelectedConfirm": {
-  "message": "Удалить {count} выбранных закладок?",
+  "message": "Удалить $count$ выбранных закладок?",
   "placeholders": {
     "count": {
       "content": "$1"
@@ -445,7 +465,7 @@
   }
 },
   "bookmarksDeleted": {
-    "message": "{count} закладок(и) удалено",
+    "message": "$count$ закладок(и) удалено",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -494,7 +514,7 @@
         "message": "Импорт из HTML"
     },
     "importHtmlSuccess": {
-        "message": "Импорт закладок из HTML выполнен успешно! Добавлено закладок: $COUNT$.",
+        "message": "Импорт закладок из HTML выполнен успешно! Добавлено закладок: $count$.",
         "placeholders": {
             "count": {
                 "content": "$1",

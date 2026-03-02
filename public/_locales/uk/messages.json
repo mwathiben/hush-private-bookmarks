@@ -1,9 +1,9 @@
 {
   "Name": {
-    "message": "Holy Private Bookmarks — менеджер закладок із локальним шифруванням"
+    "message": "Hush Private Bookmarks — менеджер закладок із локальним шифруванням"
   },
   "extensionName": {
-    "message": "Holy Private Bookmarks"
+    "message": "Hush Private Bookmarks"
   },
   "extensionDescription": {
     "message": "Повністю приватні закладки з головним паролем, папками та шифруванням"
@@ -171,7 +171,7 @@
     "message": "Недійсний файл резервної копії"
   },
   "clearHistoryConfirm": {
-    "message": "⚠️ Видалити ВСІ записи історії браузера для доменів, присутніх у ваших Holy Private Bookmarks?"
+    "message": "⚠️ Видалити ВСІ записи історії браузера для доменів, присутніх у ваших Hush Private Bookmarks?"
   },
   "noBookmarks": {
     "message": "Закладок не знайдено — нічого очищати."
@@ -205,14 +205,14 @@
       }
     }
   },
-  "addToHoly": {
-    "message": "Додати до Holy Private Bookmarks"
+  "addToHush": {
+    "message": "Додати до Hush Private Bookmarks"
   },
   "cannotAddPage": {
     "message": "Неможливо додати цю сторінку (немає дійсного URL)"
   },
   "supportPageTitle": {
-    "message": "Підтримка проєкту — Holy Private Bookmarks"
+    "message": "Підтримка проєкту — Hush Private Bookmarks"
   },
   "supportTitle": {
     "message": "Підтримати проєкт"
@@ -367,14 +367,16 @@
   "rename": {
     "message": "Перейменувати"
   },
-  "renameFolder": {
-    "message": "Перейменувати папку"
-  },
   "deleteFolder": {
     "message": "Видалити папку"
   },
   "deleteFolderConfirm": {
-    "message": "Видалити папку \"{0}\"?"
+    "message": "Видалити папку \"$name$\"?",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "deleteFolderWarning": {
     "message": "Весь вміст буде видалено назавжди."
@@ -392,7 +394,12 @@
     "message": "Неможливо видалити папку \"Всі закладки\""
   },
   "foldersCount": {
-    "message": "{0} папок"
+    "message": "$count$ папок",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "bookmarkAdded": {
     "message": "Закладку додано"
@@ -410,7 +417,12 @@
     "message": "Недійсна папка призначення"
   },
   "bookmarksMoved": {
-    "message": "{0} закладку(и) переміщено"
+    "message": "$count$ закладку(и) переміщено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "moveFailed": {
     "message": "Не вдалося перемістити закладки"
@@ -419,7 +431,12 @@
     "message": "Не вибрано жодної закладки"
   },
   "moveBookmarksTitle": {
-    "message": "Перемістити {0} закладку(и)"
+    "message": "Перемістити $count$ закладку(и)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "selectDestinationFolder": {
     "message": "Виберіть папку призначення:"
@@ -440,10 +457,7 @@
     "message": "Скасувати вибір"
   },
   "deleteSelectedConfirm": {
-    "message": "Видалити вибрану закладку?"
-  },
-  "deleteSelectedConfirm": {
-    "message": "Видалити {count} вибрану закладку$plural$?",
+    "message": "Видалити $count$ вибрану закладку$plural$?",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -454,7 +468,7 @@
     }
   },
   "bookmarksDeleted": {
-    "message": "{count} закладок видалено",
+    "message": "$count$ закладок видалено",
     "placeholders": {
       "count": {
         "content": "$1"

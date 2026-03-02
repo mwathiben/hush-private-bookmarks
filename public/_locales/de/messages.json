@@ -1,9 +1,9 @@
 {
   "Name": {
-    "message": "Holy Private Bookmarks — Verschlüsselter lokaler Lesezeichen-Manager"
+    "message": "Hush Private Bookmarks — Verschlüsselter lokaler Lesezeichen-Manager"
   },
   "extensionName": {
-    "message": "Holy Private Bookmarks"
+    "message": "Hush Private Bookmarks"
   },
   "extensionDescription": {
     "message": "Vollständig private Lesezeichen mit Master-Passwort, Ordnern und Verschlüsselung"
@@ -171,7 +171,7 @@
     "message": "Ungültige Backup-Datei"
   },
   "clearHistoryConfirm": {
-    "message": "⚠️ ALLE Browser-Verlaufseinträge für Domains löschen, die in deinen Holy Private Bookmarks vorkommen?"
+    "message": "⚠️ ALLE Browser-Verlaufseinträge für Domains löschen, die in deinen Hush Private Bookmarks vorkommen?"
   },
   "noBookmarks": {
     "message": "Keine Lesezeichen gefunden — nichts zu löschen."
@@ -205,14 +205,14 @@
       }
     }
   },
-  "addToHoly": {
-    "message": "Zu Holy Private Bookmarks hinzufügen"
+  "addToHush": {
+    "message": "Zu Hush Private Bookmarks hinzufügen"
   },
   "cannotAddPage": {
     "message": "Diese Seite kann nicht hinzugefügt werden (keine gültige URL)"
   },
   "supportPageTitle": {
-    "message": "Projekt unterstützen — Holy Private Bookmarks"
+    "message": "Projekt unterstützen — Hush Private Bookmarks"
   },
   "supportTitle": {
     "message": "Projekt unterstützen"
@@ -367,14 +367,16 @@
   "rename": {
     "message": "Umbenennen"
   },
-  "renameFolder": {
-    "message": "Ordner umbenennen"
-  },
   "deleteFolder": {
     "message": "Ordner löschen"
   },
   "deleteFolderConfirm": {
-    "message": "Ordner \"{0}\" löschen?"
+    "message": "Ordner \"$name$\" l\u00f6schen?",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "deleteFolderWarning": {
     "message": "Der gesamte Inhalt wird endgültig gelöscht."
@@ -392,7 +394,12 @@
     "message": "Der Ordner \"Alle Lesezeichen\" kann nicht gelöscht werden"
   },
   "foldersCount": {
-    "message": "{0} Ordner"
+    "message": "$count$ Ordner",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "bookmarkAdded": {
     "message": "Lesezeichen hinzugefügt"
@@ -410,7 +417,12 @@
     "message": "Ungültiger Zielordner"
   },
   "bookmarksMoved": {
-    "message": "{0} Lesezeichen verschoben"
+    "message": "$count$ Lesezeichen verschoben",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "moveFailed": {
     "message": "Verschieben der Lesezeichen fehlgeschlagen"
@@ -419,16 +431,15 @@
     "message": "Keine Lesezeichen ausgewählt"
   },
   "moveBookmarksTitle": {
-    "message": "{0} Lesezeichen verschieben"
+    "message": "$count$ Lesezeichen verschieben",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "selectDestinationFolder": {
     "message": "Zielordner auswählen:"
-  },
-  "rootFolder": {
-    "message": "Hauptverzeichnis"
-  },
-  "cancel": {
-    "message": "Abbrechen"
   },
   "move": {
     "message": "Verschieben"
@@ -446,10 +457,7 @@
     "message": "Auswahl aufheben"
   },
   "deleteSelectedConfirm": {
-    "message": "Ausgewähltes Lesezeichen löschen?"
-  },
-  "deleteSelectedConfirm": {
-    "message": "{count} ausgewähltes Lesezeichen löschen?",
+    "message": "$count$ ausgewähltes Lesezeichen löschen?",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -457,7 +465,7 @@
     }
   },
   "bookmarksDeleted": {
-    "message": "{count} Lesezeichen gelöscht",
+    "message": "$count$ Lesezeichen gelöscht",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -529,7 +537,7 @@
     "message": "Keine Lesezeichen in der Datei gefunden"
   },
     "importHtmlError": {
-        "message": "Fehler beim Parsen der HTML-Datei. Bitte überprüfen Sie das Dateiformat."
+        "message": "Fehler beim Parsen der HTML-Datei. Bitte überprüfe das Dateiformat."
     },
     "importHtmlSizeWarning": {
         "message": "1MB-Grenze"

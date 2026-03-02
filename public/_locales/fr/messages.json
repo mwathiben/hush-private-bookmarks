@@ -1,9 +1,9 @@
 {
   "Name": {
-    "message": "Holy Private Bookmarks — Gestionnaire de Marque-pages Chiffré Local"
+    "message": "Hush Private Bookmarks — Gestionnaire de Marque-pages Chiffré Local"
   },
   "extensionName": {
-    "message": "Holy Private Bookmarks"
+    "message": "Hush Private Bookmarks"
   },
   "extensionDescription": {
     "message": "Marque-pages entièrement privés avec mot de passe maître, dossiers et chiffrement"
@@ -171,7 +171,7 @@
     "message": "Fichier de sauvegarde invalide"
   },
   "clearHistoryConfirm": {
-    "message": "⚠️ Supprimer TOUTES les entrées de l'historique de navigation pour les domaines présents dans vos Holy Private Bookmarks ?"
+    "message": "⚠️ Supprimer TOUTES les entrées de l'historique de navigation pour les domaines présents dans vos Hush Private Bookmarks ?"
   },
   "noBookmarks": {
     "message": "Aucun marque-page trouvé — rien à effacer."
@@ -205,14 +205,14 @@
       }
     }
   },
-  "addToHoly": {
-    "message": "Ajouter à Holy Private Bookmarks"
+  "addToHush": {
+    "message": "Ajouter à Hush Private Bookmarks"
   },
   "cannotAddPage": {
     "message": "Impossible d'ajouter cette page (pas d'URL valide)"
   },
   "supportPageTitle": {
-    "message": "Soutenir le projet — Holy Private Bookmarks"
+    "message": "Soutenir le projet — Hush Private Bookmarks"
   },
   "supportTitle": {
     "message": "Soutenir le Projet"
@@ -367,14 +367,16 @@
   "rename": {
     "message": "Renommer"
   },
-  "renameFolder": {
-    "message": "Renommer le dossier"
-  },
   "deleteFolder": {
     "message": "Supprimer le dossier"
   },
   "deleteFolderConfirm": {
-    "message": "Supprimer le dossier \"{0}\" ?"
+    "message": "Supprimer le dossier \"$name$\" ?",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "deleteFolderWarning": {
     "message": "Tout le contenu sera définitivement supprimé."
@@ -392,7 +394,12 @@
     "message": "Impossible de supprimer le dossier \"Tous les marque-pages\""
   },
   "foldersCount": {
-    "message": "{0} dossiers"
+    "message": "$count$ dossiers",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "bookmarkAdded": {
     "message": "Marque-page ajouté"
@@ -410,7 +417,15 @@
     "message": "Dossier de destination invalide"
   },
   "bookmarksMoved": {
-    "message": "{0} marque-page{1} déplacé(s)"
+    "message": "$count$ marque-page$plural$ déplacé(s)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
   },
   "moveFailed": {
     "message": "Échec du déplacement des marque-pages"
@@ -419,16 +434,18 @@
     "message": "Aucun marque-page sélectionné"
   },
   "moveBookmarksTitle": {
-    "message": "Déplacer {0} marque-page{1}"
+    "message": "Déplacer $count$ marque-page$plural$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
   },
   "selectDestinationFolder": {
     "message": "Sélectionnez le dossier de destination :"
-  },
-  "rootFolder": {
-    "message": "Dossier racine"
-  },
-  "cancel": {
-    "message": "Annuler"
   },
   "move": {
     "message": "Déplacer"
@@ -446,10 +463,7 @@
     "message": "Annuler la sélection"
   },
   "deleteSelectedConfirm": {
-    "message": "Supprimer le marque-page sélectionné ?"
-  },
-  "deleteSelectedConfirm": {
-    "message": "Supprimer {count} marque-page{s} sélectionné(s) ?",
+    "message": "Supprimer $count$ marque-page$s$ sélectionné(s) ?",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -460,7 +474,7 @@
     }
   },
   "bookmarksDeleted": {
-    "message": "{count} marque-pages supprimés",
+    "message": "$count$ marque-pages supprimés",
     "placeholders": {
       "count": {
         "content": "$1"
@@ -511,7 +525,7 @@
         "message": "Importer depuis HTML"
     },
     "importHtmlSuccess": {
-        "message": "Importation des favoris HTML réussie ! $COUNT$ favoris ajoutés.",
+        "message": "Importation des marque-pages HTML réussie ! $COUNT$ marque-pages ajoutés.",
         "placeholders": {
             "count": {
                 "content": "$1",
@@ -529,7 +543,7 @@
     "message": "Échec de l'importation HTML : $1"
   },
   "htmlImporterNoBookmarksFound": {
-    "message": "Aucun signet trouvé dans le fichier"
+    "message": "Aucun marque-page trouvé dans le fichier"
   },
     "importHtmlError": {
         "message": "Échec de l'analyse du fichier HTML. Veuillez vérifier le format du fichier."
@@ -538,10 +552,10 @@
         "message": "Limite de 1 Mo"
     },
     "importHtmlSizeNote": {
-        "message": "max. ~2500 favoris"
+        "message": "max. ~2500 marque-pages"
     },
     "importWarning": {
-        "message": "Tous les favoris existants seront remplacés"
+        "message": "Tous les marque-pages existants seront remplacés"
     },
 	"developer": {
     "message": "Développeur :"

@@ -1,9 +1,9 @@
 {
   "Name": {
-    "message": "Holy Private Bookmarks — 加密本地书签管理器"
+    "message": "Hush Private Bookmarks — 加密本地书签管理器"
   },
   "extensionName": {
-    "message": "Holy Private Bookmarks"
+    "message": "Hush Private Bookmarks"
   },
   "extensionDescription": {
     "message": "完全私密书签，支持主密码、文件夹和加密功能"
@@ -171,7 +171,7 @@
     "message": "无效的备份文件"
   },
   "clearHistoryConfirm": {
-    "message": "⚠️ 删除您在 Holy Private Bookmarks 中出现的所有域名的浏览器历史记录条目？"
+    "message": "⚠️ 删除您在 Hush Private Bookmarks 中出现的所有域名的浏览器历史记录条目？"
   },
   "noBookmarks": {
     "message": "未找到书签 — 无需清除。"
@@ -205,14 +205,14 @@
       }
     }
   },
-  "addToHoly": {
-    "message": "添加到 Holy Private Bookmarks"
+  "addToHush": {
+    "message": "添加到 Hush Private Bookmarks"
   },
   "cannotAddPage": {
     "message": "无法添加此页面（无有效网址）"
   },
   "supportPageTitle": {
-    "message": "支持项目 — Holy Private Bookmarks"
+    "message": "支持项目 — Hush Private Bookmarks"
   },
   "supportTitle": {
     "message": "❤️ 支持项目"
@@ -359,7 +359,7 @@
     "message": "管理器已锁定"
   },
   "lockManager": {
-    "message": "🔓 锁定管理器"
+    "message": "� 锁定管理器"
   },
   "manager": {
     "message": "🗂 打开完整管理器"
@@ -371,7 +371,12 @@
     "message": "删除文件夹"
   },
   "deleteFolderConfirm": {
-    "message": "删除文件夹 \"{0}\"？"
+    "message": "删除文件夹 \"$name$\"？",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "deleteFolderWarning": {
     "message": "所有内容将被永久删除。"
@@ -389,7 +394,12 @@
     "message": "无法删除“所有书签”文件夹"
   },
   "foldersCount": {
-    "message": "{0} 个文件夹"
+    "message": "$count$ 个文件夹",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "bookmarkAdded": {
     "message": "书签已添加"
@@ -407,7 +417,12 @@
     "message": "无效的目标文件夹"
   },
   "bookmarksMoved": {
-    "message": "已移动 {0} 个书签"
+    "message": "已移动 $count$ 个书签",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "moveFailed": {
     "message": "移动书签失败"
@@ -416,7 +431,12 @@
     "message": "未选择书签"
   },
   "moveBookmarksTitle": {
-    "message": "移动 {0} 个书签"
+    "message": "移动 $count$ 个书签",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "selectDestinationFolder": {
     "message": "选择目标文件夹："
@@ -440,7 +460,7 @@
     "message": "删除所选书签？"
   },
   "bookmarksDeleted": {
-    "message": "已删除 {count} 个书签",
+    "message": "已删除 $count$ 个书签",
     "placeholders": {
       "count": {
         "content": "$1"

@@ -906,3 +906,17 @@ $ Constraint checks: zero type suppressions, zero console.log, zero lib/ purity 
 Deslop: all pass — zero AI slop, zero unnecessary comments, zero dead code, no defensive over-engineering.
 Code review: ErrorBoundary follows React class component pattern correctly (required for componentDidCatch), imports `captureException` from `@/lib/sentry` (module boundary respected), uses shadcn Alert/Button primitives (no custom UI), zero PII in fallback (generic "Something went wrong" message).
 Key findings: (1) Chrome REQUIRES `default_locale` in manifest when `_locales/` directory is present — without it, extension fails to load. (2) GitHub redirects unauthenticated users from issues/new to login page — E2E test checks for `github.com` and `hush-private-bookmarks` separately instead of exact URL. (3) `__test_throw` query param is a standard E2E pattern — never activated in normal popup usage. (4) ErrorBoundary uses class component (not react-error-boundary library) — CLAUDE.md says "Prefer existing libraries over new dependencies" and this is ~78 lines.
+
+### Post-Commit Fix (Coderabbit review)
+
+Coderabbit flagged ~30 issues in the Holy PB locale files that were blindly copied:
+
+1. **Invalid Chrome i18n placeholders**: `{0}`, `{count}` → `$placeholder$` format with `"placeholders"` blocks (all 10 locales)
+2. **Duplicate JSON keys**: removed `renameFolder`, `rootFolder`, `cancel`, `move`, `deleteSelectedConfirm` duplicates (all locales)
+3. **"Holy" → "Hush" branding**: fixed all remaining brand references across all 10 locales + renamed key `addToHoly` → `addToHush`
+4. **German text in English locale**: `importHtmlSizeNote` "Lesezeichen" → "bookmarks"
+5. **French terminology inconsistency**: unified to `marque-page` (Chrome's canonical French term)
+6. **German formal/informal mix**: unified to informal `du` form
+7. **E2E race condition**: added `waitForURL()` before URL assertion in Report Bug test
+
+Root cause: treated upstream Holy PB source as trustworthy without content audit. Lesson captured in memory.md.

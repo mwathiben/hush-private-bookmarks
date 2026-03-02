@@ -62,6 +62,7 @@ test.describe('ErrorBoundary', () => {
       page.getByRole('button', { name: 'Report Bug' }).click(),
     ]);
 
+    await newPage.waitForURL(/github\.com.*hush-private-bookmarks/);
     const url = newPage.url();
     expect(url).toContain('github.com');
     expect(url).toContain('hush-private-bookmarks');

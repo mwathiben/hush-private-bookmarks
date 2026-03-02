@@ -1,9 +1,9 @@
 {
   "Name": {
-    "message": "Holy Private Bookmarks — Գաղտնաբառով տեղային էջանիշեր"
+    "message": "Hush Private Bookmarks — Գաղտնաբառով տեղային էջանիշեր"
   },
   "extensionName": {
-    "message": "Holy Private Bookmarks"
+    "message": "Hush Private Bookmarks"
   },
   "extensionDescription": {
     "message": "Լիովին գաղտնի էջանիշեր՝ գլխավոր գաղտնաբառով, թղթապանակներով և գաղտնագրումով"
@@ -171,7 +171,7 @@
     "message": "Անվավեր պահուստային ֆայլ"
   },
   "clearHistoryConfirm": {
-    "message": "⚠️ Ջնջել ձեր դիտարկիչի պատմության ԲՈԼՈՐ գրառումները այն դոմենների համար, որոնք առկա են ձեր Holy Private Bookmarks-ում:"
+    "message": "⚠️ Ջնջել ձեր դիտարկիչի պատմության ԲՈԼՈՐ գրառումները այն դոմենների համար, որոնք առկա են ձեր Hush Private Bookmarks-ում:"
   },
   "noBookmarks": {
     "message": "Էջանիշեր չեն գտնվել — մաքրելու բան չկա:"
@@ -205,14 +205,14 @@
       }
     }
   },
-  "addToHoly": {
-    "message": "Ավելացնել Holy Private Bookmarks-ում"
+  "addToHush": {
+    "message": "Ավելացնել Hush Private Bookmarks-ում"
   },
   "cannotAddPage": {
     "message": "Չի կարելի ավելացնել այս էջը (վավեր URL չկա)"
   },
   "supportPageTitle": {
-    "message": "Աջակցել նախագծին — Holy Private Bookmarks"
+    "message": "Աջակցել նախագծին — Hush Private Bookmarks"
   },
   "supportTitle": {
     "message": "Աջակցել Նախագծին"
@@ -371,7 +371,8 @@
     "message": "Ջնջել թղթապանակը"
   },
   "deleteFolderConfirm": {
-    "message": "Ջնջել թղթապանակը \"{0}\"?"
+    "message": "Ջնջել թղթապանակը \"$name$\"?",
+    "placeholders": { "name": { "content": "$1" } }
   },
   "deleteFolderWarning": {
     "message": "Ամբողջ պարունակությունը ընդմիշտ կջնջվի:"
@@ -389,7 +390,8 @@
     "message": "Հնարավոր չէ ջնջել \"Բոլոր էջանիշերը\" թղթապանակը"
   },
   "foldersCount": {
-    "message": "{0} թղթապանակ"
+    "message": "$count$ թղթապանակ",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "bookmarkAdded": {
     "message": "Էջանիշը ավելացվեց"
@@ -407,7 +409,8 @@
     "message": "Անվավեր նպատակակետ թղթապանակ"
   },
   "bookmarksMoved": {
-    "message": "{0} էջանիշ տեղափոխվեց"
+    "message": "$count$ էջանիշ տեղափոխվեց",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "moveFailed": {
     "message": "Չհաջողվեց տեղափոխել էջանիշերը"
@@ -416,16 +419,11 @@
     "message": "Էջանիշեր ընտրված չեն"
   },
   "moveBookmarksTitle": {
-    "message": "Տեղափոխել {0} էջանիշ"
+    "message": "Տեղափոխել $count$ էջանիշ",
+    "placeholders": { "count": { "content": "$1" } }
   },
   "selectDestinationFolder": {
     "message": "Ընտրել նպատակակետ թղթապանակը:"
-  },
-  "rootFolder": {
-    "message": "Արմատային թղթապանակ"
-  },
-  "cancel": {
-    "message": "Չեղարկել"
   },
   "move": {
     "message": "Տեղափոխել"
@@ -443,7 +441,7 @@
     "message": "Չեղարկել ընտրությունը"
   },
 "deleteSelectedConfirm": {
-  "message": "Ջնջել {count} ընտրված էջանիշ$plural$?",
+  "message": "Ջնջել $count$ ընտրված էջանիշ$plural$?",
   "placeholders": {
     "count": {
       "content": "$1"
@@ -454,7 +452,7 @@
   }
 },
   "bookmarksDeleted": {
-    "message": "{count} էջանիշ ջնջվեց",
+    "message": "$count$ էջանիշ ջնջվեց",
     "placeholders": {
       "count": {
         "content": "$1"
