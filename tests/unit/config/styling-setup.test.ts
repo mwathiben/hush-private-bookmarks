@@ -49,10 +49,12 @@ describe('Tailwind v4 + shadcn/ui styling setup', () => {
       const css = readFileSync(cssPath, 'utf-8');
       const start = css.indexOf('@layer base');
       if (start !== -1) {
+        const openBrace = css.indexOf('{', start);
+        if (openBrace === -1) return;
         let depth = 0;
         let blockStart = -1;
         let blockEnd = -1;
-        for (let i = css.indexOf('{', start); i < css.length; i++) {
+        for (let i = openBrace; i < css.length; i++) {
           if (css[i] === '{') {
             if (depth === 0) blockStart = i;
             depth++;

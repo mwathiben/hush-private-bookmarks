@@ -1,0 +1,66 @@
+import { globalIgnores } from 'eslint/config';
+import eslintJs from '@eslint/js';
+import tseslint from '@typescript-eslint/eslint-plugin';
+import wxtAutoImports from './.wxt/eslint-auto-imports.mjs';
+
+export default [
+  globalIgnores([
+    '.wxt/**',
+    '.output/**',
+    'node_modules/**',
+    '.prd/**',
+    'coverage/**',
+    'test-results/**',
+    'playwright-report/**',
+    '.agents/**',
+  ]),
+
+  wxtAutoImports,
+
+  eslintJs.configs.recommended,
+
+  ...tseslint.configs['flat/recommended'],
+
+  {
+    rules: {
+      'no-empty': 'error',
+      'no-console': 'warn',
+      'prefer-const': 'error',
+      '@typescript-eslint/explicit-function-return-type': 'warn',
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      }],
+    },
+  },
+
+  {
+    files: ['components/ui/**/*.tsx'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+
+  {
+    files: ['entrypoints/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+
+  {
+    files: ['tests/**/*.{ts,tsx}'],
+    rules: {
+      'no-console': 'off',
+      'no-constant-binary-expression': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+
+  {
+    files: ['*.config.{ts,js}'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+];

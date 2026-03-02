@@ -10,7 +10,7 @@
 | SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui initialization with dark mode | ✅ | 1 |
 | SCAFFOLD-004 | Vitest configuration with coverage thresholds | ✅ | 1 |
 | SCAFFOLD-005 | Playwright E2E configuration with extension loading fixture | ⬜ | 0 |
-| SCAFFOLD-006 | ESLint v10 flat config enforcing project conventions | ⬜ | 0 |
+| SCAFFOLD-006 | ESLint v10 flat config enforcing project conventions | ✅ | 1 |
 | SCAFFOLD-007 | Shared type definitions (lib/types.ts) | ✅ | 1 |
 | SCAFFOLD-009 | Sentry initialization with zero-PII beforeSend filter | ⬜ | 0 |
 | SCAFFOLD-010 | Directory structure + .gitignore + i18n locales + icons + licensing files | ⬜ | 0 |
@@ -526,3 +526,98 @@ $ File line counts → types.ts: 64, errors.ts: 59, types.test.ts: 292, errors.t
 Deslop: all pass — JSDoc documents only Holy PB mapping (domain context, not code repetition), zero defensive over-engineering, zero type suppressions, style matches existing lib/utils.ts.
 Code review: all pass — all fields readonly (immutable contracts), readonly arrays prevent mutation, discriminated unions narrow correctly (exhaustive switch test proves it), Result<T, E> default works, error messages zero-PII, context fields operation metadata only, zero circular imports.
 Key findings: (1) @ts-expect-error only targets the immediately next line — must be placed directly above the erroring line, not above the variable declaration. (2) JSDoc containing "browser.storage" as literal text triggers purity regex tests — use "extension storage" instead. (3) SCAFFOLD-009 perpetuated a security anti-pattern treating DSN as secret — corrected to hardcode as public constant.
+
+---
+
+## Session: 2026-03-02T16:30:00Z
+
+**Task**: SCAFFOLD-006 - ESLint v10 flat config enforcing project conventions
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Installed `@eslint/js@10.0.1` for ESLint recommended base rules
+- Created eslint-config.test.ts (RED phase) — 14 assertions, 12 failed for right reason (missing config)
+- Created eslint.config.js with 5-layer flat config architecture
+- Layer 1: globalIgnores (.wxt/, .output/, .prd/, coverage/, test-results/, playwright-report/, .agents/)
+- Layer 2: WXT auto-imports from .wxt/eslint-auto-imports.mjs (54 globals: browser, defineBackground, useState, etc.)
+- Layer 3: @eslint/js recommended (~60 base JS rules)
+- Layer 4: @typescript-eslint/eslint-plugin flat/recommended (parser + plugin + 20 TS rules, turns off 23 TS-handled core rules)
+- Layer 5: Project rules + file-scoped overrides (explicit-function-return-type only enforced in lib/)
+- Fixed 1 lint violation: `no-constant-binary-expression` in vitest-config.test.ts (intentional `false && 'b'` in test — disabled rule for test files)
+- Added lint + lint:fix scripts to package.json
+- Pre-existing fix committed alongside: styling-setup.test.ts extracted openBrace variable + early return guard
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| eslint.config.js | ESLint v10 flat config — 5-layer architecture (66 lines) |
+| tests/unit/config/eslint-config.test.ts | TDD test — 14 assertions on config correctness (75 lines) |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| package.json | Added `@eslint/js` to devDependencies, added lint + lint:fix scripts |
+| package-lock.json | Regenerated with @eslint/js@10.0.1 |
+| .prd/module-01-scaffold/prd.json | SCAFFOLD-006: passes=true, attempt_count=1, passing_stories=7 |
+
+### Acceptance Criteria Verification
+
+1. ✅ eslint.config.js exists (NOT .eslintrc.json — ESLint v10 flat config only)
+2. ✅ no-empty rule set to 'error' (catches silent catch blocks)
+3. ✅ no-console rule set to 'warn' (flags console.log in production code)
+4. ✅ prefer-const rule set to 'error'
+5. ✅ explicit-function-return-type configured ('warn' globally, 'off' for components/entrypoints/tests/configs — only lib/ enforced)
+6. ✅ ESLint runs cleanly on all existing files (`npx eslint .` exits 0)
+7. ✅ .wxt/, .output/, .prd/ directories excluded via globalIgnores
+
+### Verification Results
+
+```text
+$ npx vitest run tests/unit/config/eslint-config.test.ts
+✓ tests/unit/config/eslint-config.test.ts (14 tests) 9ms
+Test Files  1 passed (1)
+Tests       14 passed (14)
+
+$ npx eslint .
+(exit 0, no errors, no warnings)
+
+$ npx tsc --noEmit
+(exit 0, no errors)
+
+$ npx vitest run
+✓ tests/unit/config/tsconfig-validation.test.ts (12 tests)
+✓ tests/unit/config/eslint-config.test.ts (14 tests)
+✓ tests/unit/config/styling-setup.test.ts (20 tests)
+✓ tests/unit/lib/types.test.ts (22 tests)
+✓ tests/unit/config/wxt-config.test.ts (7 tests)
+✓ tests/unit/lib/errors.test.ts (17 tests)
+✓ tests/unit/config/vitest-config.test.ts (10 tests)
+✓ tests/unit/sanity.test.ts (2 tests)
+Test Files  8 passed (8)
+Tests       104 passed (104)
+
+$ npx wxt build
+Σ Total size: 293.78 kB (uncompressed)
+
+Agent-browser E2E:
+- Extension loaded (ID: cojcbgmaanhnopfgbpfjmmcnmecoiggj) ✅
+- Heading "Hush" rendered ✅
+- "Get Started" button visible ✅
+- Zero console errors ✅
+
+Constraint checks:
+- No type suppressions in lib/ + entrypoints/: PASS (0 matches)
+- No console.log in production code: PASS (0 matches)
+- Module boundaries (no React/DOM in lib/): PASS (0 matches)
+- All files under 300 lines: PASS (eslint.config.js: 66, eslint-config.test.ts: 75)
+```
+
+### Self-Review Results
+
+Deslop: all pass — zero comments in config (self-documenting), zero AI-generic patterns, zero dead code, zero over-engineering. Each override serves a clear documented purpose.
+Code review: all pass — 5-layer architecture follows 2026 best practices (eslint.org, typescript-eslint.io), WXT globals properly imported, file-scoped overrides minimize noise while enforcing strictness where it matters (lib/).
+Key decision: explicit-function-return-type set to 'warn' globally but 'off' for entrypoints, components/ui, tests, and config files. Only lib/ gets the enforcement — this matches CLAUDE.md's strictness gradient (lib/ is strictest layer).
+Pre-existing fix: `no-constant-binary-expression` in test file — `false && 'b'` is intentional for testing cn() with falsy conditionals. Rule disabled for test files.
