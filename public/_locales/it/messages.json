@@ -394,10 +394,13 @@
     "message": "Impossibile eliminare la cartella \"Tutti i segnalibri\""
   },
   "foldersCount": {
-    "message": "$count$ cartelle",
+    "message": "$count$ cartell$plural$",
     "placeholders": {
       "count": {
         "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
       }
     }
   },
@@ -417,13 +420,16 @@
     "message": "Cartella di destinazione non valida"
   },
   "bookmarksMoved": {
-    "message": "$count$ segnalibro$plural$ spostato",
+    "message": "$count$ segnalibr$plural$ spostat$verbPlural$",
     "placeholders": {
       "count": {
         "content": "$1"
       },
       "plural": {
         "content": "$2"
+      },
+      "verbplural": {
+        "content": "$3"
       }
     }
   },

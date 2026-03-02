@@ -394,10 +394,13 @@
     "message": "No se puede eliminar la carpeta \"Todos los Marcadores\""
   },
   "foldersCount": {
-    "message": "$count$ carpetas",
+    "message": "$count$ carpeta$plural$",
     "placeholders": {
       "count": {
         "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
       }
     }
   },
@@ -417,13 +420,16 @@
     "message": "Carpeta de destino no válida"
   },
   "bookmarksMoved": {
-    "message": "$count$ marcador$plural$ movido",
+    "message": "$count$ marcador$plural$ movido$verbPlural$",
     "placeholders": {
       "count": {
         "content": "$1"
       },
       "plural": {
         "content": "$2"
+      },
+      "verbplural": {
+        "content": "$3"
       }
     }
   },

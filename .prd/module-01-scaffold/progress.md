@@ -909,7 +909,7 @@ Key findings: (1) Chrome REQUIRES `default_locale` in manifest when `_locales/` 
 
 ### Post-Commit Fix (Coderabbit review)
 
-Coderabbit flagged ~30 issues in the Holy PB locale files that were blindly copied:
+Coderabbit flagged ~30 issues in the Holy PB locale files that were blindly copied and a small test fix:
 
 1. **Invalid Chrome i18n placeholders**: `{0}`, `{count}` → `$placeholder$` format with `"placeholders"` blocks (all 10 locales)
 2. **Duplicate JSON keys**: removed `renameFolder`, `rootFolder`, `cancel`, `move`, `deleteSelectedConfirm` duplicates (all locales)
@@ -917,6 +917,9 @@ Coderabbit flagged ~30 issues in the Holy PB locale files that were blindly copi
 4. **German text in English locale**: `importHtmlSizeNote` "Lesezeichen" → "bookmarks"
 5. **French terminology inconsistency**: unified to `marque-page` (Chrome's canonical French term)
 6. **German formal/informal mix**: unified to informal `du` form
-7. **E2E race condition**: added `waitForURL()` before URL assertion in Report Bug test
+
+#### Non-locale fixes / Tests
+
+7. **E2E race condition**: added `waitForURL()` before URL assertion in Report Bug test (`error-boundary.test.ts`)
 
 Root cause: treated upstream Holy PB source as trustworthy without content audit. Lesson captured in memory.md.

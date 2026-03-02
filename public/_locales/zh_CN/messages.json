@@ -359,7 +359,7 @@
     "message": "管理器已锁定"
   },
   "lockManager": {
-    "message": "� 锁定管理器"
+    "message": "🔒 锁定管理器"
   },
   "manager": {
     "message": "🗂 打开完整管理器"
