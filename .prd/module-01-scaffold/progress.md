@@ -14,7 +14,7 @@
 | SCAFFOLD-007 | Shared type definitions (lib/types.ts) | ✅ | 1 |
 | SCAFFOLD-009 | Sentry initialization with zero-PII beforeSend filter | ✅ | 1 |
 | SCAFFOLD-010 | Directory structure + .gitignore + i18n locales + icons + licensing files | ✅ | 1 |
-| SCAFFOLD-011 | GitHub Actions CI pipeline | ⬜ | 0 |
+| SCAFFOLD-011 | GitHub Actions CI pipeline | ✅ | 1 |
 | SCAFFOLD-012 | Full scaffold integration verification | ⬜ | 0 |
 
 **Critical Path**: 008 -> 001 -> 002 -> 003/004/006 -> 005 -> 007 -> 009 -> 010 -> 011 -> 012
@@ -923,3 +923,61 @@ Coderabbit flagged ~30 issues in the Holy PB locale files that were blindly copi
 7. **E2E race condition**: added `waitForURL()` before URL assertion in Report Bug test (`error-boundary.test.ts`)
 
 Root cause: treated upstream Holy PB source as trustworthy without content audit. Lesson captured in memory.md.
+
+---
+
+## Session: 2026-03-02T23:15:00Z
+**Task**: SCAFFOLD-011 - GitHub Actions CI pipeline
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Created `.github/workflows/ci.yml` with 4 jobs: typecheck, lint, unit-tests (with coverage), e2e-tests (with xvfb-run)
+- Created `.github/workflows/nightly.yml` with 3 jobs: Chrome (full pipeline + E2E), Firefox (build-only), Edge (build-only)
+- Job dependency graph: typecheck + lint (parallel) → unit-tests → e2e-tests
+- Concurrency group with cancel-in-progress to avoid wasting CI minutes on superseded pushes
+- Artifact uploads with `!cancelled()` condition (Playwright best practice)
+- Committed pre-existing unstaged locale fixes (es, it, zh_CN plural placeholders + zh_CN corrupted emoji) as SCAFFOLD-010 cleanup before starting
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| .github/workflows/ci.yml | Main CI pipeline: typecheck, lint, unit tests, E2E on push/PR to main |
+| .github/workflows/nightly.yml | Nightly browser build verification: Chrome + E2E, Firefox build, Edge build |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| .prd/module-01-scaffold/prd.json | Set SCAFFOLD-011 passes:true, attempt_count:1, passing_stories:11 |
+| .prd/module-01-scaffold/progress.md | Updated story tracker, appended session entry |
+
+### Acceptance Criteria Verification
+
+1. ✅ CI triggers on push and pull_request to main — `on: push/pull_request` to `[main]`
+2. ✅ CI runs tsc, eslint, vitest, playwright in sequence — 4 jobs with `needs` dependency chain
+3. ✅ Node.js 20 used across all jobs — `node-version: 20` in every job
+4. ✅ node_modules cached with package-lock.json hash — `cache: npm` in `actions/setup-node@v4`
+5. ✅ Coverage and Playwright artifacts uploaded — `actions/upload-artifact@v4` in unit-tests and e2e-tests
+6. ✅ E2E tests use xvfb-run — `xvfb-run --auto-servernum --` wraps E2E command
+7. ✅ Nightly workflow builds for browser targets — Chrome, Firefox, Edge jobs in nightly.yml
+8. ✅ Nightly runs on cron schedule — `cron: '0 3 * * *'` (3am UTC daily)
+
+### Verification Results
+
+```
+$ npm run compile → exit 0 (zero type errors)
+$ npm run lint → exit 0 (zero lint errors)
+$ npm run test → 10 test files, 169 tests passed
+$ npm run build → exit 0 (.output/chrome-mv3/)
+$ npm run test:e2e → 5 passed (15.6s)
+$ npm run build:firefox → exit 0 (.output/firefox-mv2/)
+```
+
+### Design Decisions
+
+1. **Nightly scope**: PRD specified Chrome Canary / Edge Dev E2E, but Playwright docs state "Standard Chrome and Edge no longer support the command-line flags needed for side-loading extensions, so the bundled Chromium is required." Nightly redesigned as build-only verification + standard Chromium E2E.
+2. **xvfb-run**: Included per PRD acceptance criterion. Technically a no-op with `channel: 'chromium'` headless extension support, but harmless and pre-installed on ubuntu-latest.
+3. **Separate jobs vs single job**: Separate jobs for clear GitHub UI visibility, parallel execution of independent checks (typecheck + lint), and faster feedback on cheaper checks.
+4. **No .env patterns**: Sentry DSN is a public constant in source code — no GitHub Secrets or environment variable patterns introduced.

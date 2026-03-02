@@ -1,0 +1,88 @@
+name: Nightly Browser Builds
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  chrome:
+    name: Chrome Build + E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run compile
+
+      - run: npm run lint
+
+      - run: npm run test
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Build Chrome extension
+        run: npm run build
+
+      - name: Run E2E tests
+        run: xvfb-run --auto-servernum -- npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: nightly-chrome-results
+          path: |
+            .output/chrome-mv3/
+            test-results/
+          retention-days: 7
+
+  firefox:
+    name: Firefox Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build Firefox extension
+        run: npm run build:firefox
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-firefox-build
+          path: .output/firefox-mv2/
+          retention-days: 7
+
+  edge:
+    name: Edge Build (MV3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build Edge extension (same MV3 target as Chrome)
+        run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-edge-build
+          path: .output/chrome-mv3/
+          retention-days: 7
