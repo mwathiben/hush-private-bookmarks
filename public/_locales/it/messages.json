@@ -469,13 +469,16 @@
     "message": "Annulla selezione"
   },
   "deleteSelectedConfirm": {
-    "message": "Eliminare $count$ segnalibro$plural$ selezionato?",
+    "message": "Eliminare $count$ segnalibr$plural$ selezionat$adj$?",
     "placeholders": {
       "count": {
         "content": "$1"
       },
       "plural": {
         "content": "$2"
+      },
+      "adj": {
+        "content": "$3"
       }
     }
   },

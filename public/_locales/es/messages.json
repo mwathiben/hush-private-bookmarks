@@ -428,7 +428,7 @@
       "plural": {
         "content": "$2"
       },
-      "verbplural": {
+      "verbPlural": {
         "content": "$3"
       }
     }
@@ -531,7 +531,7 @@
         "message": "Importar desde HTML"
     },
     "importHtmlSuccess": {
-        "message": "¡Marcadores HTML importados correctamente! $COUNT$ marcadores añadidos.",
+        "message": "¡Marcadores HTML importados correctamente! $count$ marcadores añadidos.",
         "placeholders": {
             "count": {
                 "content": "$1",

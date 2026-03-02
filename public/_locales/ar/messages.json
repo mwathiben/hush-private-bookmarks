@@ -534,7 +534,12 @@
     "message": "الملف كبير جدًا (الحد الأقصى 1 ميجابايت)"
   },
   "htmlImporterParseError": {
-    "message": "فشل استيراد HTML: $1"
+    "message": "فشل استيراد HTML: $error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
   },
   "htmlImporterNoBookmarksFound": {
     "message": "لم يتم العثور على إشارات مرجعية في الملف"
