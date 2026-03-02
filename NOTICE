@@ -1,0 +1,15 @@
+Hush Private Bookmarks
+Copyright (c) 2026 Hush Contributors
+Licensed under GPL-3.0 (see LICENSE)
+
+This project includes code and assets derived from:
+
+  Holy Private Bookmarks
+  https://github.com/OSV-IT-Studio/holy-private-bookmarks
+  Copyright (c) OSV IT Studio
+  Licensed under GPL-3.0
+
+  Derived files:
+    - lib/crypto.ts (from js/crypto-wrapper.js)
+    - lib/data-model.ts (from js/shared.js)
+    - public/_locales/ (from src/_locales/)

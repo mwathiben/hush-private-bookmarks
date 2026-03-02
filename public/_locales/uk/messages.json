@@ -1,0 +1,549 @@
+{
+  "Name": {
+    "message": "Holy Private Bookmarks — менеджер закладок із локальним шифруванням"
+  },
+  "extensionName": {
+    "message": "Holy Private Bookmarks"
+  },
+  "extensionDescription": {
+    "message": "Повністю приватні закладки з головним паролем, папками та шифруванням"
+  },
+  "createPassword": {
+    "message": "Створіть головний пароль для повного шифрування закладок"
+  },
+  "newPassword": {
+    "message": "Новий пароль (мін. 6 символів)"
+  },
+  "confirmPassword": {
+    "message": "Підтвердьте пароль"
+  },
+  "createStorage": {
+    "message": "Створити сховище"
+  },
+  "enterMasterPassword": {
+    "message": "Введіть головний пароль для розблокування"
+  },
+  "masterPassword": {
+    "message": "Головний пароль"
+  },
+  "unlock": {
+    "message": "Розблокувати"
+  },
+  "wrongPassword": {
+    "message": "Неправильний пароль"
+  },
+  "passwordsMismatch": {
+    "message": "Паролі не співпадають або занадто короткі"
+  },
+  "bookmarksProtected": {
+    "message": "Ваші закладки надійно захищені"
+  },
+  "addCurrentPage": {
+    "message": "Додати поточну сторінку"
+  },
+  "newFolder": {
+    "message": "Нова папка"
+  },
+  "clearHistory": {
+    "message": "Очистити історію"
+  },
+  "supportProject": {
+    "message": "Підтримати проєкт"
+  },
+  "settings": {
+    "message": "Налаштування"
+  },
+  "settingsbtn": {
+    "message": "⚙️"
+  },
+  "changeMasterPassword": {
+    "message": "Змінити головний пароль"
+  },
+  "currentPassword": {
+    "message": "Поточний пароль"
+  },
+  "newPassword2": {
+    "message": "Новий пароль"
+  },
+  "confirmNewPassword": {
+    "message": "Підтвердьте новий пароль"
+  },
+  "changePassword": {
+    "message": "Змінити пароль"
+  },
+  "exportImport": {
+    "message": "Експорт та Імпорт"
+  },
+  "export": {
+    "message": "Експорт"
+  },
+  "openPrivate": {
+    "message": "Відкрити в приватній вкладці"
+  },
+  "import": {
+    "message": "Імпорт"
+  },
+  "importFromChrome": {
+    "message": "Імпортувати з Chrome"
+  },
+  "importChromeBookmarks": {
+    "message": "Імпортувати всі закладки Chrome"
+  },
+  "importChromeBookmarksAdvanced": {
+    "message": "Вибрати папки для імпорту"
+  },
+  "importChromeConfirm": {
+    "message": "Імпортувати всі закладки з Chrome? Існуючі закладки будуть збережені."
+  },
+  "importChromeSuccess": {
+    "message": "Закладки успішно імпортовано!"
+  },
+  "importChromeError": {
+    "message": "Не вдалося імпортувати закладки"
+  },
+  "selectFoldersToImport": {
+    "message": "Виберіть папки для імпорту"
+  },
+  "selectAll": {
+    "message": "Вибрати все"
+  },
+  "deselectAll": {
+    "message": "Зняти виділення"
+  },
+  "importSelected": {
+    "message": "Імпортувати"
+  },
+  "back": {
+    "message": "← Назад"
+  },
+  "addBookmark": {
+    "message": "Додати закладку"
+  },
+  "editBookmark": {
+    "message": "Редагувати закладку"
+  },
+  "page": {
+    "message": "Сторінка"
+  },
+  "title": {
+    "message": "Назва"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "folder": {
+    "message": "Папка"
+  },
+  "rootFolder": {
+    "message": "Коренева папка"
+  },
+  "new": {
+    "message": "+ Нова"
+  },
+  "cancel": {
+    "message": "Скасувати"
+  },
+  "save": {
+    "message": "Зберегти"
+  },
+  "deleteConfirm": {
+    "message": "Видалити цей елемент?"
+  },
+  "folderName": {
+    "message": "Назва папки:"
+  },
+  "newName": {
+    "message": "Нова назва:"
+  },
+  "titleRequired": {
+    "message": "Назва та URL обов'язкові"
+  },
+  "validUrl": {
+    "message": "URL має починатися з http:// або https://"
+  },
+  "passwordChanged": {
+    "message": "Пароль успішно змінено!"
+  },
+  "importSuccess": {
+    "message": "Резервну копію успішно імпортовано! Будь ласка, відкрийте попап заново."
+  },
+  "invalidFile": {
+    "message": "Недійсний файл резервної копії"
+  },
+  "clearHistoryConfirm": {
+    "message": "⚠️ Видалити ВСІ записи історії браузера для доменів, присутніх у ваших Holy Private Bookmarks?"
+  },
+  "noBookmarks": {
+    "message": "Закладок не знайдено — нічого очищати."
+  },
+  "noDomains": {
+    "message": "Не знайдено дійсних доменів у закладках."
+  },
+  "newBookmark": {
+    "message": "Нова закладка"
+  },
+  "paste": {
+    "message": "Вставити"
+  },
+  "ctxnewFolder": {
+    "message": "Нова папка"
+  },
+  "emptyTreeTitle": {
+    "message": "Ще немає закладок"
+  },
+  "emptyTreeSubtitle": {
+    "message": "Додайте свою першу закладку або папку, щоб розпочати"
+  },
+  "historyCleared": {
+    "message": "Історію очищено!\nВидалено $count$ відвідувань з $domains$ доменів.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "domains": {
+        "content": "$2"
+      }
+    }
+  },
+  "addToHoly": {
+    "message": "Додати до Holy Private Bookmarks"
+  },
+  "cannotAddPage": {
+    "message": "Неможливо додати цю сторінку (немає дійсного URL)"
+  },
+  "supportPageTitle": {
+    "message": "Підтримка проєкту — Holy Private Bookmarks"
+  },
+  "supportTitle": {
+    "message": "Підтримати проєкт"
+  },
+  "supportDescription": {
+    "message": "Якщо розширення корисне для вас — будь-яка допомога вітається"
+  },
+  "bitcoinTitle": {
+    "message": "Bitcoin (BTC)"
+  },
+  "ethereumTitle": {
+    "message": "Ethereum (ETH)"
+  },
+  "copyAddress": {
+    "message": "Копіювати адресу"
+  },
+  "copiedToClipboard": {
+    "message": "Адресу скопійовано в буфер обміну!"
+  },
+  "clickToCopy": {
+    "message": "Натисніть, щоб скопіювати"
+  },
+  "importantWarning": {
+    "message": "ВАЖЛИВЕ ПОПЕРЕДЖЕННЯ:"
+  },
+  "passwordCannotBeRecovered": {
+    "message": "Цей пароль НЕ МОЖНА відновити!"
+  },
+  "noPasswordReset": {
+    "message": "НЕМАЄ опції скидання пароля"
+  },
+  "weDontStorePassword": {
+    "message": "Ми НІДЕ не зберігаємо ваш пароль"
+  },
+  "bookmarksEncrypted": {
+    "message": "Ваші закладки зашифровані лише цим паролем"
+  },
+  "savePasswordSecurely": {
+    "message": "Збережіть цей пароль у надійному місці!"
+  },
+  "copyUrl": {
+    "message": "Копіювати URL"
+  },
+  "edit": {
+    "message": "Редагувати"
+  },
+  "delete": {
+    "message": "Видалити"
+  },
+  "urlCopied": {
+    "message": "URL скопійовано в буфер обміну"
+  },
+  "about": {
+    "message": "Про розширення"
+  },
+  "aboutExtension": {
+    "message": "Про розширення"
+  },
+  "openGitHub": {
+    "message": "Відкрити GitHub"
+  },
+  "close": {
+    "message": "Закрити"
+  },
+  "features": {
+    "message": "Можливості"
+  },
+  "troubleshooting": {
+    "message": "Усунення неполадок"
+  },
+  "encryption": {
+    "message": "Шифрування"
+  },
+  "encryptionDesc": {
+    "message": "Шифрування AES-256"
+  },
+  "localStorage": {
+    "message": "Локальне сховище"
+  },
+  "localStorageDesc": {
+    "message": "Дані залишаються на вашому пристрої"
+  },
+  "privacy": {
+    "message": "Конфіденційність"
+  },
+  "privacyDesc": {
+    "message": "Без відстеження та аналітики"
+  },
+  "openSource": {
+    "message": "GPLv3"
+  },
+  "viewOnGitHub": {
+    "message": "Переглянути на GitHub"
+  },
+  "githubRepo": {
+    "message": "Репозиторій GitHub"
+  },
+  "githubRepoDesc": {
+    "message": "Переглянути вихідний код, повідомити про проблеми, зробити внесок"
+  },
+  "version": {
+    "message": "Версія"
+  },
+  "openmanager": {
+    "message": "Відкрити менеджер"
+  },
+  "managerDesc": {
+    "message": "Відкрити повноекранний менеджер закладок"
+  },
+  "folders": {
+    "message": "Папки"
+  },
+  "bookmarks": {
+    "message": "закладки"
+  },
+  "allBookmarks": {
+    "message": "Всі закладки"
+  },
+  "bookmarksCount": {
+    "message": "закладок"
+  },
+  "searchBookmarks": {
+    "message": "Пошук закладок..."
+  },
+  "noBookmarksInFolder": {
+    "message": "Немає закладок у цій папці"
+  },
+  "addBookmarksToGetStarted": {
+    "message": "Додайте закладки, щоб розпочати"
+  },
+  "bookmarkUpdated": {
+    "message": "Закладку оновлено"
+  },
+  "bookmarkDeleted": {
+    "message": "Закладку видалено"
+  },
+  "renameFolder": {
+    "message": "Перейменувати папку"
+  },
+  "folderCreated": {
+    "message": "Папку успішно створено"
+  },
+  "managerLocked": {
+    "message": "Менеджер заблоковано"
+  },
+  "lockManager": {
+    "message": "Блокувати менеджер"
+  },
+  "manager": {
+    "message": "Відкрити повний менеджер"
+  },
+  "rename": {
+    "message": "Перейменувати"
+  },
+  "renameFolder": {
+    "message": "Перейменувати папку"
+  },
+  "deleteFolder": {
+    "message": "Видалити папку"
+  },
+  "deleteFolderConfirm": {
+    "message": "Видалити папку \"{0}\"?"
+  },
+  "deleteFolderWarning": {
+    "message": "Весь вміст буде видалено назавжди."
+  },
+  "folderRenamed": {
+    "message": "Папку успішно перейменовано"
+  },
+  "folderDeleted": {
+    "message": "Папку успішно видалено"
+  },
+  "cannotRenameAll": {
+    "message": "Неможливо перейменувати папку \"Всі закладки\""
+  },
+  "cannotDeleteAll": {
+    "message": "Неможливо видалити папку \"Всі закладки\""
+  },
+  "foldersCount": {
+    "message": "{0} папок"
+  },
+  "bookmarkAdded": {
+    "message": "Закладку додано"
+  },
+  "pendingBookmarkNotification": {
+    "message": "Закладка очікує!"
+  },
+  "pendingBookmarkInstruction": {
+    "message": "Закладка очікує на додавання. Будь ласка, розблокуйте, щоб продовжити."
+  },
+  "dragSuccess": {
+    "message": "Елемент успішно переміщено"
+  },
+  "invalidDestinationFolder": {
+    "message": "Недійсна папка призначення"
+  },
+  "bookmarksMoved": {
+    "message": "{0} закладку(и) переміщено"
+  },
+  "moveFailed": {
+    "message": "Не вдалося перемістити закладки"
+  },
+  "noBookmarksSelected": {
+    "message": "Не вибрано жодної закладки"
+  },
+  "moveBookmarksTitle": {
+    "message": "Перемістити {0} закладку(и)"
+  },
+  "selectDestinationFolder": {
+    "message": "Виберіть папку призначення:"
+  },
+  "selected": {
+    "message": "вибрано"
+  },
+  "moveSelectedTitle": {
+    "message": "Перемістити вибрані"
+  },
+  "move": {
+    "message": "Перемістити"
+  },
+  "deleteSelectedTitle": {
+    "message": "Видалити вибрані"
+  },
+  "cancelSelectionTitle": {
+    "message": "Скасувати вибір"
+  },
+  "deleteSelectedConfirm": {
+    "message": "Видалити вибрану закладку?"
+  },
+  "deleteSelectedConfirm": {
+    "message": "Видалити {count} вибрану закладку$plural$?",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "bookmarksDeleted": {
+    "message": "{count} закладок видалено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "emptyFolder": {
+    "message": "Папка порожня",
+    "description": "Message shown when a folder has no bookmarks"
+  },
+  "noSearchResults": {
+    "message": "Закладок не знайдено",
+    "description": "Message when search returns no results"
+  },
+  "noSearchResultsDesc": {
+    "message": "Спробуйте інший пошуковий запит",
+    "description": "Description for empty search results"
+  },
+ "theme": {
+  "message": "Тема"
+},
+"themeDark": {
+  "message": "Темна",
+  "description": "Dark theme name"
+},
+"themeLight": {
+  "message": "Світла",
+  "description": "Light theme name"
+},
+"themeSystem": {
+  "message": "Системна",
+  "description": "System theme name"
+},
+"themeToggle": {
+  "message": "Перемкнути тему",
+  "description": "Tooltip for theme toggle button"
+},
+"showFavicons": {
+    "message": "Показувати іконки сайтів (favicons)"
+},
+"showFaviconsDesc": {
+    "message": "Може передавати історію переглядів на сервери Google"
+},
+"bookmarksAndFolders": {
+    "message": "Закладки та теки"
+  },
+ "importFromHtml": {
+        "message": "Імпорт з HTML"
+    },
+    "importHtmlSuccess": {
+        "message": "Імпорт закладок з HTML виконано успішно! Додано закладок: $COUNT$.",
+        "placeholders": {
+            "count": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+   "htmlImporterNoFileSelected": {
+    "message": "Файл не вибрано"
+  },
+  "htmlImporterFileTooLarge": {
+    "message": "Файл занадто великий (макс. 1 МБ)"
+  },
+  "htmlImporterParseError": {
+    "message": "Не вдалося імпортувати HTML: $1"
+  },
+  "htmlImporterNoBookmarksFound": {
+    "message": "У файлі не знайдено закладок"
+  },
+    "importHtmlError": {
+        "message": "Не вдалося обробити HTML-файл. Будь ласка, перевірте формат файлу."
+    },
+    "importHtmlSizeWarning": {
+        "message": "Ліміт 1 МБ"
+    },
+    "importHtmlSizeNote": {
+        "message": "макс. ~2500 закладок"
+    },
+    "importWarning": {
+        "message": "Всі існуючі закладки будуть замінені"
+    },
+	"developer": {
+    "message": "Розробник:"
+},
+"lock": {
+    "message": "Блокування"
+},  
+  "faqButtonTitle": {
+    "message": "Поширені запитання"
+  }
+}

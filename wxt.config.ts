@@ -9,6 +9,7 @@ export default defineConfig({
   manifest: {
     name: 'Hush Private Bookmarks',
     description: 'Privacy-first hidden bookmarks for your browser',
+    default_locale: 'en',
     permissions: ['storage', 'contextMenus', 'activeTab', 'bookmarks'],
     optional_permissions: ['history'],
   },

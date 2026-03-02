@@ -474,8 +474,8 @@
             ],
             "verification": "npx vitest run tests/unit/config/project-structure.test.ts && tsc --noEmit && wxt build",
             "estimated_effort": "small",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "SCAFFOLD-001",
                 "SCAFFOLD-003",
@@ -615,7 +615,7 @@
     "total_story_points": 48,
     "total_stories": 12,
     "metadata": {
-        "passing_stories": 9,
+        "passing_stories": 10,
         "build_plan_day": "Day 1 (first half)",
         "session_protocol": "One Claude Code session for scaffold. Review all config files. Run tsc --noEmit. Run vitest. Verify extension loads. Commit.",
         "quality_gate": "All config tests pass. tsc clean. wxt build succeeds. Extension loads in Chrome. shadcn/ui components render in popup shell."
@@ -677,7 +677,6 @@
                 "components/ErrorBoundary.tsx",
                 "hooks/ (empty directory)",
                 "NOTICE",
-                ".env.example",
                 ".github/workflows/ci.yml",
                 ".github/workflows/nightly.yml",
                 ".prd/ (PRD management directory)",

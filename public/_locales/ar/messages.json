@@ -1,0 +1,549 @@
+{
+  "Name": {
+    "message": "Holy Private Bookmarks — مدير الإشارات المرجعية المشفرة محلياً"
+  },
+  "extensionName": {
+    "message": "Holy Private Bookmarks"
+  },
+  "extensionDescription": {
+    "message": "إشارات مرجعية خاصة تماماً مع كلمة مرور رئيسية ومجلدات وتشفير"
+  },
+  "createPassword": {
+    "message": "إنشاء كلمة مرور رئيسية للتشفير الكامل للإشارات المرجعية"
+  },
+  "newPassword": {
+    "message": "كلمة مرور جديدة (6 أحرف على الأقل)"
+  },
+  "confirmPassword": {
+    "message": "تأكيد كلمة المرور"
+  },
+  "createStorage": {
+    "message": "إنشاء تخزين"
+  },
+  "enterMasterPassword": {
+    "message": "أدخل كلمة المرور الرئيسية للفتح"
+  },
+  "masterPassword": {
+    "message": "كلمة المرور الرئيسية"
+  },
+  "unlock": {
+    "message": "فتح"
+  },
+  "wrongPassword": {
+    "message": "كلمة مرور خاطئة"
+  },
+  "passwordsMismatch": {
+    "message": "كلمات المرور غير متطابقة أو قصيرة جداً"
+  },
+  "bookmarksProtected": {
+    "message": "إشاراتك المرجعية محمية بشكل آمن"
+  },
+  "addCurrentPage": {
+    "message": "إضافة الصفحة الحالية"
+  },
+  "newFolder": {
+    "message": "مجلد جديد"
+  },
+  "clearHistory": {
+    "message": "مسح السجل"
+  },
+  "supportProject": {
+    "message": "دعم المشروع"
+  },
+  "settings": {
+    "message": "الإعدادات"
+  },
+  "settingsbtn": {
+    "message": "⚙️"
+  },
+  "changeMasterPassword": {
+    "message": "تغيير كلمة المرور الرئيسية"
+  },
+  "currentPassword": {
+    "message": "كلمة المرور الحالية"
+  },
+  "newPassword2": {
+    "message": "كلمة المرور الجديدة"
+  },
+  "confirmNewPassword": {
+    "message": "تأكيد كلمة المرور الجديدة"
+  },
+  "changePassword": {
+    "message": "تغيير كلمة المرور"
+  },
+  "exportImport": {
+    "message": "تصدير واستيراد"
+  },
+  "export": {
+    "message": "تصدير"
+  },
+  "openPrivate": {
+    "message": "فتح في تبويب خاص"
+  },
+  "import": {
+    "message": "استيراد"
+  },
+  "importFromChrome": {
+    "message": "استيراد من Chrome"
+  },
+  "importChromeBookmarks": {
+    "message": "استيراد جميع إشارات Chrome المرجعية"
+  },
+  "importChromeBookmarksAdvanced": {
+    "message": "تحديد المجلدات للاستيراد"
+  },
+  "importChromeConfirm": {
+    "message": "استيراد جميع الإشارات المرجعية من Chrome؟ سيتم الاحتفاظ بالإشارات المرجعية الموجودة."
+  },
+  "importChromeSuccess": {
+    "message": "تم استيراد الإشارات المرجعية بنجاح!"
+  },
+  "importChromeError": {
+    "message": "فشل استيراد الإشارات المرجعية"
+  },
+  "selectFoldersToImport": {
+    "message": "حدد المجلدات المراد استيرادها"
+  },
+  "selectAll": {
+    "message": "تحديد الكل"
+  },
+  "deselectAll": {
+    "message": "إلغاء تحديد الكل"
+  },
+  "importSelected": {
+    "message": "استيراد"
+  },
+  "back": {
+    "message": "← رجوع"
+  },
+  "addBookmark": {
+    "message": "إضافة إشارة مرجعية"
+  },
+  "editBookmark": {
+    "message": "تعديل الإشارة المرجعية"
+  },
+  "page": {
+    "message": "صفحة"
+  },
+  "title": {
+    "message": "العنوان"
+  },
+  "url": {
+    "message": "الرابط"
+  },
+  "folder": {
+    "message": "المجلد"
+  },
+  "rootFolder": {
+    "message": "المجلد الجذري"
+  },
+  "new": {
+    "message": "+ جديد"
+  },
+  "cancel": {
+    "message": "إلغاء"
+  },
+  "save": {
+    "message": "حفظ"
+  },
+  "deleteConfirm": {
+    "message": "حذف هذا العنصر؟"
+  },
+  "folderName": {
+    "message": "اسم المجلد:"
+  },
+  "newName": {
+    "message": "الاسم الجديد:"
+  },
+  "titleRequired": {
+    "message": "العنوان والرابط مطلوبان"
+  },
+  "validUrl": {
+    "message": "يجب أن يبدأ الرابط بـ http:// أو https://"
+  },
+  "passwordChanged": {
+    "message": "تم تغيير كلمة المرور بنجاح!"
+  },
+  "importSuccess": {
+    "message": "تم استيراد النسخة الاحتياطية بنجاح! يرجى إعادة فتح النافذة المنبثقة."
+  },
+  "invalidFile": {
+    "message": "ملف نسخ احتياطي غير صالح"
+  },
+  "clearHistoryConfirm": {
+    "message": "⚠️ حذف جميع إدخالات سجل المتصفح للنطاقات الموجودة في Holy Private Bookmarks الخاصة بك؟"
+  },
+  "noBookmarks": {
+    "message": "لم يتم العثور على إشارات مرجعية - لا شيء لمسحه."
+  },
+  "noDomains": {
+    "message": "لم يتم العثور على نطاقات صالحة في الإشارات المرجعية."
+  },
+  "newBookmark": {
+    "message": "إشارة مرجعية جديدة"
+  },
+  "paste": {
+    "message": "لصق"
+  },
+  "ctxnewFolder": {
+    "message": "مجلد جديد"
+  },
+  "emptyTreeTitle": {
+    "message": "لا توجد إشارات مرجعية بعد"
+  },
+  "emptyTreeSubtitle": {
+    "message": "أضف أول إشارة مرجعية أو مجلد للبدء"
+  },
+  "historyCleared": {
+    "message": "تم مسح السجل!\nتمت إزالة $count$ زيارة من $domains$ نطاق(نطاقات).",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "domains": {
+        "content": "$2"
+      }
+    }
+  },
+  "addToHoly": {
+    "message": "إضافة إلى Holy Private Bookmarks"
+  },
+  "cannotAddPage": {
+    "message": "لا يمكن إضافة هذه الصفحة (لا يوجد رابط صالح)"
+  },
+  "supportPageTitle": {
+    "message": "دعم المشروع — Holy Private Bookmarks"
+  },
+  "supportTitle": {
+    "message": "دعم المشروع"
+  },
+  "supportDescription": {
+    "message": "إذا كانت الإضافة مفيدة لك - أي مساعدة موضع تقدير"
+  },
+  "bitcoinTitle": {
+    "message": "Bitcoin (BTC)"
+  },
+  "ethereumTitle": {
+    "message": "Ethereum (ETH)"
+  },
+  "copyAddress": {
+    "message": "نسخ العنوان"
+  },
+  "copiedToClipboard": {
+    "message": "تم نسخ العنوان إلى الحافظة!"
+  },
+  "clickToCopy": {
+    "message": "انقر للنسخ"
+  },
+  "importantWarning": {
+    "message": "تحذير مهم:"
+  },
+  "passwordCannotBeRecovered": {
+    "message": "لا يمكن استرداد كلمة المرور هذه!"
+  },
+  "noPasswordReset": {
+    "message": "لا يوجد خيار لإعادة تعيين كلمة المرور"
+  },
+  "weDontStorePassword": {
+    "message": "نحن لا نخزن كلمة المرور الخاصة بك في أي مكان"
+  },
+  "bookmarksEncrypted": {
+    "message": "إشاراتك المرجعية مشفرة بكلمة المرور هذه فقط"
+  },
+  "savePasswordSecurely": {
+    "message": "احفظ كلمة المرور هذه بشكل آمن!"
+  },
+  "copyUrl": {
+    "message": "نسخ الرابط"
+  },
+  "edit": {
+    "message": "تعديل"
+  },
+  "delete": {
+    "message": "حذف"
+  },
+  "urlCopied": {
+    "message": "تم نسخ الرابط إلى الحافظة"
+  },
+  "about": {
+    "message": "حول"
+  },
+  "aboutExtension": {
+    "message": "حول الإضافة"
+  },
+  "openGitHub": {
+    "message": "فتح GitHub"
+  },
+  "close": {
+    "message": "إغلاق"
+  },
+  "features": {
+    "message": "الميزات"
+  },
+  "troubleshooting": {
+    "message": "استكشاف الأخطاء وإصلاحها"
+  },
+  "encryption": {
+    "message": "التشفير"
+  },
+  "encryptionDesc": {
+    "message": "تشفير AES-256"
+  },
+  "localStorage": {
+    "message": "تخزين محلي"
+  },
+  "localStorageDesc": {
+    "message": "البيانات تبقى على جهازك"
+  },
+  "privacy": {
+    "message": "الخصوصية"
+  },
+  "privacyDesc": {
+    "message": "لا تتبع أو تحليلات"
+  },
+  "openSource": {
+    "message": "GPLv3"
+  },
+  "viewOnGitHub": {
+    "message": "عرض على GitHub"
+  },
+  "githubRepo": {
+    "message": "مستودع GitHub"
+  },
+  "githubRepoDesc": {
+    "message": "عرض الكود المصدري، الإبلاغ عن المشكلات، المساهمة"
+  },
+  "version": {
+    "message": "الإصدار"
+  },
+  "openmanager": {
+    "message": "فتح المدير"
+  },
+  "managerDesc": {
+    "message": "فتح مدير الإشارات المرجعية بملء الشاشة"
+  },
+  "folders": {
+    "message": "المجلدات"
+  },
+  "bookmarks": {
+    "message": "إشارات مرجعية"
+  },
+  "allBookmarks": {
+    "message": "جميع الإشارات المرجعية"
+  },
+  "bookmarksCount": {
+    "message": "إشارات مرجعية"
+  },
+  "searchBookmarks": {
+    "message": "البحث في الإشارات المرجعية..."
+  },
+  "noBookmarksInFolder": {
+    "message": "لا توجد إشارات مرجعية في هذا المجلد"
+  },
+  "addBookmarksToGetStarted": {
+    "message": "أضف إشارات مرجعية للبدء"
+  },
+  "bookmarkUpdated": {
+    "message": "تم تحديث الإشارة المرجعية"
+  },
+  "bookmarkDeleted": {
+    "message": "تم حذف الإشارة المرجعية"
+  },
+  "renameFolder": {
+    "message": "إعادة تسمية المجلد"
+  },
+  "folderCreated": {
+    "message": "تم إنشاء المجلد بنجاح"
+  },
+  "managerLocked": {
+    "message": "المدير مقفل"
+  },
+  "lockManager": {
+    "message": "قفل المدير"
+  },
+  "manager": {
+    "message": "فتح المدير الكامل"
+  },
+  "rename": {
+    "message": "إعادة تسمية"
+  },
+  "renameFolder": {
+    "message": "إعادة تسمية المجلد"
+  },
+  "deleteFolder": {
+    "message": "حذف المجلد"
+  },
+  "deleteFolderConfirm": {
+    "message": "حذف المجلد \"{0}\"؟"
+  },
+  "deleteFolderWarning": {
+    "message": "سيتم حذف كل المحتوى بشكل دائم."
+  },
+  "folderRenamed": {
+    "message": "تمت إعادة تسمية المجلد بنجاح"
+  },
+  "folderDeleted": {
+    "message": "تم حذف المجلد بنجاح"
+  },
+  "cannotRenameAll": {
+    "message": "لا يمكن إعادة تسمية مجلد \"جميع الإشارات المرجعية\""
+  },
+  "cannotDeleteAll": {
+    "message": "لا يمكن حذف مجلد \"جميع الإشارات المرجعية\""
+  },
+  "foldersCount": {
+    "message": "{0} مجلدات"
+  },
+  "bookmarkAdded": {
+    "message": "تمت إضافة الإشارة المرجعية"
+  },
+  "pendingBookmarkNotification": {
+    "message": "إشارة مرجعية معلقة!"
+  },
+  "pendingBookmarkInstruction": {
+    "message": "إشارة مرجعية في انتظار الإضافة. يرجى فتح القفل للمتابعة."
+  },
+  "dragSuccess": {
+    "message": "تم نقل العنصر بنجاح"
+  },
+  "invalidDestinationFolder": {
+    "message": "مجلد الوجهة غير صالح"
+  },
+  "bookmarksMoved": {
+    "message": "تم نقل {0} إشارة مرجعية"
+  },
+  "moveFailed": {
+    "message": "فشل نقل الإشارات المرجعية"
+  },
+  "noBookmarksSelected": {
+    "message": "لم يتم تحديد إشارات مرجعية"
+  },
+  "moveBookmarksTitle": {
+    "message": "نقل {0} إشارة مرجعية"
+  },
+  "selectDestinationFolder": {
+    "message": "حدد مجلد الوجهة:"
+  },
+  "selected": {
+    "message": "محدد"
+  },
+  "moveSelectedTitle": {
+    "message": "نقل المحدد"
+  },
+  "move": {
+    "message": "نقل"
+  },
+  "deleteSelectedTitle": {
+    "message": "حذف المحدد"
+  },
+  "cancelSelectionTitle": {
+    "message": "إلغاء التحديد"
+  },
+  "deleteSelectedConfirm": {
+    "message": "حذف الإشارة المرجعية المحددة؟"
+  },
+  "deleteSelectedConfirm": {
+    "message": "حذف {count} إشارة مرجعية محددة$plural$؟",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "bookmarksDeleted": {
+    "message": "تم حذف {count} إشارات مرجعية",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "emptyFolder": {
+    "message": "المجلد فارغ",
+    "description": "Message shown when a folder has no bookmarks"
+  },
+  "noSearchResults": {
+    "message": "لم يتم العثور على إشارات مرجعية",
+    "description": "Message when search returns no results"
+  },
+  "noSearchResultsDesc": {
+    "message": "جرب مصطلح بحث مختلف",
+    "description": "Description for empty search results"
+  },
+  "theme": {
+  "message": "المظهر"
+},
+"themeDark": {
+  "message": "داكن",
+  "description": "Dark theme name"
+},
+"themeLight": {
+  "message": "فاتح",
+  "description": "Light theme name"
+},
+"themeSystem": {
+  "message": "النظام",
+  "description": "System theme name"
+},
+"themeToggle": {
+  "message": "تبديل المظهر",
+  "description": "Tooltip for theme toggle button"
+},
+"showFavicons": {
+    "message": "عرض أيقونات المواقع"
+},
+"showFaviconsDesc": {
+    "message": "قد يؤدي إلى تسرب سجل التصفح إلى خوادم Google"
+},
+"bookmarksAndFolders": {
+    "message": "الإشارات المرجعية والمجلدات"
+  },
+"importFromHtml": {
+        "message": "استيراد من HTML"
+    },
+    "importHtmlSuccess": {
+        "message": "تم استيراد الإشارات المرجعية من HTML بنجاح! تمت إضافة $COUNT$ إشارة مرجعية.",
+        "placeholders": {
+            "count": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "htmlImporterNoFileSelected": {
+    "message": "لم يتم تحديد ملف"
+  },
+  "htmlImporterFileTooLarge": {
+    "message": "الملف كبير جدًا (الحد الأقصى 1 ميجابايت)"
+  },
+  "htmlImporterParseError": {
+    "message": "فشل استيراد HTML: $1"
+  },
+  "htmlImporterNoBookmarksFound": {
+    "message": "لم يتم العثور على إشارات مرجعية في الملف"
+  },
+    "importHtmlError": {
+        "message": "فشل تحليل ملف HTML. يرجى التحقق من تنسيق الملف."
+    },
+    "importHtmlSizeWarning": {
+        "message": "حد 1 ميجابايت"
+    },
+    "importHtmlSizeNote": {
+        "message": "الحد الأقصى ~2500 إشارة مرجعية"
+    },
+    "importWarning": {
+        "message": "سيتم استبدال جميع الإشارات المرجعية الموجودة"
+    },
+	"developer": {
+    "message": "المطور:"
+},
+"lock": {
+    "message": "قفل"
+},
+  "faqButtonTitle": {
+    "message": "الأسئلة الشائعة"
+  }
+}

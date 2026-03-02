@@ -1,0 +1,549 @@
+{
+  "Name": {
+    "message": "Holy Private Bookmarks — Gestore di segnalibri locali crittografati"
+  },
+  "extensionName": {
+    "message": "Holy Private Bookmarks"
+  },
+  "extensionDescription": {
+    "message": "Segnalibri completamente privati con password principale, cartelle e crittografia"
+  },
+  "createPassword": {
+    "message": "Crea una password principale per la crittografia completa dei segnalibri"
+  },
+  "newPassword": {
+    "message": "Nuova password (min. 6 caratteri)"
+  },
+  "confirmPassword": {
+    "message": "Conferma password"
+  },
+  "createStorage": {
+    "message": "Crea archivio"
+  },
+  "enterMasterPassword": {
+    "message": "Inserisci la password principale per sbloccare"
+  },
+  "masterPassword": {
+    "message": "Password principale"
+  },
+  "unlock": {
+    "message": "Sblocca"
+  },
+  "wrongPassword": {
+    "message": "Password errata"
+  },
+  "passwordsMismatch": {
+    "message": "Le password non coincidono o sono troppo corte"
+  },
+  "bookmarksProtected": {
+    "message": "I tuoi segnalibri sono protetti in modo sicuro"
+  },
+  "addCurrentPage": {
+    "message": "Aggiungi pagina corrente"
+  },
+  "newFolder": {
+    "message": "Nuova cartella"
+  },
+  "clearHistory": {
+    "message": "Cancella cronologia"
+  },
+  "supportProject": {
+    "message": "Supporta il progetto"
+  },
+  "settings": {
+    "message": "Impostazioni"
+  },
+  "settingsbtn": {
+    "message": "⚙️"
+  },
+  "changeMasterPassword": {
+    "message": "Cambia password principale"
+  },
+  "currentPassword": {
+    "message": "Password attuale"
+  },
+  "newPassword2": {
+    "message": "Nuova password"
+  },
+  "confirmNewPassword": {
+    "message": "Conferma nuova password"
+  },
+  "changePassword": {
+    "message": "Cambia password"
+  },
+  "exportImport": {
+    "message": "Esporta e Importa"
+  },
+  "export": {
+    "message": "Esporta"
+  },
+  "openPrivate": {
+    "message": "Apri in scheda privata"
+  },
+  "import": {
+    "message": "Importa"
+  },
+  "importFromChrome": {
+    "message": "Importa da Chrome"
+  },
+  "importChromeBookmarks": {
+    "message": "Importa tutti i segnalibri di Chrome"
+  },
+  "importChromeBookmarksAdvanced": {
+    "message": "Seleziona cartelle da importare"
+  },
+  "importChromeConfirm": {
+    "message": "Importare tutti i segnalibri da Chrome? I segnalibri esistenti verranno conservati."
+  },
+  "importChromeSuccess": {
+    "message": "Segnalibri importati con successo!"
+  },
+  "importChromeError": {
+    "message": "Impossibile importare i segnalibri"
+  },
+  "selectFoldersToImport": {
+    "message": "Seleziona le cartelle da importare"
+  },
+  "selectAll": {
+    "message": "Seleziona tutto"
+  },
+  "deselectAll": {
+    "message": "Deseleziona tutto"
+  },
+  "importSelected": {
+    "message": "Importa"
+  },
+  "back": {
+    "message": "← Indietro"
+  },
+  "addBookmark": {
+    "message": "Aggiungi segnalibro"
+  },
+  "editBookmark": {
+    "message": "Modifica segnalibro"
+  },
+  "page": {
+    "message": "Pagina"
+  },
+  "title": {
+    "message": "Titolo"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "folder": {
+    "message": "Cartella"
+  },
+  "rootFolder": {
+    "message": "Cartella principale"
+  },
+  "new": {
+    "message": "+ Nuovo"
+  },
+  "cancel": {
+    "message": "Annulla"
+  },
+  "save": {
+    "message": "Salva"
+  },
+  "deleteConfirm": {
+    "message": "Eliminare questo elemento?"
+  },
+  "folderName": {
+    "message": "Nome cartella:"
+  },
+  "newName": {
+    "message": "Nuovo nome:"
+  },
+  "titleRequired": {
+    "message": "Titolo e URL sono obbligatori"
+  },
+  "validUrl": {
+    "message": "L'URL deve iniziare con http:// o https://"
+  },
+  "passwordChanged": {
+    "message": "Password cambiata con successo!"
+  },
+  "importSuccess": {
+    "message": "Backup importato con successo! Riapri il popup."
+  },
+  "invalidFile": {
+    "message": "File di backup non valido"
+  },
+  "clearHistoryConfirm": {
+    "message": "⚠️ Eliminare TUTTE le voci della cronologia del browser per i domini presenti nei tuoi Holy Private Bookmarks?"
+  },
+  "noBookmarks": {
+    "message": "Nessun segnalibro trovato — nulla da cancellare."
+  },
+  "noDomains": {
+    "message": "Nessun dominio valido trovato nei segnalibri."
+  },
+  "newBookmark": {
+    "message": "Nuovo segnalibro"
+  },
+  "paste": {
+    "message": "Incolla"
+  },
+  "ctxnewFolder": {
+    "message": "Nuova cartella"
+  },
+  "emptyTreeTitle": {
+    "message": "Ancora nessun segnalibro"
+  },
+  "emptyTreeSubtitle": {
+    "message": "Aggiungi il primo segnalibro o cartella per iniziare"
+  },
+  "historyCleared": {
+    "message": "Cronologia cancellata!\nRimosse $count$ visita/e da $domains$ dominio/i.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "domains": {
+        "content": "$2"
+      }
+    }
+  },
+  "addToHoly": {
+    "message": "Aggiungi a Holy Private Bookmarks"
+  },
+  "cannotAddPage": {
+    "message": "Impossibile aggiungere questa pagina (URL non valido)"
+  },
+  "supportPageTitle": {
+    "message": "Supporta il progetto — Holy Private Bookmarks"
+  },
+  "supportTitle": {
+    "message": "Supporta il Progetto"
+  },
+  "supportDescription": {
+    "message": "Se l'estensione ti è utile — qualsiasi aiuto è gradito"
+  },
+  "bitcoinTitle": {
+    "message": "Bitcoin (BTC)"
+  },
+  "ethereumTitle": {
+    "message": "Ethereum (ETH)"
+  },
+  "copyAddress": {
+    "message": "Copia indirizzo"
+  },
+  "copiedToClipboard": {
+    "message": "Indirizzo copiato negli appunti!"
+  },
+  "clickToCopy": {
+    "message": "Clicca per copiare"
+  },
+  "importantWarning": {
+    "message": "AVVERTENZA IMPORTANTE:"
+  },
+  "passwordCannotBeRecovered": {
+    "message": "Questa password NON può essere recuperata!"
+  },
+  "noPasswordReset": {
+    "message": "NON esiste opzione di reimpostazione della password"
+  },
+  "weDontStorePassword": {
+    "message": "NON memorizziamo la tua password da nessuna parte"
+  },
+  "bookmarksEncrypted": {
+    "message": "I tuoi segnalibri sono crittografati solo con questa password"
+  },
+  "savePasswordSecurely": {
+    "message": "Salva questa password in modo sicuro!"
+  },
+  "copyUrl": {
+    "message": "Copia URL"
+  },
+  "edit": {
+    "message": "Modifica"
+  },
+  "delete": {
+    "message": "Elimina"
+  },
+  "urlCopied": {
+    "message": "URL copiato negli appunti"
+  },
+  "about": {
+    "message": "Informazioni"
+  },
+  "aboutExtension": {
+    "message": "Informazioni sull'estensione"
+  },
+  "openGitHub": {
+    "message": "Apri GitHub"
+  },
+  "close": {
+    "message": "Chiudi"
+  },
+  "features": {
+    "message": "Caratteristiche"
+  },
+  "troubleshooting": {
+    "message": "Risoluzione problemi"
+  },
+  "encryption": {
+    "message": "Crittografia"
+  },
+  "encryptionDesc": {
+    "message": "Crittografia AES-256"
+  },
+  "localStorage": {
+    "message": "Archiviazione locale"
+  },
+  "localStorageDesc": {
+    "message": "I dati rimangono sul tuo dispositivo"
+  },
+  "privacy": {
+    "message": "Privacy"
+  },
+  "privacyDesc": {
+    "message": "Nessun tracciamento o analisi"
+  },
+  "openSource": {
+    "message": "GPLv3"
+  },
+  "viewOnGitHub": {
+    "message": "Visualizza su GitHub"
+  },
+  "githubRepo": {
+    "message": "Repository GitHub"
+  },
+  "githubRepoDesc": {
+    "message": "Visualizza il codice sorgente, segnala problemi, contribuisci"
+  },
+  "version": {
+    "message": "Versione"
+  },
+  "openmanager": {
+    "message": "Apri gestore"
+  },
+  "managerDesc": {
+    "message": "Apri gestore segnalibri a schermo intero"
+  },
+  "folders": {
+    "message": "Cartelle"
+  },
+  "bookmarks": {
+    "message": "segnalibri"
+  },
+  "allBookmarks": {
+    "message": "Tutti i segnalibri"
+  },
+  "bookmarksCount": {
+    "message": "segnalibri"
+  },
+  "searchBookmarks": {
+    "message": "Cerca segnalibri..."
+  },
+  "noBookmarksInFolder": {
+    "message": "Nessun segnalibro in questa cartella"
+  },
+  "addBookmarksToGetStarted": {
+    "message": "Aggiungi segnalibri per iniziare"
+  },
+  "bookmarkUpdated": {
+    "message": "Segnalibro aggiornato"
+  },
+  "bookmarkDeleted": {
+    "message": "Segnalibro eliminato"
+  },
+  "renameFolder": {
+    "message": "Rinomina cartella"
+  },
+  "folderCreated": {
+    "message": "Cartella creata con successo"
+  },
+  "managerLocked": {
+    "message": "Gestore bloccato"
+  },
+  "lockManager": {
+    "message": "Blocca gestore"
+  },
+  "manager": {
+    "message": "Apri gestore completo"
+  },
+  "rename": {
+    "message": "Rinomina"
+  },
+  "renameFolder": {
+    "message": "Rinomina cartella"
+  },
+  "deleteFolder": {
+    "message": "Elimina cartella"
+  },
+  "deleteFolderConfirm": {
+    "message": "Eliminare la cartella \"{0}\"?"
+  },
+  "deleteFolderWarning": {
+    "message": "Tutto il contenuto verrà eliminato permanentemente."
+  },
+  "folderRenamed": {
+    "message": "Cartella rinominata con successo"
+  },
+  "folderDeleted": {
+    "message": "Cartella eliminata con successo"
+  },
+  "cannotRenameAll": {
+    "message": "Impossibile rinominare la cartella \"Tutti i segnalibri\""
+  },
+  "cannotDeleteAll": {
+    "message": "Impossibile eliminare la cartella \"Tutti i segnalibri\""
+  },
+  "foldersCount": {
+    "message": "{0} cartelle"
+  },
+  "bookmarkAdded": {
+    "message": "Segnalibro aggiunto"
+  },
+  "pendingBookmarkNotification": {
+    "message": "Segnalibro in attesa!"
+  },
+  "pendingBookmarkInstruction": {
+    "message": "Un segnalibro è in attesa di essere aggiunto. Sblocca per continuare."
+  },
+  "dragSuccess": {
+    "message": "Elemento spostato con successo"
+  },
+  "invalidDestinationFolder": {
+    "message": "Cartella di destinazione non valida"
+  },
+  "bookmarksMoved": {
+    "message": "{0} segnalibro{1} spostato"
+  },
+  "moveFailed": {
+    "message": "Impossibile spostare i segnalibri"
+  },
+  "noBookmarksSelected": {
+    "message": "Nessun segnalibro selezionato"
+  },
+  "moveBookmarksTitle": {
+    "message": "Sposta {0} segnalibro{1}"
+  },
+  "selectDestinationFolder": {
+    "message": "Seleziona cartella di destinazione:"
+  },
+  "selected": {
+    "message": "selezionati"
+  },
+  "moveSelectedTitle": {
+    "message": "Sposta selezionati"
+  },
+  "move": {
+    "message": "Sposta"
+  },
+  "deleteSelectedTitle": {
+    "message": "Elimina selezionati"
+  },
+  "cancelSelectionTitle": {
+    "message": "Annulla selezione"
+  },
+  "deleteSelectedConfirm": {
+    "message": "Eliminare il segnalibro selezionato?"
+  },
+  "deleteSelectedConfirm": {
+    "message": "Eliminare {count} segnalibro$plural$ selezionato?",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "plural": {
+        "content": "$2"
+      }
+    }
+  },
+  "bookmarksDeleted": {
+    "message": "{count} segnalibri eliminati",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "emptyFolder": {
+    "message": "La cartella è vuota",
+    "description": "Message shown when a folder has no bookmarks"
+  },
+  "noSearchResults": {
+    "message": "Nessun segnalibro trovato",
+    "description": "Message when search returns no results"
+  },
+  "noSearchResultsDesc": {
+    "message": "Prova un termine di ricerca diverso",
+    "description": "Description for empty search results"
+  },
+  "theme": {
+  "message": "Tema"
+},
+"themeDark": {
+  "message": "Scuro",
+  "description": "Dark theme name"
+},
+"themeLight": {
+  "message": "Chiaro",
+  "description": "Light theme name"
+},
+"themeSystem": {
+  "message": "Sistema",
+  "description": "System theme name"
+},
+"themeToggle": {
+  "message": "Cambia tema",
+  "description": "Tooltip for theme toggle button"
+},
+"showFavicons": {
+    "message": "Mostra le favicon dei siti web"
+},
+"showFaviconsDesc": {
+    "message": "Potrebbe divulgare la cronologia di navigazione ai server di Google"
+},
+ "bookmarksAndFolders": {
+    "message": "Segnalibri e Cartelle"
+  },
+  "importFromHtml": {
+        "message": "Importa da HTML"
+    },
+    "importHtmlSuccess": {
+        "message": "Importazione segnalibri HTML riuscita! $COUNT$ segnalibri aggiunti.",
+        "placeholders": {
+            "count": {
+                "content": "$1",
+                "example": "42"
+            }
+        }
+    },
+    "htmlImporterNoFileSelected": {
+    "message": "Nessun file selezionato"
+  },
+  "htmlImporterFileTooLarge": {
+    "message": "File troppo grande (max 1 MB)"
+  },
+  "htmlImporterParseError": {
+    "message": "Impossibile importare il file HTML: $1"
+  },
+  "htmlImporterNoBookmarksFound": {
+    "message": "Nessun segnalibro trovato nel file"
+  },
+    "importHtmlError": {
+        "message": "Impossibile analizzare il file HTML. Si prega di verificare il formato del file."
+    },
+    "importHtmlSizeWarning": {
+        "message": "Limite 1MB"
+    },
+    "importHtmlSizeNote": {
+        "message": "max ~2500 segnalibri"
+    },
+    "importWarning": {
+        "message": "Tutti i segnalibri esistenti verranno sostituiti"
+    },
+	"developer": {
+    "message": "Sviluppatore:"
+},
+"lock": {
+    "message": "Blocca"
+},  
+  "faqButtonTitle": {
+    "message": "Domande frequenti"
+  }
+}

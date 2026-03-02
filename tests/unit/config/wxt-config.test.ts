@@ -7,6 +7,7 @@ const MANIFEST_PATH = resolve(process.cwd(), '.output/chrome-mv3/manifest.json')
 interface Manifest {
   name: string;
   description: string;
+  default_locale?: string;
   permissions: string[];
   optional_permissions?: string[];
   host_permissions?: string[];
@@ -60,5 +61,9 @@ describe('WXT manifest configuration', () => {
 
   it('uses manifest version 3', () => {
     expect(manifest.manifest_version).toBe(3);
+  });
+
+  it('declares default_locale as en', () => {
+    expect(manifest.default_locale).toBe('en');
   });
 });

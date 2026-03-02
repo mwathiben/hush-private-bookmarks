@@ -13,7 +13,7 @@
 | SCAFFOLD-006 | ESLint v10 flat config enforcing project conventions | ✅ | 1 |
 | SCAFFOLD-007 | Shared type definitions (lib/types.ts) | ✅ | 1 |
 | SCAFFOLD-009 | Sentry initialization with zero-PII beforeSend filter | ✅ | 1 |
-| SCAFFOLD-010 | Directory structure + .gitignore + i18n locales + icons + licensing files | ⬜ | 0 |
+| SCAFFOLD-010 | Directory structure + .gitignore + i18n locales + icons + licensing files | ✅ | 1 |
 | SCAFFOLD-011 | GitHub Actions CI pipeline | ⬜ | 0 |
 | SCAFFOLD-012 | Full scaffold integration verification | ⬜ | 0 |
 
@@ -827,3 +827,82 @@ Deslop: all pass — zero AI slop, zero unnecessary comments, zero dead code, ze
 Code review: all pass — no type suppressions, explicit return types on all exports, module boundaries respected, named imports only from @sentry/browser.
 Sentry code review: BrowserClient pattern matches official docs exactly, 6 DOM integrations filtered, 5 safe integrations verified via source inspection (HttpContext uses WINDOW.document || {} guard, CultureContext uses Intl API).
 Key findings: (1) Sentry v10 beforeSend expects ErrorEvent (not Event) — ErrorEvent has required `type: undefined`. (2) Integration type not exported from @sentry/browser — use ReturnType. (3) captureException test needs fetch mock to prevent real network calls hanging test. (4) Named imports prevent Chrome store rejection (import * includes script injection code).
+
+---
+
+## Session: 2026-03-02T18:00:00Z
+**Task**: SCAFFOLD-010 - Directory structure + i18n locales + NOTICE + ErrorBoundary
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Fixed pre-existing issue: committed unstaged `lib/sentry.ts` URL redaction in exception values + added missing test coverage
+- Removed stale `.env.example` reference from PRD context section
+- Created `tests/unit/config/project-structure.test.ts` (RED) — 37 assertions across 7 describe blocks validating directories, locales, icons, licensing, hooks, ErrorBoundary
+- Added `default_locale` test to `tests/unit/config/wxt-config.test.ts` (RED)
+- Verified RED: 25 expected failures
+- Created `hooks/.gitkeep` placeholder
+- Copied 10 locale directories from Holy PB reference (`/tmp/holy-pb-reference/src/_locales/`) to `public/_locales/`
+- Customized `en/messages.json`: extensionName → "Hush Private Bookmarks", extensionDescription → "Privacy-first hidden bookmarks for your browser"
+- Added `default_locale: 'en'` to `wxt.config.ts` manifest config (Chrome requires this when `_locales/` is present)
+- Created `NOTICE` file with Holy PB attribution (repo URL, GPL-3.0, derived files list)
+- Created `components/ErrorBoundary.tsx` — class component with `captureException` from `@/lib/sentry`, shadcn Alert/Button fallback UI, zero PII
+- Wired ErrorBoundary into `entrypoints/popup/main.tsx` wrapping `<App />`
+- Added `__test_throw` query param trigger in `entrypoints/popup/App.tsx` for E2E testing
+- Created `tests/e2e/error-boundary.test.ts` — 3 Playwright E2E tests (fallback UI, Try Again, Report Bug)
+- Verified GREEN: 169 unit tests pass, 5 E2E tests pass
+- Full verification sequence: tsc, eslint, vitest, wxt build, playwright all pass
+- Self-review: deslop + code-review — zero slop, zero type suppressions, all module boundaries respected
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| `hooks/.gitkeep` | Placeholder for future hooks directory |
+| `NOTICE` | GPL-3.0 attribution for Holy Private Bookmarks derived code |
+| `public/_locales/{ar,de,en,es,fr,hy,it,ru,uk,zh_CN}/messages.json` | Chrome i18n locale files (10 locales) |
+| `components/ErrorBoundary.tsx` | React error boundary with Sentry capture + shadcn fallback UI |
+| `tests/unit/config/project-structure.test.ts` | TDD structure validation (37 assertions) |
+| `tests/e2e/error-boundary.test.ts` | Playwright E2E for ErrorBoundary fallback rendering |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `lib/sentry.ts` | Committed pre-existing unstaged URL redaction in exception values |
+| `tests/unit/lib/sentry-config.test.ts` | Added missing test for exception value URL redaction |
+| `wxt.config.ts` | Added `default_locale: 'en'` to manifest |
+| `tests/unit/config/wxt-config.test.ts` | Added `default_locale` interface field + test assertion |
+| `entrypoints/popup/main.tsx` | Wrapped App in ErrorBoundary |
+| `entrypoints/popup/App.tsx` | Added `__test_throw` E2E trigger |
+| `.prd/module-01-scaffold/prd.json` | Removed stale `.env.example` ref; marked SCAFFOLD-010 passed |
+
+### Acceptance Criteria Verification
+
+1. ✅ All directories from architecture diagram exist (lib/, components/ui/, hooks/, tests/)
+2. ✅ public/_locales/ contains 10 locale directories: ar, de, en, es, fr, hy, it, ru, uk, zh_CN
+3. ✅ public/icon/ has 5 PNG icon files (16, 32, 48, 96, 128) — note: actual path is `public/icon/` not `public/icons/`
+4. ✅ ErrorBoundary.tsx catches errors, renders fallback UI, captures to Sentry
+5. ✅ .gitignore excludes .output/, .wxt/, node_modules/, coverage/, test-results/
+6. ✅ No generated files tracked in git
+7. ✅ LICENSE file exists and contains GPL-3.0 text
+8. ✅ NOTICE file attributes Holy Private Bookmarks with repo URL and derived file list
+
+### Verification Results
+
+```text
+$ npx tsc --noEmit → exit 0
+$ npx eslint . → exit 0 (zero errors, zero warnings)
+$ npx vitest run → 169 tests pass (10 suites), exit 0
+$ npx wxt build → 597.59 kB total (JS+CSS ~444KB uncompressed, ~135KB gzipped)
+  - .output/chrome-mv3/_locales/en/messages.json exists
+  - .output/chrome-mv3/manifest.json contains "default_locale": "en"
+$ npx playwright test → 5 tests pass (2 sanity + 3 error-boundary), exit 0
+$ Constraint checks: zero type suppressions, zero console.log, zero lib/ purity violations, all files < 300 lines
+```
+
+### Self-Review Results
+
+Deslop: all pass — zero AI slop, zero unnecessary comments, zero dead code, no defensive over-engineering.
+Code review: ErrorBoundary follows React class component pattern correctly (required for componentDidCatch), imports `captureException` from `@/lib/sentry` (module boundary respected), uses shadcn Alert/Button primitives (no custom UI), zero PII in fallback (generic "Something went wrong" message).
+Key findings: (1) Chrome REQUIRES `default_locale` in manifest when `_locales/` directory is present — without it, extension fails to load. (2) GitHub redirects unauthenticated users from issues/new to login page — E2E test checks for `github.com` and `hush-private-bookmarks` separately instead of exact URL. (3) `__test_throw` query param is a standard E2E pattern — never activated in normal popup usage. (4) ErrorBoundary uses class component (not react-error-boundary library) — CLAUDE.md says "Prefer existing libraries over new dependencies" and this is ~78 lines.
