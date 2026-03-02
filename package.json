@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "verify": "tsc --noEmit && eslint . && vitest run && wxt build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "postinstall": "wxt prepare"

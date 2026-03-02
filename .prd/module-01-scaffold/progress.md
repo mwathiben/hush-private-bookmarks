@@ -15,7 +15,7 @@
 | SCAFFOLD-009 | Sentry initialization with zero-PII beforeSend filter | ✅ | 1 |
 | SCAFFOLD-010 | Directory structure + .gitignore + i18n locales + icons + licensing files | ✅ | 1 |
 | SCAFFOLD-011 | GitHub Actions CI pipeline | ✅ | 1 |
-| SCAFFOLD-012 | Full scaffold integration verification | ⬜ | 0 |
+| SCAFFOLD-012 | Full scaffold integration verification | ✅ | 1 |
 
 **Critical Path**: 008 -> 001 -> 002 -> 003/004/006 -> 005 -> 007 -> 009 -> 010 -> 011 -> 012
 
@@ -981,3 +981,102 @@ $ npm run build:firefox → exit 0 (.output/firefox-mv2/)
 2. **xvfb-run**: Included per PRD acceptance criterion. Technically a no-op with `channel: 'chromium'` headless extension support, but harmless and pre-installed on ubuntu-latest.
 3. **Separate jobs vs single job**: Separate jobs for clear GitHub UI visibility, parallel execution of independent checks (typecheck + lint), and faster feedback on cheaper checks.
 4. **No .env patterns**: Sentry DSN is a public constant in source code — no GitHub Secrets or environment variable patterns introduced.
+
+---
+
+## Session: 2026-03-03T12:00:00Z
+**Task**: SCAFFOLD-012 - Full scaffold integration verification
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Ran tracer bullet analysis across entire scaffold codebase — confirmed zero type suppressions, zero empty catches, zero console.log in production, zero circular imports, zero lib/ purity violations, zero relative path traversals, all files under 300 lines, all functions under 50 lines
+- Identified and removed misleading `.env` entries from `.gitignore` (project uses zero .env files — DSN is hardcoded public constant)
+- Added missing `verify` script to `package.json` (`tsc --noEmit && eslint . && vitest run && wxt build`)
+- Created comprehensive integration smoke test (34 test cases across 7 describe blocks) covering: lib/ imports resolve, lib/ module purity, type composition, error class properties, circular dependency detection, .gitignore hygiene, package.json scripts
+- Created Playwright E2E scaffold integration test (5 tests) covering: Tailwind CSS rendering, shadcn Button styles, service worker health, uncaught JS error detection, manifest metadata validation
+- Fixed TypeScript unused import errors by adding explicit type usage assertions
+- Fixed E2E shadcn Button display assertion (flex vs inline-flex in popup layout context)
+- Fixed E2E service worker detection by adding extensionId fixture dependency
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `tests/unit/integration/scaffold-smoke.test.ts` | Unit integration: all lib/ imports, purity, type composition, error classes, config hygiene (~245 lines) |
+| `tests/e2e/scaffold-integration.test.ts` | E2E: CSS loaded, service worker active, manifest correct, no JS errors (~83 lines) |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `.gitignore` | Removed 4-line `.env` section (lines 17-20) — project has zero .env files |
+| `package.json` | Added `verify` script with tsc + eslint + vitest + wxt build |
+| `.prd/module-01-scaffold/prd.json` | Set SCAFFOLD-012 passes: true, attempt_count: 1, passing_stories: 12 |
+| `.prd/module-01-scaffold/progress.md` | Updated story tracker, appended session entry + module summary |
+
+### Acceptance Criteria Verification
+
+1. ✅ `npm run verify` exits 0 (tsc + eslint + vitest + wxt build all pass)
+2. ✅ `npm run test:e2e` exits 0 (10 E2E tests pass — 2 sanity + 3 error-boundary + 5 scaffold-integration)
+3. ✅ Bundle size < 200KB gzipped (actual: ~134KB gzipped, 594.45 kB uncompressed)
+4. ✅ Scaffold smoke test passes (7 describe blocks, 34 tests green)
+5. ✅ `.gitignore` has zero `.env` references
+6. ✅ `package.json` has `verify` and `test:e2e` scripts
+7. ✅ All `@/*` path aliases resolve in test and source files
+8. ✅ prd.json shows 12/12 stories passing
+9. ✅ Zero type suppressions (`as any`, `@ts-ignore`) across entire codebase
+10. ✅ Zero console.log in production code
+11. ✅ Zero circular imports between lib/ modules
+
+### Verification Results
+
+```
+$ npx tsc --noEmit → exit 0 (zero type errors)
+$ npx eslint . → exit 0 (zero lint errors)
+$ npx vitest run → 11 test files, 203 tests passed (34 new from scaffold-smoke.test.ts)
+$ wxt build → exit 0 (594.45 kB uncompressed, ~134KB gzipped)
+$ npx playwright test → 10 tests passed (5 new from scaffold-integration.test.ts)
+$ npm run verify → exit 0 (full pipeline: tsc + eslint + vitest + wxt build)
+```
+
+---
+
+## Module Summary
+
+**Module 1: Project Scaffold — COMPLETE**
+
+All 12 stories pass. Module 1 establishes the foundation for Hush Private Bookmarks:
+
+| Story | Title | Status |
+|-------|-------|--------|
+| SCAFFOLD-001 | WXT + React + TS skeleton | ✅ |
+| SCAFFOLD-002 | TypeScript strict mode | ✅ |
+| SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui | ✅ |
+| SCAFFOLD-004 | Domain types (lib/types.ts) | ✅ |
+| SCAFFOLD-005 | Error classes (lib/errors.ts) | ✅ |
+| SCAFFOLD-006 | Sentry integration (lib/sentry.ts) | ✅ |
+| SCAFFOLD-007 | Unit test infrastructure (Vitest) | ✅ |
+| SCAFFOLD-008 | ESLint v10 flat config | ✅ |
+| SCAFFOLD-009 | Privacy-safe Sentry setup | ✅ |
+| SCAFFOLD-010 | Directory structure + i18n + ErrorBoundary | ✅ |
+| SCAFFOLD-011 | GitHub Actions CI pipeline | ✅ |
+| SCAFFOLD-012 | Full scaffold integration verification | ✅ |
+
+**Key Metrics**:
+- 203 unit tests passing across 11 test files
+- 10 E2E tests passing (sanity, error boundary, scaffold integration)
+- Bundle: ~134KB gzipped (under 200KB budget)
+- Zero type suppressions, zero console.log, zero circular imports
+- lib/ modules are pure (zero React/DOM/browser.storage imports)
+- Strict TypeScript: noImplicitAny, noUncheckedIndexedAccess, noUnusedLocals, noUnusedParameters
+
+**Architecture Established**:
+- `lib/` — Pure domain logic (types, errors, sentry, utils)
+- `components/` — React UI (ErrorBoundary, shadcn primitives)
+- `entrypoints/` — WXT entry points (popup, background)
+- `hooks/` — Bridge layer (empty, ready for Module 2)
+- `tests/unit/` — Vitest unit + integration tests
+- `tests/e2e/` — Playwright browser automation tests
+
+**Ready for Module 2 handoff.**
