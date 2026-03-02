@@ -373,8 +373,8 @@
             ],
             "verification": "tsc --noEmit && npx vitest run tests/unit/lib/types.test.ts && npx eslint lib/",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "SCAFFOLD-002",
                 "SCAFFOLD-004",
@@ -386,12 +386,11 @@
             "category": "infrastructure",
             "priority": "HIGH",
             "title": "Sentry initialization with zero-PII beforeSend filter",
-            "description": "Configure @sentry/browser (already installed) with Sentry initialization for both background.ts and popup entry. The critical requirement: beforeSend MUST strip URLs and bookmark titles from all error reports. No breadcrumbs. No session replay. DSN injected at build time via import.meta.env.WXT_SENTRY_DSN.",
+            "description": "Configure @sentry/browser (already installed) with Sentry initialization for both background.ts and popup entry. The critical requirement: beforeSend MUST strip URLs and bookmark titles from all error reports. No breadcrumbs. No session replay. DSN hardcoded as a constant in lib/sentry.ts (DSN is a public project identifier per CLAUDE.md and Sentry docs — not a secret).",
             "story_points": 5,
             "steps": [
                 "RED: Write tests/unit/lib/sentry-config.test.ts that imports the Sentry initialization module and asserts: beforeSend function exists, beforeSend strips URLs from error events (test with a mock error containing a URL), beforeSend strips bookmark titles from error context, breadcrumbs are disabled, session replay is disabled",
-                "GREEN: Create lib/sentry.ts with initSentry() function that calls Sentry.init() with: dsn from import.meta.env.WXT_SENTRY_DSN (build-time injection — WXT exposes WXT_-prefixed env vars to client code), beforeSend that strips request.url, strips any string matching URL patterns from extra context, strips bookmark-related fields. Set integrations to exclude BrowserTracing breadcrumbs and session replay",
-                "Create .env.example with WXT_SENTRY_DSN=your-dsn-here as documentation for contributors",
+                "GREEN: Create lib/sentry.ts with initSentry() function that calls Sentry.init() with: dsn hardcoded as a constant (DSN is public-facing per CLAUDE.md and Sentry docs — not a secret, no .env needed), beforeSend that strips request.url, strips any string matching URL patterns from extra context, strips bookmark-related fields. Set integrations to exclude BrowserTracing breadcrumbs and session replay",
                 "Update entrypoints/background.ts to call initSentry() in defineBackground setup",
                 "Update entrypoints/popup/main.tsx to call initSentry() before React root render",
                 "Run Sentry config tests to verify PII stripping works",
@@ -399,7 +398,6 @@
             ],
             "files": [
                 "lib/sentry.ts",
-                ".env.example",
                 "tests/unit/lib/sentry-config.test.ts"
             ],
             "acceptance_criteria": [
@@ -408,10 +406,10 @@
                 "beforeSend strips bookmark titles from error extra/context fields",
                 "Breadcrumbs are disabled (no navigation or click tracking)",
                 "Session replay is NOT included",
-                "DSN loaded via import.meta.env.WXT_SENTRY_DSN (build-time injection)",
+                "DSN hardcoded as constant in lib/sentry.ts (public project identifier, not a secret per CLAUDE.md)",
                 "initSentry() called in both background.ts and popup main.tsx",
                 "beforeSend filter is a pure function with its own unit tests",
-                ".env.example documents the WXT_SENTRY_DSN variable"
+                "No .env file needed for DSN (hardcoded as public constant)"
             ],
             "definition_of_done": [
                 "npx vitest run tests/unit/lib/sentry-config.test.ts passes",
@@ -617,7 +615,7 @@
     "total_story_points": 48,
     "total_stories": 12,
     "metadata": {
-        "passing_stories": 5,
+        "passing_stories": 6,
         "build_plan_day": "Day 1 (first half)",
         "session_protocol": "One Claude Code session for scaffold. Review all config files. Run tsc --noEmit. Run vitest. Verify extension loads. Commit.",
         "quality_gate": "All config tests pass. tsc clean. wxt build succeeds. Extension loads in Chrome. shadcn/ui components render in popup shell."

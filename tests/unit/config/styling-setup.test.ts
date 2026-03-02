@@ -47,10 +47,28 @@ describe('Tailwind v4 + shadcn/ui styling setup', () => {
 
     it('does not put :root or .dark inside @layer base', () => {
       const css = readFileSync(cssPath, 'utf-8');
-      const layerBaseBlock = css.match(/@layer base\s*\{[\s\S]*?\n\}/);
-      if (layerBaseBlock) {
-        expect(layerBaseBlock[0]).not.toContain(':root');
-        expect(layerBaseBlock[0]).not.toContain('.dark');
+      const start = css.indexOf('@layer base');
+      if (start !== -1) {
+        let depth = 0;
+        let blockStart = -1;
+        let blockEnd = -1;
+        for (let i = css.indexOf('{', start); i < css.length; i++) {
+          if (css[i] === '{') {
+            if (depth === 0) blockStart = i;
+            depth++;
+          } else if (css[i] === '}') {
+            depth--;
+            if (depth === 0) {
+              blockEnd = i + 1;
+              break;
+            }
+          }
+        }
+        if (blockStart !== -1 && blockEnd !== -1) {
+          const layerBaseBlock = css.slice(blockStart, blockEnd);
+          expect(layerBaseBlock).not.toContain(':root');
+          expect(layerBaseBlock).not.toContain('.dark');
+        }
       }
     });
   });
