@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [WxtVitest()],
   test: {
     environment: 'jsdom',
-    include: ['tests/**/*.test.{ts,tsx}'],
+    include: ['tests/unit/**/*.test.{ts,tsx}'],
     setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',
