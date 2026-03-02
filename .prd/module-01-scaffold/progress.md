@@ -9,7 +9,7 @@
 | SCAFFOLD-002 | Strict TypeScript configuration (tsconfig.json) | ✅ | 1 |
 | SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui initialization with dark mode | ✅ | 1 |
 | SCAFFOLD-004 | Vitest configuration with coverage thresholds | ✅ | 1 |
-| SCAFFOLD-005 | Playwright E2E configuration with extension loading fixture | ⬜ | 0 |
+| SCAFFOLD-005 | Playwright E2E configuration with extension loading fixture | ✅ | 1 |
 | SCAFFOLD-006 | ESLint v10 flat config enforcing project conventions | ✅ | 1 |
 | SCAFFOLD-007 | Shared type definitions (lib/types.ts) | ✅ | 1 |
 | SCAFFOLD-009 | Sentry initialization with zero-PII beforeSend filter | ⬜ | 0 |
@@ -621,3 +621,96 @@ Deslop: all pass — zero comments in config (self-documenting), zero AI-generic
 Code review: all pass — 5-layer architecture follows 2026 best practices (eslint.org, typescript-eslint.io), WXT globals properly imported, file-scoped overrides minimize noise while enforcing strictness where it matters (lib/).
 Key decision: explicit-function-return-type set to 'warn' globally but 'off' for entrypoints, components/ui, tests, and config files. Only lib/ gets the enforcement — this matches CLAUDE.md's strictness gradient (lib/ is strictest layer).
 Pre-existing fix: `no-constant-binary-expression` in test file — `false && 'b'` is intentional for testing cn() with falsy conditionals. Rule disabled for test files.
+
+---
+
+## Session: 2026-03-02T17:30:00Z
+
+**Task**: SCAFFOLD-005 - Playwright E2E configuration with extension loading fixture
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Created playwright.config.ts with CI-aware settings: fullyParallel false, trace on-first-retry, workers 1, retries 1 in CI, github reporter in CI
+- Created tests/e2e/fixtures/extension.ts with custom Playwright fixture: chromium.launchPersistentContext with channel 'chromium', existsSync pre-check for build output, service worker ID extraction, context teardown
+- Created tests/e2e/sanity.test.ts with 2 tests: popup content verification (h1 "Hush" + "Get Started" button) and console error capture
+- Modified vitest.config.ts: narrowed include from `tests/**` to `tests/unit/**` to prevent Vitest running Playwright tests
+- Committed typescript-eslint migration separately: unified `typescript-eslint` package replaces `@typescript-eslint/eslint-plugin` + `@typescript-eslint/parser`, added `no-empty-pattern: 'off'` for e2e test files
+- Researched 2025-2026 Playwright best practices: worker-scoped fixtures not viable (conflicts with Playwright built-in `context` type), channel 'chromium' enables headless extension testing without xvfb
+- Independent verification via Playwright script: extension ID cojcbgmaanhnopfgbpfjmmcnmecoiggj, popup renders correctly, zero console errors
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| playwright.config.ts | Playwright test runner config — testDir, timeout, CI retries, trace (14 lines) |
+| tests/e2e/fixtures/extension.ts | Custom fixture: loads extension, exposes context + extensionId (45 lines) |
+| tests/e2e/sanity.test.ts | 2 sanity tests: popup content + no console errors (33 lines) |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| vitest.config.ts | Narrowed include from `tests/**` to `tests/unit/**` (e2e exclusion) |
+| eslint.config.js | Migrated to unified typescript-eslint package, added no-empty-pattern override for e2e |
+| package.json | Added test:e2e script, swapped typescript-eslint deps |
+| package-lock.json | Regenerated for dependency changes |
+| .prd/module-01-scaffold/prd.json | SCAFFOLD-005: passes=true, attempt_count=1, passing_stories=8 |
+
+### Acceptance Criteria Verification
+
+1. ✅ playwright.config.ts targets Chromium with extension loading support (channel: 'chromium' in fixture)
+2. ✅ Custom fixture loads built extension via --load-extension flag (extension.ts L22-25)
+3. ✅ Fixture exposes extensionId for navigating to popup/manager pages (extension.ts L32-42)
+4. ✅ Sanity test navigates to popup and finds expected content (h1 "Hush", button "Get Started")
+5. ✅ Tests run in CI-compatible mode (channel: 'chromium' headless, retries: 1 in CI, workers: 1)
+
+### Verification Results
+
+```text
+$ npx tsc --noEmit
+(exit 0, no errors)
+
+$ npx eslint .
+(exit 0, no errors, no warnings)
+
+$ npx vitest run
+✓ tests/unit/config/tsconfig-validation.test.ts (12 tests)
+✓ tests/unit/config/eslint-config.test.ts (14 tests)
+✓ tests/unit/lib/types.test.ts (22 tests)
+✓ tests/unit/config/wxt-config.test.ts (7 tests)
+✓ tests/unit/config/styling-setup.test.ts (20 tests)
+✓ tests/unit/lib/errors.test.ts (17 tests)
+✓ tests/unit/config/vitest-config.test.ts (10 tests)
+✓ tests/unit/sanity.test.ts (2 tests)
+Test Files  8 passed (8)
+Tests       104 passed (104)
+
+$ npx wxt build
+Σ Total size: 293.78 kB
+
+$ npx playwright test
+Running 2 tests using 1 worker
+  ok 1 popup loads and displays expected content (2.6s)
+  ok 2 popup has no console errors (1.7s)
+  2 passed (6.9s)
+
+Independent Playwright verification:
+- Extension ID: cojcbgmaanhnopfgbpfjmmcnmecoiggj ✅
+- Heading "Hush" rendered ✅
+- "Get Started" button visible ✅
+- Console errors: NONE ✅
+
+Constraint checks:
+- No as any, @ts-ignore, @ts-expect-error: PASS (0 across all files)
+- No console.log in production code: PASS
+- All files under 300 lines: PASS (max: 45 lines)
+- All functions under 50 lines: PASS (max: 16 lines)
+```
+
+### Self-Review Results
+
+Deslop: all pass — zero unnecessary comments, zero dead code, zero over-engineering (no Page Object Model for 2 sanity tests), zero AI slop patterns.
+Code review: all pass — matches official Playwright chrome extension example exactly, fixture cleanup via context.close(), existsSync pre-check prevents cryptic errors, extensionId null guard, proper error messages.
+Research finding: worker-scoped fixtures (`{ scope: 'worker' }`) conflict with Playwright's built-in `context` type (test-scoped). Official Playwright chrome extension docs use test-scoped. Performance impact negligible with workers: 1.
+Improvement over initial code: added fullyParallel: false (explicit), trace: 'on-first-retry' (CI debugging), separated typescript-eslint migration into its own commit.
