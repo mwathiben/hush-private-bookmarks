@@ -293,7 +293,6 @@ Tracer bullet: traced all 6 TS files in project — only wxt-config.test.ts need
 | components/ui/input.tsx | shadcn Input primitive (21 lines, pristine) |
 | components/ui/dialog.tsx | shadcn Dialog primitive (156 lines, pristine) |
 | components/ui/alert.tsx | shadcn Alert primitive (66 lines, pristine) |
-| .npmrc | legacy-peer-deps=true (ESLint v10 peer dep conflict fix) |
 | tests/unit/config/styling-setup.test.ts | TDD test — 20 assertions on CSS, components, config |
 
 ### Files Modified
@@ -303,7 +302,7 @@ Tracer bullet: traced all 6 TS files in project — only wxt-config.test.ts need
 | wxt.config.ts | Added @tailwindcss/vite plugin via vite: () => ({ plugins: [tailwindcss()] }) |
 | entrypoints/popup/main.tsx | Changed import from './style.css' to '@/app.css' |
 | entrypoints/popup/App.tsx | Replaced inline styles with Tailwind classes + shadcn Button import |
-| package.json | Added 6 dependencies (shadcn, CVA, clsx, tailwind-merge, lucide-react, tw-animate-css) |
+| package.json | Added 5 runtime dependencies (CVA, clsx, tailwind-merge, lucide-react, tw-animate-css), moved shadcn to devDependencies, added overrides for wxt eslint peer dep |
 | package-lock.json | Regenerated with 219 new packages |
 | .prd/module-01-scaffold/prd.json | SCAFFOLD-003: passes=true, attempt_count=1, passing_stories=4 |
 
@@ -312,6 +311,7 @@ Tracer bullet: traced all 6 TS files in project — only wxt-config.test.ts need
 | File | Reason |
 | --- | --- |
 | entrypoints/popup/style.css | Replaced by app.css (Tailwind v4 global CSS) |
+| .npmrc | Removed legacy-peer-deps=true; conflict resolved via targeted overrides in package.json (wxt@0.20.18 peerOptional eslint "^8.57.0 \|\| ^9.0.0" vs eslint@^10.0.2) |
 
 ### Acceptance Criteria Verification
 
