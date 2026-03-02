@@ -1,6 +1,6 @@
 import { globalIgnores } from 'eslint/config';
 import eslintJs from '@eslint/js';
-import tseslint from '@typescript-eslint/eslint-plugin';
+import tseslint from 'typescript-eslint';
 import wxtAutoImports from './.wxt/eslint-auto-imports.mjs';
 
 export default [
@@ -19,7 +19,7 @@ export default [
 
   eslintJs.configs.recommended,
 
-  ...tseslint.configs['flat/recommended'],
+  ...tseslint.configs.recommended,
 
   {
     rules: {
@@ -54,6 +54,13 @@ export default [
       'no-console': 'off',
       'no-constant-binary-expression': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+
+  {
+    files: ['tests/e2e/**/*.ts'],
+    rules: {
+      'no-empty-pattern': 'off',
     },
   },
 
