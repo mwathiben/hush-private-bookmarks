@@ -1,6 +1,11 @@
 import { defineConfig } from 'wxt';
 
-// See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
+  manifest: {
+    name: 'Hush Private Bookmarks',
+    description: 'Privacy-first hidden bookmarks for your browser',
+    permissions: ['storage', 'contextMenus', 'activeTab', 'bookmarks'],
+    optional_permissions: ['history'],
+  },
 });

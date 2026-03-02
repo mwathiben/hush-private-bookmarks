@@ -5,7 +5,7 @@
 | ID | Title | Status | Attempts |
 | --- | --- | --- | --- |
 | SCAFFOLD-008 | Update CLAUDE.md with Progress Logging Protocol and Licensing Rules | ✅ | 1 |
-| SCAFFOLD-001 | Configure WXT project with manifest permissions and clean boilerplate | ⬜ | 0 |
+| SCAFFOLD-001 | Configure WXT project with manifest permissions and clean boilerplate | ✅ | 1 |
 | SCAFFOLD-002 | Strict TypeScript configuration (tsconfig.json) | ⬜ | 0 |
 | SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui initialization with dark mode | ⬜ | 0 |
 | SCAFFOLD-004 | Vitest configuration with coverage thresholds | ⬜ | 0 |
@@ -78,3 +78,104 @@ FOUND:   Option B readiness
 
 PASSED: All required phrases found in CLAUDE.md
 ```
+
+---
+
+## Session: 2026-03-02T16:10:00Z
+
+**Task**: SCAFFOLD-001 - Configure WXT project with manifest permissions and clean boilerplate
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Hardened .gitignore with .env, coverage/, test-results/, playwright-report/, *.tsbuildinfo exclusions (security fix)
+- Created vitest.config.ts with WxtVitest() plugin (minimal bootstrap for SCAFFOLD-004)
+- Created tests/unit/config/wxt-config.test.ts with 7 assertions on built manifest
+- Updated wxt.config.ts with manifest permissions (storage, contextMenus, activeTab, bookmarks) and optional_permissions (history)
+- Updated package.json: name to hush-private-bookmarks, version to 0.1.0, description updated
+- Replaced popup App.tsx boilerplate (counter, logos) with minimal "Hush" placeholder
+- Deleted template files: App.css, content.ts, react.svg, wxt.svg
+- Stripped style.css to minimal body reset
+- Updated popup index.html title to "Hush Private Bookmarks"
+- Cleaned background.ts: removed console.log, added onInstalled handler stub
+- Updated README.md from WXT template boilerplate to project description
+- Regenerated package-lock.json with new package name
+- PRD deviation: moved history to optional_permissions (user-approved, reduces install friction)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| vitest.config.ts | Minimal Vitest config with WxtVitest() plugin |
+| tests/unit/config/wxt-config.test.ts | Config validation test (7 assertions on built manifest) |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| .gitignore | Added .env, coverage/, test-results/, playwright-report/, *.tsbuildinfo |
+| wxt.config.ts | Added manifest block with permissions, optional_permissions, name, description |
+| package.json | Renamed to hush-private-bookmarks, bumped to 0.1.0, updated description |
+| package-lock.json | Regenerated with new package name |
+| entrypoints/popup/App.tsx | Replaced boilerplate counter/logos with minimal "Hush" placeholder |
+| entrypoints/popup/style.css | Stripped 70 lines of template styles to 3-line body reset |
+| entrypoints/popup/index.html | Title changed to "Hush Private Bookmarks" |
+| entrypoints/background.ts | Removed console.log, added onInstalled handler stub |
+| README.md | Replaced WXT template text with project description |
+
+### Files Deleted
+
+| File | Reason |
+| --- | --- |
+| entrypoints/popup/App.css | Template demo styles (logo animations) |
+| entrypoints/content.ts | Unused content script (no content injection needed) |
+| assets/react.svg | Template React logo (no longer referenced) |
+| public/wxt.svg | Template WXT logo (no longer referenced) |
+
+### Acceptance Criteria Verification
+
+1. ✅ wxt.config.ts declares permissions: storage, contextMenus, activeTab, bookmarks; history in optional_permissions
+2. ✅ wxt.config.ts does NOT declare clipboardRead or clipboardWrite permissions
+3. ✅ wxt.config.ts integrates @wxt-dev/module-react
+4. ✅ package.json name is 'hush-private-bookmarks'
+5. ✅ `wxt build` completes without errors (exit 0, 203.36 kB total)
+6. ✅ Extension loads in Chrome as unpacked and popup renders 'Hush' text (agent-browser verified)
+7. ✅ entrypoints/background.ts uses WXT defineBackground() pattern with no console.log
+8. ✅ entrypoints/content.ts is removed
+9. ✅ Template boilerplate (counter, logos) is removed from popup
+10. ✅ Config validation test passes (7/7 assertions)
+
+### Verification Results
+
+```text
+$ npx tsc --noEmit
+(exit 0, no errors)
+
+$ npx wxt build
+Built extension in 3.264 s
+Σ Total size: 203.36 kB
+
+$ npx vitest run tests/unit/config/wxt-config.test.ts
+✓ tests/unit/config/wxt-config.test.ts (7 tests) 7ms
+Test Files  1 passed (1)
+Tests       7 passed (7)
+
+$ grep -r "console.log" entrypoints/
+(no results)
+
+$ grep -r "wxt-react-starter" . --exclude-dir=node_modules
+(only in .prd/prd.json starting_state context — expected)
+
+Agent-browser E2E:
+- Extension loaded in Chromium ✅
+- Popup rendered with "Hush" heading ✅
+- Zero console errors ✅
+```
+
+### Self-Review Results
+
+Deslop: 7/7 pass. Code review: 11/11 pass (after fixes). Module boundaries: 5/5 pass.
+Fixes applied during self-review:
+- Removed fragile React.ReactElement return type from App.tsx (let TS infer from JSX)
+- Replaced README.md WXT boilerplate with project description
+- Regenerated package-lock.json with correct package name

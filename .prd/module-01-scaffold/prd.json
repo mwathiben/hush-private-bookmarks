@@ -78,7 +78,7 @@
                 "tests/unit/config/wxt-config.test.ts"
             ],
             "acceptance_criteria": [
-                "wxt.config.ts declares permissions: storage, contextMenus, activeTab, history, bookmarks",
+                "wxt.config.ts declares permissions: storage, contextMenus, activeTab, bookmarks; history in optional_permissions",
                 "wxt.config.ts does NOT declare clipboardRead or clipboardWrite permissions",
                 "wxt.config.ts integrates @wxt-dev/module-react (already true)",
                 "package.json name is 'hush-private-bookmarks'",
@@ -99,8 +99,8 @@
             ],
             "verification": "wxt build && npx vitest run tests/unit/config/wxt-config.test.ts",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "SCAFFOLD-008"
             ]
@@ -610,11 +610,11 @@
             "action": "Verify plugin versions in SCAFFOLD-006 — v8.56.1 is already installed"
         }
     ],
-    "critical_path": "008 -> 001 -> 002 -> 003/004/006 -> 007 -> 009 -> 010 -> 012",
+    "critical_path": "008 -> 001 -> 002 -> 003/004/006 -> 005 -> 007 -> 009 -> 010 -> 011 -> 012",
     "total_story_points": 48,
     "total_stories": 12,
     "metadata": {
-        "passing_stories": 1,
+        "passing_stories": 2,
         "build_plan_day": "Day 1 (first half)",
         "session_protocol": "One Claude Code session for scaffold. Review all config files. Run tsc --noEmit. Run vitest. Verify extension loads. Commit.",
         "quality_gate": "All config tests pass. tsc clean. wxt build succeeds. Extension loads in Chrome. shadcn/ui components render in popup shell."

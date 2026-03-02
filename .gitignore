@@ -14,6 +14,17 @@ stats-*.json
 .wxt
 web-ext.config.ts
 
+# Environment variables (NEVER track secrets)
+.env
+.env.local
+.env.*.local
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

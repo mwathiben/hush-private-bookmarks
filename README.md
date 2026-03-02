@@ -1,3 +1,7 @@
-# WXT + React
+# Hush Private Bookmarks
 
-This template should help get you started developing with React in WXT.
+Privacy-first browser extension for hidden bookmarks.
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE) for details.
