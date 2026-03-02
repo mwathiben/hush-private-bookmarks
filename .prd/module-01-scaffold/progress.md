@@ -7,7 +7,7 @@
 | SCAFFOLD-008 | Update CLAUDE.md with Progress Logging Protocol and Licensing Rules | ✅ | 1 |
 | SCAFFOLD-001 | Configure WXT project with manifest permissions and clean boilerplate | ✅ | 1 |
 | SCAFFOLD-002 | Strict TypeScript configuration (tsconfig.json) | ✅ | 1 |
-| SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui initialization with dark mode | ⬜ | 0 |
+| SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui initialization with dark mode | ✅ | 1 |
 | SCAFFOLD-004 | Vitest configuration with coverage thresholds | ⬜ | 0 |
 | SCAFFOLD-005 | Playwright E2E configuration with extension loading fixture | ⬜ | 0 |
 | SCAFFOLD-006 | ESLint v10 flat config enforcing project conventions | ⬜ | 0 |
@@ -256,3 +256,116 @@ Deslop: all pass — no slop, no comments, no over-engineering.
 Code review: all pass — matches acceptance criteria, no scope creep, pre-existing issue fixed.
 Web research: confirmed 2026 best practice for 5 strict flags. Skipped exactOptionalPropertyTypes (library compatibility risk with shadcn/ui).
 Tracer bullet: traced all 6 TS files in project — only wxt-config.test.ts needed a fix.
+
+---
+
+## Session: 2026-03-02T22:30:00Z
+
+**Task**: SCAFFOLD-003 - Tailwind CSS v4 + shadcn/ui initialization with dark mode
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Created styling-setup.test.ts (RED phase) — 20 assertions, 18 failed for right reason
+- Installed 6 dependencies: shadcn, class-variance-authority, clsx, tailwind-merge, lucide-react, tw-animate-css
+- Registered @tailwindcss/vite plugin in wxt.config.ts via `vite: () => ({ plugins: [tailwindcss()] })`
+- Created app.css with four-step CSS architecture: imports → @custom-variant → @theme inline → :root/.dark → @layer base
+- Full neutral OKLCH palette for light and dark modes (62 oklch values)
+- Created lib/utils.ts with cn() utility (zero React/DOM imports, module-boundary compliant)
+- Created components.json for shadcn/ui v4 (style: new-york, rsc: false, config: "")
+- Installed shadcn components via CLI: button, input, dialog, alert
+- Fixed shadcn CLI peer dep conflict by creating .npmrc with legacy-peer-deps=true
+- Fixed shadcn CLI path resolution: CLI placed files one directory up due to WXT @/ alias — manually moved to correct location
+- Deleted entrypoints/popup/style.css (replaced by app.css)
+- Updated main.tsx: import '@/app.css' replaces './style.css'
+- Updated App.tsx: renders shadcn Button with Tailwind semantic classes (bg-background, text-foreground)
+- E2E verified with Playwright: popup renders "Hush" heading + styled "Get Started" button with oklch colors
+- PRD deviation: used "new-york" style instead of "default" (deprecated per shadcn docs)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| app.css | Global CSS: Tailwind v4 + shadcn OKLCH theme + dark mode (122 lines) |
+| lib/utils.ts | cn() utility — clsx + tailwind-merge (6 lines) |
+| components.json | shadcn/ui v4 project config (rsc: false, config: "") |
+| components/ui/button.tsx | shadcn Button primitive (64 lines, pristine) |
+| components/ui/input.tsx | shadcn Input primitive (21 lines, pristine) |
+| components/ui/dialog.tsx | shadcn Dialog primitive (156 lines, pristine) |
+| components/ui/alert.tsx | shadcn Alert primitive (66 lines, pristine) |
+| .npmrc | legacy-peer-deps=true (ESLint v10 peer dep conflict fix) |
+| tests/unit/config/styling-setup.test.ts | TDD test — 20 assertions on CSS, components, config |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| wxt.config.ts | Added @tailwindcss/vite plugin via vite: () => ({ plugins: [tailwindcss()] }) |
+| entrypoints/popup/main.tsx | Changed import from './style.css' to '@/app.css' |
+| entrypoints/popup/App.tsx | Replaced inline styles with Tailwind classes + shadcn Button import |
+| package.json | Added 6 dependencies (shadcn, CVA, clsx, tailwind-merge, lucide-react, tw-animate-css) |
+| package-lock.json | Regenerated with 219 new packages |
+| .prd/module-01-scaffold/prd.json | SCAFFOLD-003: passes=true, attempt_count=1, passing_stories=4 |
+
+### Files Deleted
+
+| File | Reason |
+| --- | --- |
+| entrypoints/popup/style.css | Replaced by app.css (Tailwind v4 global CSS) |
+
+### Acceptance Criteria Verification
+
+1. ✅ Global CSS uses Tailwind v4 `@import "tailwindcss"` (NOT v3 @tailwind directives)
+2. ✅ No tailwind.config.ts or tailwind.config.js exists
+3. ✅ Dark mode configured via `@custom-variant dark (&:is(.dark *))` class strategy
+4. ✅ shadcn/ui CSS variables defined using OKLCH color format (62 oklch values)
+5. ✅ components/ui/ contains button.tsx, input.tsx, dialog.tsx, alert.tsx
+6. ✅ Popup renders styled shadcn Button (E2E verified: oklch(0.205 0 0) background)
+7. ✅ No shadcn primitives modified after installation (pristine copies)
+8. ✅ lib/utils.ts created with cn() utility (clsx + tailwind-merge)
+
+### Verification Results
+
+```text
+$ npx vitest run tests/unit/config/styling-setup.test.ts
+✓ tests/unit/config/styling-setup.test.ts (20 tests) 15ms
+Test Files  1 passed (1)
+Tests       20 passed (20)
+
+$ npx vitest run
+✓ tests/unit/config/wxt-config.test.ts (7 tests) 7ms
+✓ tests/unit/config/tsconfig-validation.test.ts (12 tests) 11ms
+✓ tests/unit/config/styling-setup.test.ts (20 tests) 15ms
+Test Files  3 passed (3)
+Tests       39 passed (39)
+
+$ npx tsc --noEmit
+(exit 0, no errors)
+
+$ npx wxt build
+Σ Total size: 293.65 kB (uncompressed)
+  JS: 224.74 kB, CSS: 59.09 kB
+
+Constraint checks:
+- No tailwind.config.ts/js: PASS
+- lib/utils.ts zero React/DOM imports: PASS (0 matches)
+- No console.log in production code: PASS
+- No type suppressions (as any, @ts-ignore): PASS (0 across 7 files)
+- OKLCH colors in app.css: PASS (62 occurrences)
+- :root/.dark NOT inside @layer base: PASS
+- All files under 300 lines: PASS
+- All functions under 50 lines: PASS
+
+Playwright E2E:
+- Extension loaded (ID: cojcbgmaanhnopfgbpfjmmcnmecoiggj) ✅
+- Heading "Hush" rendered ✅
+- "Get Started" button visible with oklch styling ✅
+- White background from body bg-background ✅
+```
+
+### Self-Review Results
+
+Deslop: all pass — no unnecessary comments, no AI-generic patterns, no dead code, no over-engineering.
+Code review: all pass — no type suppressions, no empty catches, module boundaries respected, semantic tokens used.
+Frontend code review: all pass — no inline styles, dark mode support, ARIA via shadcn, cn() merge order correct.
+Issues found (non-blocking): destructive-foreground mapped in @theme inline but not defined in :root (shadcn new-york convention — button uses text-white directly).
