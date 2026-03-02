@@ -8,7 +8,7 @@
 | SCAFFOLD-001 | Configure WXT project with manifest permissions and clean boilerplate | ✅ | 1 |
 | SCAFFOLD-002 | Strict TypeScript configuration (tsconfig.json) | ✅ | 1 |
 | SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui initialization with dark mode | ✅ | 1 |
-| SCAFFOLD-004 | Vitest configuration with coverage thresholds | ⬜ | 0 |
+| SCAFFOLD-004 | Vitest configuration with coverage thresholds | ✅ | 1 |
 | SCAFFOLD-005 | Playwright E2E configuration with extension loading fixture | ⬜ | 0 |
 | SCAFFOLD-006 | ESLint v10 flat config enforcing project conventions | ⬜ | 0 |
 | SCAFFOLD-007 | Shared type definitions (lib/types.ts) | ⬜ | 0 |
@@ -369,3 +369,95 @@ Deslop: all pass — no unnecessary comments, no AI-generic patterns, no dead co
 Code review: all pass — no type suppressions, no empty catches, module boundaries respected, semantic tokens used.
 Frontend code review: all pass — no inline styles, dark mode support, ARIA via shadcn, cn() merge order correct.
 Issues found (non-blocking): destructive-foreground mapped in @theme inline but not defined in :root (shadcn new-york convention — button uses text-white directly).
+
+---
+
+## Session: 2026-03-02T14:40:00Z
+
+**Task**: SCAFFOLD-004 - Vitest configuration with coverage thresholds
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Created tests/setup.ts with `@testing-library/jest-dom/vitest` import (Vitest 4.x correct subpath)
+- Created tests/unit/config/vitest-config.test.ts (RED phase) — 10 tests: 3 behavioral (alias resolution + cn() calls), 7 declarative (config file assertions)
+- Created tests/unit/sanity.test.ts (RED phase) — 2 tests: arithmetic + jsdom environment check
+- Verified RED state: 8 correct failures (7 config assertions + 1 jsdom), 43 passes (no regressions)
+- Rewrote vitest.config.ts with full configuration: v8 coverage provider, jsdom environment, per-directory thresholds, setupFiles, explicit coverage.include globs
+- Critical Vitest 4.x finding: `coverage.all` was REMOVED in v4.0 — replaced with `coverage.include` explicit globs
+- Added test/test:watch/test:coverage scripts to package.json (pre-existing issue: no test script)
+- Verified GREEN state: all 51 tests pass across 5 files
+- Coverage report: lib/utils.ts at 100% (passes 80% threshold), entrypoints/ at 0% (expected — no tests yet)
+- Flagged PRD issue: SCAFFOLD-009 plans `.env.example` for Sentry DSN, but CLAUDE.md says DSN is public-facing (should be hardcoded, not in .env)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/setup.ts | jest-dom/vitest matcher setup (1 line) |
+| tests/unit/config/vitest-config.test.ts | Alias resolution + config correctness tests (60 lines) |
+| tests/unit/sanity.test.ts | Runner + jsdom environment sanity check (11 lines) |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| vitest.config.ts | Full rewrite: added jsdom environment, setupFiles, v8 coverage with per-directory thresholds (37 lines) |
+| package.json | Added test, test:watch, test:coverage scripts (+3 lines) |
+| .prd/module-01-scaffold/prd.json | SCAFFOLD-004: passes=true, attempt_count=1, passing_stories=5 |
+
+### Acceptance Criteria Verification
+
+1. ✅ vitest.config.ts uses v8 coverage provider (`provider: 'v8'`)
+2. ✅ jsdom environment configured for component tests (`environment: 'jsdom'`)
+3. ✅ Coverage thresholds: 80% for lib/ (`'lib/**'` threshold block), 60% for entrypoints/ (`'entrypoints/**'` threshold block)
+4. ✅ Path aliases resolve in test files — `import { cn } from '@/lib/utils'` works at runtime
+5. ✅ `npx vitest run` executes (exit 0, 51 tests pass) and `npx vitest run --coverage` reports coverage
+6. ✅ Sanity test passes (arithmetic + jsdom environment)
+
+### Verification Results
+
+```text
+$ npx vitest run
+✓ tests/unit/sanity.test.ts (2 tests) 5ms
+✓ tests/unit/config/wxt-config.test.ts (7 tests) 9ms
+✓ tests/unit/config/tsconfig-validation.test.ts (12 tests) 12ms
+✓ tests/unit/config/styling-setup.test.ts (20 tests) 20ms
+✓ tests/unit/config/vitest-config.test.ts (10 tests) 21ms
+Test Files  5 passed (5)
+Tests       51 passed (51)
+
+$ npx tsc --noEmit
+(exit 0, no errors)
+
+$ npx vitest run --coverage
+Coverage enabled with v8
+Test Files  5 passed (5)
+Tests       51 passed (51)
+ % Coverage report from v8
+lib/utils.ts         | 100% Stmts | 100% Branch | 100% Funcs | 100% Lines
+entrypoints/         |   0% Stmts | 100% Branch |   0% Funcs |   0% Lines
+ERROR: entrypoints/** thresholds not met (expected — no tests yet)
+
+$ npx wxt build
+Σ Total size: 293.73 kB (uncompressed)
+
+Playwright E2E:
+- Extension loaded (ID: cojcbgmaanhnopfgbpfjmmcnmecoiggj) ✅
+- Heading "Hush" rendered ✅
+- "Get Started" button visible ✅
+- Zero console errors ✅
+
+Constraint checks:
+- No type suppressions (as any, @ts-ignore): PASS (0 across all files)
+- No console.log in production code: PASS
+- All files under 300 lines: PASS (max: 60)
+- All functions under 50 lines: PASS
+- coverage.all NOT used (removed in Vitest 4.x): PASS
+```
+
+### Self-Review Results
+
+Deslop: all pass — no AI slop, no unnecessary comments, no over-engineering, no dead code.
+Code review: all pass — no type suppressions, no empty catches, module boundaries respected, all AC met, no scope creep.
+Key finding: `coverage.all` removed in Vitest 4.0 — used `coverage.include` with explicit globs instead. Verified via official docs + migration guide + installed type definitions.

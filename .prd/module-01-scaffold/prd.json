@@ -240,8 +240,8 @@
             ],
             "verification": "npx vitest run && npx vitest run tests/unit/config/vitest-config.test.ts",
             "estimated_effort": "small",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "SCAFFOLD-002",
                 "SCAFFOLD-008"
@@ -617,7 +617,7 @@
     "total_story_points": 48,
     "total_stories": 12,
     "metadata": {
-        "passing_stories": 4,
+        "passing_stories": 5,
         "build_plan_day": "Day 1 (first half)",
         "session_protocol": "One Claude Code session for scaffold. Review all config files. Run tsc --noEmit. Run vitest. Verify extension loads. Commit.",
         "quality_gate": "All config tests pass. tsc clean. wxt build succeeds. Extension loads in Chrome. shadcn/ui components render in popup shell."
