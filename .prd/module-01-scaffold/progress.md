@@ -12,7 +12,7 @@
 | SCAFFOLD-005 | Playwright E2E configuration with extension loading fixture | ✅ | 1 |
 | SCAFFOLD-006 | ESLint v10 flat config enforcing project conventions | ✅ | 1 |
 | SCAFFOLD-007 | Shared type definitions (lib/types.ts) | ✅ | 1 |
-| SCAFFOLD-009 | Sentry initialization with zero-PII beforeSend filter | ⬜ | 0 |
+| SCAFFOLD-009 | Sentry initialization with zero-PII beforeSend filter | ✅ | 1 |
 | SCAFFOLD-010 | Directory structure + .gitignore + i18n locales + icons + licensing files | ⬜ | 0 |
 | SCAFFOLD-011 | GitHub Actions CI pipeline | ⬜ | 0 |
 | SCAFFOLD-012 | Full scaffold integration verification | ⬜ | 0 |
@@ -714,3 +714,116 @@ Deslop: all pass — zero unnecessary comments, zero dead code, zero over-engine
 Code review: all pass — matches official Playwright chrome extension example exactly, fixture cleanup via context.close(), existsSync pre-check prevents cryptic errors, extensionId null guard, proper error messages.
 Research finding: worker-scoped fixtures (`{ scope: 'worker' }`) conflict with Playwright's built-in `context` type (test-scoped). Official Playwright chrome extension docs use test-scoped. Performance impact negligible with workers: 1.
 Improvement over initial code: added fullyParallel: false (explicit), trace: 'on-first-retry' (CI debugging), separated typescript-eslint migration into its own commit.
+
+---
+
+## Session: 2026-03-02T20:10:00Z
+
+**Task**: SCAFFOLD-009 - Sentry initialization with zero-PII beforeSend filter
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- RED: Created tests/unit/lib/sentry-config.test.ts (26 tests) — confirmed failure for right reason (missing module)
+- GREEN: Created lib/sentry.ts (93 lines) — BrowserClient + Scope pattern per official Sentry extension docs (NOT Sentry.init())
+- Exported pure `stripPii` function as beforeSend filter: strips request.url, request.headers, breadcrumbs, user, bookmark-related extra keys, URL patterns from strings, PII tag keys
+- Exported `getFilteredIntegrations`: filters 6 DOM-dependent integrations (BrowserApiErrors, BrowserSession, Breadcrumbs, ConversationId, GlobalHandlers, FunctionToString), keeps 5 safe ones (InboundFilters, LinkedErrors, Dedupe, HttpContext, CultureContext)
+- DSN hardcoded as public constant (real project DSN, not placeholder)
+- Updated entrypoints/background.ts: initSentry() at module top level before defineBackground
+- Updated entrypoints/popup/main.tsx: initSentry() before ReactDOM.createRoot
+- Fixed type error: Sentry v10 beforeSend expects `ErrorEvent` (not `Event`), `Integration` type not exported (used `ReturnType`)
+- Fixed test timeout: mocked global `fetch` to prevent real network calls in tests
+- PRD correction: changed step from `Sentry.init()` to `BrowserClient` pattern per official Sentry docs
+
+### Research Conducted
+
+- Official Sentry docs (docs.sentry.io/platforms/javascript/best-practices/shared-environments/): BrowserClient mandatory for extensions
+- Sentry data scrubbing docs (docs.sentry.io/platforms/javascript/data-management/sensitive-data/): beforeSend is last in pipeline
+- GitHub issue #14010: named imports only (import * prevents tree-shaking, causes Chrome store rejection)
+- GitHub issue #4098: Sentry.init() fails in MV3 service workers (document.visibilityState undefined)
+- Verified HttpContext integration source: safe in service workers (WINDOW.document || {} guard)
+- Verified CultureContext integration source: uses Intl API (available in service workers)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| lib/sentry.ts | BrowserClient init, stripPii beforeSend filter, captureException wrapper (93 lines) |
+| tests/unit/lib/sentry-config.test.ts | TDD tests: 26 tests for stripPii, getFilteredIntegrations, initSentry, purity (222 lines) |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| entrypoints/background.ts | Added initSentry() import and call at module top level (+3 lines) |
+| entrypoints/popup/main.tsx | Added initSentry() import and call before React render (+3 lines) |
+| .prd/module-01-scaffold/prd.json | SCAFFOLD-009: passes=true, attempt_count=1, passing_stories=9, corrected step to BrowserClient pattern |
+
+### Acceptance Criteria Verification
+
+1. ✅ lib/sentry.ts exports initSentry() function
+2. ✅ beforeSend strips URLs from error events (request.url, breadcrumb URLs)
+3. ✅ beforeSend strips bookmark titles from error extra/context fields
+4. ✅ Breadcrumbs are disabled (filtered from integrations + breadcrumbs array cleared)
+5. ✅ Session replay is NOT included (not in filtered integrations)
+6. ✅ DSN hardcoded as constant in lib/sentry.ts (real public project identifier)
+7. ✅ initSentry() called in both background.ts and popup main.tsx
+8. ✅ beforeSend filter (stripPii) is a pure function with 15 dedicated unit tests
+9. ✅ No .env file needed for DSN (hardcoded as public constant)
+
+### Verification Results
+
+```text
+$ npx tsc --noEmit
+(exit 0, no errors)
+
+$ npx eslint .
+(exit 0, no errors, no warnings)
+
+$ npx vitest run
+✓ tests/unit/sanity.test.ts (2 tests)
+✓ tests/unit/config/wxt-config.test.ts (7 tests)
+✓ tests/unit/config/eslint-config.test.ts (14 tests)
+✓ tests/unit/lib/types.test.ts (22 tests)
+✓ tests/unit/config/styling-setup.test.ts (20 tests)
+✓ tests/unit/config/vitest-config.test.ts (10 tests)
+✓ tests/unit/lib/sentry-config.test.ts (26 tests)
+✓ tests/unit/lib/errors.test.ts (17 tests)
+✓ tests/unit/config/tsconfig-validation.test.ts (12 tests)
+Test Files  9 passed (9)
+Tests       130 passed (130)
+
+$ npx wxt build
+Σ Total size: 449.32 kB (uncompressed)
+  background.js: 78.16 kB (26.8 kB gzipped)
+  popup chunk: 302.76 kB (97.4 kB gzipped)
+  CSS: 59.22 kB (10.5 kB gzipped)
+  Total gzipped: ~134.7 kB (under 200 kB budget)
+
+$ npx playwright test
+  ok 1 popup loads and displays expected content (2.6s)
+  ok 2 popup has no console errors (1.8s)
+  2 passed (6.7s)
+
+Playwright E2E (ephemeral script):
+- Extension ID: cojcbgmaanhnopfgbpfjmmcnmecoiggj ✅
+- Heading "Hush" ✅
+- "Get Started" button ✅
+- Console errors: NONE ✅
+- Service worker running ✅
+
+Constraint checks:
+- No type suppressions (as any, @ts-ignore, @ts-expect-error): PASS (0 in lib/ + entrypoints/)
+- No console.log in production code: PASS (0 in lib/ + entrypoints/)
+- All files under 300 lines: PASS (sentry.ts: 93, test: 222, background.ts: 9, main.tsx: 13)
+- All functions under 50 lines: PASS (stripPii: 32 lines — longest)
+- Module purity (no React/DOM in lib/sentry.ts): PASS (test verified)
+- Named imports only (no import *): PASS
+```
+
+### Self-Review Results
+
+Deslop: all pass — zero AI slop, zero unnecessary comments, zero dead code, zero defensive over-engineering.
+Code review: all pass — no type suppressions, explicit return types on all exports, module boundaries respected, named imports only from @sentry/browser.
+Sentry code review: BrowserClient pattern matches official docs exactly, 6 DOM integrations filtered, 5 safe integrations verified via source inspection (HttpContext uses WINDOW.document || {} guard, CultureContext uses Intl API).
+Key findings: (1) Sentry v10 beforeSend expects ErrorEvent (not Event) — ErrorEvent has required `type: undefined`. (2) Integration type not exported from @sentry/browser — use ReturnType. (3) captureException test needs fetch mock to prevent real network calls hanging test. (4) Named imports prevent Chrome store rejection (import * includes script injection code).

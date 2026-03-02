@@ -390,7 +390,7 @@
             "story_points": 5,
             "steps": [
                 "RED: Write tests/unit/lib/sentry-config.test.ts that imports the Sentry initialization module and asserts: beforeSend function exists, beforeSend strips URLs from error events (test with a mock error containing a URL), beforeSend strips bookmark titles from error context, breadcrumbs are disabled, session replay is disabled",
-                "GREEN: Create lib/sentry.ts with initSentry() function that calls Sentry.init() with: dsn hardcoded as a constant (DSN is public-facing per CLAUDE.md and Sentry docs — not a secret, no .env needed), beforeSend that strips request.url, strips any string matching URL patterns from extra context, strips bookmark-related fields. Set integrations to exclude BrowserTracing breadcrumbs and session replay",
+                "GREEN: Create lib/sentry.ts with initSentry() function using BrowserClient + Scope pattern (NOT Sentry.init() — per official Sentry docs for browser extensions). DSN hardcoded as a constant (public-facing per CLAUDE.md). beforeSend (stripPii pure function) strips request.url, request.headers, URLs from extra context, bookmark-related fields, user data. Filter out 6 DOM-dependent integrations (BrowserApiErrors, BrowserSession, Breadcrumbs, ConversationId, GlobalHandlers, FunctionToString)",
                 "Update entrypoints/background.ts to call initSentry() in defineBackground setup",
                 "Update entrypoints/popup/main.tsx to call initSentry() before React root render",
                 "Run Sentry config tests to verify PII stripping works",
@@ -420,8 +420,8 @@
             ],
             "verification": "npx vitest run tests/unit/lib/sentry-config.test.ts && tsc --noEmit && npx eslint lib/sentry.ts",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "SCAFFOLD-001",
                 "SCAFFOLD-002",
@@ -615,7 +615,7 @@
     "total_story_points": 48,
     "total_stories": 12,
     "metadata": {
-        "passing_stories": 8,
+        "passing_stories": 9,
         "build_plan_day": "Day 1 (first half)",
         "session_protocol": "One Claude Code session for scaffold. Review all config files. Run tsc --noEmit. Run vitest. Verify extension loads. Commit.",
         "quality_gate": "All config tests pass. tsc clean. wxt build succeeds. Extension loads in Chrome. shadcn/ui components render in popup shell."
