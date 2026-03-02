@@ -114,6 +114,21 @@ describe('stripPii', () => {
     expect(result?.exception?.values?.[0]?.stacktrace?.frames).toHaveLength(1);
   });
 
+  it('redacts URLs in exception values', () => {
+    const event = makeEvent({
+      exception: {
+        values: [{
+          type: 'FetchError',
+          value: 'Failed to load https://private.com/bookmarks',
+        }],
+      },
+    });
+    const result = stripPii(event, {});
+    expect(result?.exception?.values?.[0]?.value).toBe(
+      'Failed to load [REDACTED]',
+    );
+  });
+
   it('preserves timestamp', () => {
     const event = makeEvent();
     const result = stripPii(event, {});

@@ -56,6 +56,14 @@ export function stripPii(event: ErrorEvent, _hint: EventHint): ErrorEvent | null
     event.message = event.message.replace(URL_PATTERN, '[REDACTED]');
   }
 
+  if (event.exception?.values) {
+    for (const entry of event.exception.values) {
+      if (typeof entry.value === 'string') {
+        entry.value = entry.value.replace(URL_PATTERN, '[REDACTED]');
+      }
+    }
+  }
+
   return event;
 }
 
