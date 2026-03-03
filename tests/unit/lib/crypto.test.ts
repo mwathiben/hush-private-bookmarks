@@ -359,3 +359,33 @@ describe('lib/crypto.ts module purity', () => {
     expect(content).not.toContain('setInterval');
   });
 });
+
+describe('IV uniqueness and randomness', () => {
+  it('each encryption produces a unique IV', async () => {
+    const ivs = new Set<string>();
+    for (let i = 0; i < 100; i++) {
+      const store = await encrypt('same plaintext', 'same-password');
+      ivs.add(store.iv);
+    }
+    expect(ivs.size).toBe(100);
+  }, 120_000);
+
+  it('IVs are 12 bytes (96 bits) as required by AES-GCM', async () => {
+    const store = await encrypt('test', 'password');
+    const ivBytes = Uint8Array.from(atob(store.iv), (c) => c.charCodeAt(0));
+    expect(ivBytes.length).toBe(12);
+  });
+
+  it('different encryptions of same plaintext produce different ciphertext', async () => {
+    const a = await encrypt('identical content', 'same-password');
+    const b = await encrypt('identical content', 'same-password');
+    expect(a.encrypted).not.toBe(b.encrypted);
+  });
+
+  it('IV is not all zeros', async () => {
+    const store = await encrypt('test', 'password');
+    const ivBytes = Uint8Array.from(atob(store.iv), (c) => c.charCodeAt(0));
+    const allZero = ivBytes.every((b) => b === 0);
+    expect(allZero).toBe(false);
+  });
+});

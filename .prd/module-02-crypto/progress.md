@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | CRYPTO-001 | Extract and type the crypto logic from Holy PB crypto-wrapper.js | PASSED | 1 |
 | CRYPTO-002 | Wrong password detection and typed error handling | PASSED | 1 |
-| CRYPTO-003 | IV uniqueness and randomness verification | - | 0 |
+| CRYPTO-003 | IV uniqueness and randomness verification | ✅ | 1 |
 | CRYPTO-004 | Edge case handling: empty input, large input, special characters | - | 0 |
 | CRYPTO-005 | Key derivation isolation and salt uniqueness | - | 0 |
 | CRYPTO-006 | Stateless module purity and call independence | - | 0 |
@@ -136,4 +136,60 @@ eslint: clean (0 errors)
 wxt build: success (594.45 KB uncompressed)
 playwright test: 13/13 E2E tests passed (3 new crypto + 10 existing)
 grep -c 'catch.*{}' lib/crypto.ts: 0 (zero empty catch blocks)
+```
+
+---
+
+## Session: 2026-03-03T16:00:00Z
+
+**Task**: CRYPTO-003 - IV uniqueness and randomness verification
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Researched AES-GCM IV best practices: NIST SP 800-38D (96-bit IV mandate, uniqueness requirement), Forbidden Attack (Joux 2006 — IV reuse leaks GHASH key), Wycheproof AES-GCM (all-zero IV = auth key exposure, 316 test vectors in 44 groups)
+- Tracer bullet analysis: mapped full blast radius — 2 direct consumers of lib/crypto, 47 existing test cases, zero production files using crypto yet
+- Added 4 unit tests in `describe('IV uniqueness and randomness')` to crypto.test.ts:
+  - 100 encryptions produce 100 unique IVs (120s timeout for PBKDF2 600K)
+  - IV decodes from base64 to exactly 12 bytes (NIST SP 800-38D compliance)
+  - Same plaintext + same password produces different ciphertext
+  - IV is not all zeros (defense-in-depth, Wycheproof-informed)
+- Created Playwright E2E test file with 2 tests for IV uniqueness in real browser extension context:
+  - 10 getRandomValues calls produce unique 12-byte IVs
+  - Two full AES-GCM encrypt operations produce different IVs and ciphertext
+- Zero changes to production code (lib/crypto.ts untouched)
+- CodeRabbit review: 0 critical, 0 high, 1 medium (E2E timeout headroom — 30s default vs 1.8s actual), 2 info
+- 24 skills applied (see plan file for full list)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/e2e/crypto-iv-uniqueness.test.ts | 2 Playwright E2E tests for IV uniqueness in browser extension context |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| tests/unit/lib/crypto.test.ts | Added describe('IV uniqueness and randomness') with 4 tests. Total: 40 tests in file. |
+
+### Acceptance Criteria Verification
+
+1. 100 encryptions of same input produce 100 unique IVs — PASS (Set.size === 100)
+2. IVs are exactly 12 bytes when decoded from base64 — PASS
+3. Same plaintext + same password produces different ciphertext each time — PASS
+4. Tests use real crypto.getRandomValues (NOT mocked) — PASS (zero mock/spy in IV describe block)
+5. Tests use real crypto.subtle (NOT mocked) — PASS (zero mock/spy in IV describe block)
+
+### Verification Results
+
+```text
+tsc --noEmit: clean (0 errors)
+vitest run: 247 tests passed (12 test files)
+vitest run --coverage: lib/** branches 80.76%, statements 100%, functions 100%, lines 100%
+eslint: clean (0 errors)
+wxt build: success (594.45 KB uncompressed)
+playwright test: 15/15 E2E tests passed (2 new IV uniqueness + 13 existing)
+security grep: zero mocks in IV describe block, zero type suppressions, zero Math.random in new files
+CodeRabbit: 0 critical, 0 high, 1 medium (non-blocking), 2 info
 ```
