@@ -27,8 +27,15 @@ export type BookmarkTree = Folder;
 
 /**
  * AES-256-GCM encrypted payload with PBKDF2 key derivation parameters.
- * Holy PB uses number[] for salt/iv/data. Hush uses base64 strings (more compact in JSON).
- * Hush extension: iterations (Holy PB hardcodes 600k, Hush stores for future-proofing).
+ *
+ * Holy PB format: `{ iv: number[], data: number[] }` with salt stored separately.
+ * Hush format: base64-encoded strings with bundled salt and iteration count.
+ * Migration from Holy PB format to Hush EncryptedStore is Module 14's responsibility.
+ *
+ * - salt: 16-byte CSPRNG output, base64-encoded (RFC 4648 standard alphabet)
+ * - iv: 12-byte CSPRNG initialization vector, base64-encoded
+ * - encrypted: AES-256-GCM ciphertext + 16-byte auth tag, base64-encoded
+ * - iterations: PBKDF2 iteration count (600,000 per OWASP 2025)
  */
 export interface EncryptedStore {
   readonly salt: string;

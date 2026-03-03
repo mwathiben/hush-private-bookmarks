@@ -303,7 +303,6 @@ describe('error message safety', () => {
       expect(msg).not.toMatch(/\[object ArrayBuffer\]/);
     }
   });
-
 });
 
 describe('IV uniqueness and randomness', () => {
