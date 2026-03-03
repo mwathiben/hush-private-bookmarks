@@ -7,7 +7,7 @@
 | CRYPTO-001 | Extract and type the crypto logic from Holy PB crypto-wrapper.js | PASSED | 1 |
 | CRYPTO-002 | Wrong password detection and typed error handling | PASSED | 1 |
 | CRYPTO-003 | IV uniqueness and randomness verification | ✅ | 1 |
-| CRYPTO-004 | Edge case handling: empty input, large input, special characters | - | 0 |
+| CRYPTO-004 | Edge case handling: empty input, large input, special characters | PASSED | 1 |
 | CRYPTO-005 | Key derivation isolation and salt uniqueness | - | 0 |
 | CRYPTO-006 | Stateless module purity and call independence | - | 0 |
 | CRYPTO-007 | EncryptedStore format validation and JSON serialization | - | 0 |
@@ -192,4 +192,65 @@ wxt build: success (594.45 KB uncompressed)
 playwright test: 15/15 E2E tests passed (2 new IV uniqueness + 13 existing)
 security grep: zero mocks in IV describe block, zero type suppressions, zero Math.random in new files
 CodeRabbit: 0 critical, 0 high, 1 medium (non-blocking), 2 info
+```
+
+---
+
+## Session: 2026-03-03T18:00:00Z
+
+**Task**: CRYPTO-004 - Edge case handling: empty input, large input, special characters
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Researched Web Crypto API empty password behavior: W3C spec silent on zero-length keys, all browsers/Node.js accept empty PBKDF2 passwords (Mozilla Bug 1500292, Node.js PR #44201). OWASP confirms this is a policy-level vulnerability requiring app-level validation.
+- Researched AES-GCM limits: NIST SP 800-38D max plaintext ~64 GiB, 1MB well within safe range.
+- Tracer bullet analysis: mapped full blast radius — 2 direct test consumers, 2 E2E test suites, 0 production consumers, 0 circular dependencies.
+- Added empty password validation guards to `encrypt()` and `decrypt()` in lib/crypto.ts (plain `Error`, not `InvalidPasswordError` — intentional so `verifyPassword()` re-throws instead of returning false)
+- Constant-time analysis: `password.length === 0` is O(1), no content-dependent branching, no timing leak
+- Created 9 unit tests in new file (separate from 391-line crypto.test.ts per 300-line limit):
+  - 6 roundtrip tests: empty string, single char, 1MB, Unicode (emoji/CJK/RTL/ZWJ), null bytes, JSON special chars
+  - 3 empty password tests: encrypt rejects, decrypt rejects, verifyPassword re-throws (not caught as InvalidPasswordError)
+- Created 4 Playwright E2E tests verifying browser Web Crypto API behavior:
+  - Empty plaintext AES-GCM roundtrip
+  - Unicode AES-GCM roundtrip
+  - Null bytes survive AES-GCM roundtrip
+  - Browser PBKDF2 importKey accepts empty password (proves app-level validation is necessary)
+- CodeRabbit review: fixed double verifyPassword call (unnecessary PBKDF2 computation), improved assertion to use `not.toBeInstanceOf(InvalidPasswordError)`, added comment explaining E2E 1000-iteration divergence from production 600K
+- 30+ skills applied (see plan file for full list)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/unit/lib/crypto-edge-cases.test.ts | 9 unit tests for edge case handling and empty password validation |
+| tests/e2e/crypto-edge-cases.test.ts | 4 Playwright E2E tests for browser Web Crypto edge case behavior |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| lib/crypto.ts | Added empty password validation guards to encrypt() (L90-92) and decrypt() (L147-149). +8 lines, 205 total. |
+
+### Acceptance Criteria Verification
+
+1. Empty string encrypts and decrypts to empty string — PASS
+2. Single character roundtrips correctly — PASS
+3. 1MB input roundtrips correctly (no truncation, no memory error) — PASS (656ms)
+4. Unicode (emoji, CJK, RTL) roundtrips correctly — PASS
+5. Null bytes in plaintext survive roundtrip — PASS
+6. JSON special characters roundtrip correctly — PASS
+7. Empty password is explicitly rejected (not silently accepted) — PASS (encrypt, decrypt, verifyPassword all reject)
+
+### Verification Results
+
+```text
+tsc --noEmit: clean (0 errors)
+vitest run: 256 tests passed (13 test files)
+vitest run --coverage: lib/** branches 83.33%, crypto.ts branches 81.25%, statements 100%, functions 100%, lines 100%
+eslint: clean (0 errors)
+wxt build: success (594.45 KB uncompressed)
+playwright test: 19/19 E2E tests passed (4 new edge cases + 15 existing)
+security grep: zero Math.random, zero type suppressions, zero empty catches, zero console.log
+CodeRabbit: 0 critical, 0 high, 2 medium (both fixed), 3 low
 ```

@@ -87,6 +87,10 @@ export async function encrypt(
   plaintext: string,
   password: string,
 ): Promise<EncryptedStore> {
+  if (password.length === 0) {
+    throw new Error('Password cannot be empty');
+  }
+
   const salt = generateSalt();
   const iv = crypto.getRandomValues(new Uint8Array(CRYPTO_CONFIG.ivLength));
   const key = await deriveKey(password, salt);
@@ -140,6 +144,10 @@ export async function decrypt(
   store: EncryptedStore,
   password: string,
 ): Promise<string> {
+  if (password.length === 0) {
+    throw new Error('Password cannot be empty');
+  }
+
   const { salt, iv, encryptedBytes } = parseStoreFields(store);
   const key = await deriveKey(password, salt);
 
