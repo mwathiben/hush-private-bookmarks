@@ -27,13 +27,13 @@ import { DecryptionError, InvalidPasswordError } from '@/lib/errors';
  * Cryptographic parameters extracted verbatim from Holy PB.
  * Iterations, algorithm, key length, IV length, and hash MUST NOT be modified.
  */
-export const CRYPTO_CONFIG: CryptoConfig = {
+export const CRYPTO_CONFIG = {
   iterations: 600_000,
   algorithm: 'AES-GCM',
   keyLength: 256,
   ivLength: 12,
   hashAlgorithm: 'SHA-256',
-};
+} as const satisfies CryptoConfig;
 
 function uint8ArrayToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -53,7 +53,7 @@ function base64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 }
 
 export function generateSalt(): Uint8Array<ArrayBuffer> {
-  return crypto.getRandomValues(new Uint8Array(16));
+  return crypto.getRandomValues(new Uint8Array(SALT_BYTES));
 }
 
 export async function deriveKey(
@@ -99,7 +99,7 @@ export async function encrypt(
   const encoded = encoder.encode(plaintext);
 
   const encrypted = await crypto.subtle.encrypt(
-    { name: CRYPTO_CONFIG.algorithm, iv },
+    { name: CRYPTO_CONFIG.algorithm, iv, tagLength: 128 },
     key,
     encoded,
   );
@@ -126,18 +126,50 @@ interface StoreFields {
   encryptedBytes: Uint8Array<ArrayBuffer>;
 }
 
-function parseStoreFields(store: EncryptedStore): StoreFields {
+const SALT_BYTES = 16;
+const GCM_TAG_BYTES = 16;
+
+function validateAndParseStore(store: EncryptedStore): StoreFields {
+  if (store.iterations !== CRYPTO_CONFIG.iterations) {
+    throw new DecryptionError(
+      `Unsupported iteration count: ${store.iterations}`,
+      { cause: new Error(`Expected ${CRYPTO_CONFIG.iterations}, got ${store.iterations}`) },
+    );
+  }
+
+  let salt: Uint8Array<ArrayBuffer>;
+  let iv: Uint8Array<ArrayBuffer>;
+  let encryptedBytes: Uint8Array<ArrayBuffer>;
+
   try {
-    return {
-      salt: base64ToUint8Array(store.salt),
-      iv: base64ToUint8Array(store.iv),
-      encryptedBytes: base64ToUint8Array(store.encrypted),
-    };
+    salt = base64ToUint8Array(store.salt);
+    iv = base64ToUint8Array(store.iv);
+    encryptedBytes = base64ToUint8Array(store.encrypted);
   } catch (error) {
     throw new DecryptionError('Invalid base64 in encrypted store', {
       cause: error instanceof Error ? error : new Error(String(error)),
     });
   }
+
+  if (salt.byteLength !== SALT_BYTES) {
+    throw new DecryptionError(
+      `Invalid salt length: expected ${SALT_BYTES} bytes, got ${salt.byteLength}`,
+    );
+  }
+
+  if (iv.byteLength !== CRYPTO_CONFIG.ivLength) {
+    throw new DecryptionError(
+      `Invalid IV length: expected ${CRYPTO_CONFIG.ivLength} bytes, got ${iv.byteLength}`,
+    );
+  }
+
+  if (encryptedBytes.byteLength < GCM_TAG_BYTES) {
+    throw new DecryptionError(
+      `Invalid encrypted data length: expected at least ${GCM_TAG_BYTES} bytes, got ${encryptedBytes.byteLength}`,
+    );
+  }
+
+  return { salt, iv, encryptedBytes };
 }
 
 export async function decrypt(
@@ -148,13 +180,13 @@ export async function decrypt(
     throw new Error('Password cannot be empty');
   }
 
-  const { salt, iv, encryptedBytes } = parseStoreFields(store);
+  const { salt, iv, encryptedBytes } = validateAndParseStore(store);
   const key = await deriveKey(password, salt);
 
   let decryptedBuffer: ArrayBuffer;
   try {
     decryptedBuffer = await crypto.subtle.decrypt(
-      { name: CRYPTO_CONFIG.algorithm, iv },
+      { name: CRYPTO_CONFIG.algorithm, iv, tagLength: 128 },
       key,
       encryptedBytes,
     );
