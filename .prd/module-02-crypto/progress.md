@@ -8,7 +8,7 @@
 | CRYPTO-002 | Wrong password detection and typed error handling | PASSED | 1 |
 | CRYPTO-003 | IV uniqueness and randomness verification | ✅ | 1 |
 | CRYPTO-004 | Edge case handling: empty input, large input, special characters | PASSED | 1 |
-| CRYPTO-005 | Key derivation isolation and salt uniqueness | - | 0 |
+| CRYPTO-005 | Key derivation isolation and salt uniqueness | PASSED | 1 |
 | CRYPTO-006 | Stateless module purity and call independence | - | 0 |
 | CRYPTO-007 | EncryptedStore format validation and JSON serialization | - | 0 |
 | CRYPTO-008 | Crypto module full test suite validation and coverage gate | - | 0 |
@@ -253,4 +253,69 @@ wxt build: success (594.45 KB uncompressed)
 playwright test: 19/19 E2E tests passed (4 new edge cases + 15 existing)
 security grep: zero Math.random, zero type suppressions, zero empty catches, zero console.log
 CodeRabbit: 0 critical, 0 high, 2 medium (both fixed), 3 low
+```
+
+---
+
+## Session: 2026-03-03T19:00:00Z
+
+**Task**: CRYPTO-005 - Key derivation isolation and salt uniqueness
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Researched PBKDF2 key derivation best practices: NIST SP 800-132 (salt ≥128 bits from approved RBG, fresh per operation), NIST SP 800-38D (salt reuse risks), OWASP 2025 (PBKDF2-SHA256 ≥600K iterations), W3C Web Crypto exportKey spec (non-extractable key → InvalidAccessError DOMException), RFC 6070 (PBKDF2 test vectors), birthday bound analysis (P(collision in 50 × 128-bit salts) ≈ 3.7×10⁻³⁶)
+- Tracer bullet analysis: mapped full blast radius — lib/crypto.ts has zero production consumers, only test files import it. Zero circular dependencies. Code quality audit: all checks clean (extractable: false on both importKey and deriveKey, 600K iterations, 16-byte salt, 12-byte IV)
+- Created 6 unit tests in new file (separate from 391-line crypto.test.ts per 300-line limit):
+  - Different passwords → different ciphertext + cross-decrypt fails with InvalidPasswordError
+  - Same password + different salt → different ciphertext (salt assertion distinguishes from IV test)
+  - 50 encryptions → 50 unique salts (birthday bound proof of CSPRNG usage)
+  - generateSalt returns exactly 16 bytes, not all zeros (NIST SP 800-132 compliance)
+  - Independent deriveKey calls with same inputs produce compatible keys (determinism via encrypt/decrypt roundtrip)
+  - deriveKey produces non-extractable keys (key.extractable === false, exportKey rejects)
+- Created 5 Playwright E2E tests for browser Web Crypto key derivation behavior:
+  - getRandomValues produces 10 unique 16-byte salts
+  - Different passwords → different ciphertext with shared salt+IV (isolates password variable, IV reuse safe with different keys)
+  - Same password + different salts → different ciphertext with salt-difference assertion
+  - Key derivation determinism: encrypt with key1, decrypt with key2 succeeds
+  - Non-extractable key: exportKey rejects with InvalidAccessError (W3C spec compliance)
+- E2E tests use 1000 PBKDF2 iterations (not production 600K) with explanatory comment — testing Web Crypto API behavior, not key-stretching strength
+- CodeRabbit review: 0 critical, 4 medium, 7 low. Fixed: F4/F5 (added 120s timeouts to multi-PBKDF2 unit tests), F16 (IV reuse safety comment), F17 (salt-difference assertion in E2E). Accepted: F2/F3 (PRD mandates 50-salt and determinism tests), F6 (jsdom returns InvalidAccessException, not InvalidAccessError — E2E covers spec compliance)
+- 40+ skills applied (see plan file for full list)
+- Zero production code changes
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/unit/lib/crypto-key-derivation.test.ts | 6 unit tests for key derivation isolation and salt uniqueness |
+| tests/e2e/crypto-key-derivation.test.ts | 5 Playwright E2E tests for browser Web Crypto key derivation behavior |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| .prd/module-02-crypto/prd.json | CRYPTO-005 passes: true, attempt_count: 1, metadata.passing_stories: 5 |
+| .prd/module-02-crypto/progress.md | Appended CRYPTO-005 session entry, updated story tracker |
+
+### Acceptance Criteria Verification
+
+1. Different passwords produce different ciphertext for same plaintext — PASS (unit + E2E)
+2. Same password + different salt produces different ciphertext — PASS (unit + E2E with salt-difference assertion)
+3. 50 encryptions produce 50 unique salts — PASS (Set.size === 50)
+4. Salt is exactly 16 bytes — PASS (generateSalt().byteLength === 16)
+5. Key derivation is consistent (same password + same salt → successful decrypt across calls) — PASS (unit + E2E)
+6. No test exports raw key material (deriveKey uses extractable: false) — PASS (key.extractable === false, exportKey rejects)
+
+### Verification Results
+
+```text
+tsc --noEmit: clean (0 errors)
+vitest run: 262 tests passed (14 test files)
+vitest run --coverage: lib/** branches 83.33%, statements 100%, functions 100%, lines 100%
+eslint: clean (0 errors)
+wxt build: success
+playwright test tests/e2e/crypto-key-derivation.test.ts: 5/5 passed
+security grep: zero mock/spy in new unit test, zero Math.random, zero type suppressions, zero console.log, zero 'as any'
+CodeRabbit: 0 critical, 4 medium (all addressed), 7 low
 ```
