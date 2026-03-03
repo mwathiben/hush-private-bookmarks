@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   CRYPTO_CONFIG,
   decrypt,
@@ -9,6 +9,7 @@ import {
   generateSalt,
   verifyPassword,
 } from '@/lib/crypto';
+import { DecryptionError, InvalidPasswordError } from '@/lib/errors';
 import type { EncryptedStore } from '@/lib/types';
 
 afterEach(() => {
@@ -16,6 +17,16 @@ afterEach(() => {
 });
 
 const ROOT = resolve(process.cwd());
+
+function corruptBase64(original: string): string {
+  const bytes = Uint8Array.from(atob(original), (c) => c.charCodeAt(0));
+  bytes[0] = bytes[0]! ^ 0xff;
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(binary);
+}
 
 describe('encrypt/decrypt roundtrip', () => {
   it('encrypts and decrypts back to original plaintext', async () => {
@@ -82,21 +93,16 @@ describe('decrypt error handling', () => {
   it('throws InvalidPasswordError on wrong password', async () => {
     const store = await encrypt('secret data', 'correct-password');
 
+    await expect(decrypt(store, 'wrong-password')).rejects.toBeInstanceOf(
+      InvalidPasswordError,
+    );
     await expect(decrypt(store, 'wrong-password')).rejects.toThrow(
       'Decryption failed: wrong password or corrupted data',
     );
-
-    try {
-      await decrypt(store, 'wrong-password');
-    } catch (error) {
-      const { InvalidPasswordError } = await import('@/lib/errors');
-      expect(error).toBeInstanceOf(InvalidPasswordError);
-    }
   });
 
   it('throws DecryptionError for non-OperationError decrypt failures', async () => {
     const store = await encrypt('test data', 'password');
-    const { DecryptionError } = await import('@/lib/errors');
 
     vi.spyOn(crypto.subtle, 'decrypt').mockRejectedValueOnce(
       new TypeError('mock internal failure'),
@@ -109,7 +115,6 @@ describe('decrypt error handling', () => {
 
   it('throws DecryptionError when decrypted data is not valid UTF-8', async () => {
     const store = await encrypt('test data', 'password');
-    const { DecryptionError } = await import('@/lib/errors');
 
     vi.spyOn(TextDecoder.prototype, 'decode').mockImplementationOnce(() => {
       throw new TypeError('The encoded data was not valid');
@@ -128,7 +133,6 @@ describe('decrypt error handling', () => {
       iterations: 600_000,
     };
 
-    const { DecryptionError } = await import('@/lib/errors');
     await expect(decrypt(badStore, 'any-password')).rejects.toBeInstanceOf(
       DecryptionError,
     );
@@ -156,11 +160,154 @@ describe('verifyPassword', () => {
       iterations: 600_000,
     };
 
-    const { DecryptionError } = await import('@/lib/errors');
     await expect(
       verifyPassword(badStore, 'any-password'),
     ).rejects.toBeInstanceOf(DecryptionError);
   });
+});
+
+describe('decrypt with corrupted store fields', () => {
+  let store: EncryptedStore;
+
+  beforeAll(async () => {
+    store = await encrypt('test data for corruption', 'password');
+  });
+
+  it('throws InvalidPasswordError for corrupted ciphertext (valid base64)', async () => {
+    const corrupted: EncryptedStore = {
+      ...store,
+      encrypted: corruptBase64(store.encrypted),
+    };
+
+    await expect(decrypt(corrupted, 'password')).rejects.toBeInstanceOf(
+      InvalidPasswordError,
+    );
+  });
+
+  it('throws InvalidPasswordError for corrupted IV (valid base64)', async () => {
+    const corrupted: EncryptedStore = {
+      ...store,
+      iv: corruptBase64(store.iv),
+    };
+
+    await expect(decrypt(corrupted, 'password')).rejects.toBeInstanceOf(
+      InvalidPasswordError,
+    );
+  });
+
+  it('throws InvalidPasswordError for corrupted salt (valid base64)', async () => {
+    const corrupted: EncryptedStore = {
+      ...store,
+      salt: corruptBase64(store.salt),
+    };
+
+    await expect(decrypt(corrupted, 'password')).rejects.toBeInstanceOf(
+      InvalidPasswordError,
+    );
+  });
+});
+
+describe('error cause chain', () => {
+  it('InvalidPasswordError from wrong password has OperationError cause', async () => {
+    const store = await encrypt('test data', 'correct');
+
+    try {
+      await decrypt(store, 'wrong');
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvalidPasswordError);
+      expect((error as InvalidPasswordError).cause).toBeInstanceOf(Error);
+      expect((error as InvalidPasswordError).cause).toHaveProperty(
+        'name',
+        'OperationError',
+      );
+    }
+  });
+
+  it('DecryptionError from invalid base64 has Error cause', async () => {
+    const badStore: EncryptedStore = {
+      salt: '!!!not-base64!!!',
+      iv: 'also-bad',
+      encrypted: 'nope',
+      iterations: 600_000,
+    };
+
+    try {
+      await decrypt(badStore, 'any');
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(DecryptionError);
+      expect((error as DecryptionError).cause).toBeInstanceOf(Error);
+    }
+  });
+
+  it('DecryptionError from non-OperationError preserves original cause', async () => {
+    const store = await encrypt('test data', 'password');
+    const mockError = new TypeError('mock internal failure');
+
+    vi.spyOn(crypto.subtle, 'decrypt').mockRejectedValueOnce(mockError);
+
+    try {
+      await decrypt(store, 'password');
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(DecryptionError);
+      expect((error as DecryptionError).cause).toBe(mockError);
+    }
+  });
+
+  it('DecryptionError from invalid UTF-8 has Error cause', async () => {
+    const store = await encrypt('test data', 'password');
+
+    vi.spyOn(TextDecoder.prototype, 'decode').mockImplementationOnce(() => {
+      throw new TypeError('The encoded data was not valid');
+    });
+
+    try {
+      await decrypt(store, 'password');
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(DecryptionError);
+      expect((error as DecryptionError).cause).toBeInstanceOf(Error);
+      expect((error as DecryptionError).cause).toHaveProperty(
+        'message',
+        'The encoded data was not valid',
+      );
+    }
+  });
+});
+
+describe('error message safety', () => {
+  it('error messages do not contain the password string', async () => {
+    const password = 'super-secret-p@ssw0rd-12345';
+    const store = await encrypt('sensitive data', password);
+
+    try {
+      await decrypt(store, 'wrong-password');
+      expect.fail('should have thrown');
+    } catch (error) {
+      const err = error as InvalidPasswordError;
+      expect(err.message).not.toContain(password);
+      expect(err.message).not.toContain('wrong-password');
+      expect(String(err.cause)).not.toContain(password);
+      expect(String(err.cause)).not.toContain('wrong-password');
+    }
+  });
+
+  it('error messages do not contain key material representations', async () => {
+    const store = await encrypt('data', 'password');
+
+    try {
+      await decrypt(store, 'wrong');
+      expect.fail('should have thrown');
+    } catch (error) {
+      const msg = (error as Error).message;
+      expect(msg).not.toMatch(/CryptoKey/);
+      expect(msg).not.toMatch(/Uint8Array/);
+      expect(msg).not.toMatch(/\[object ArrayBuffer\]/);
+    }
+  });
+
 });
 
 describe('lib/crypto.ts module purity', () => {
