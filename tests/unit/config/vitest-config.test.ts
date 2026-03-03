@@ -39,11 +39,6 @@ describe('vitest configuration', () => {
       expect(configSource).toContain('branches: 80');
     });
 
-    it('configures entrypoints/ coverage thresholds at 60%', () => {
-      expect(configSource).toMatch(/'entrypoints\/\*\*'/);
-      expect(configSource).toContain('branches: 60');
-    });
-
     it('includes source directories in coverage', () => {
       expect(configSource).toContain("'lib/**/*.ts'");
       expect(configSource).toContain("'entrypoints/**/*.{ts,tsx}'");

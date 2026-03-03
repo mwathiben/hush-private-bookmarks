@@ -231,13 +231,19 @@ describe('CryptoConfig', () => {
       iterations: 600_000,
       algorithm: 'AES-256-GCM',
       keyLength: 256,
+      ivLength: 12,
+      hashAlgorithm: 'SHA-256',
     };
     expect(config.iterations).toBe(600_000);
     expect(config.algorithm).toBe('AES-256-GCM');
     expect(config.keyLength).toBe(256);
+    expect(config.ivLength).toBe(12);
+    expect(config.hashAlgorithm).toBe('SHA-256');
     expect(typeof config.iterations).toBe('number');
     expect(typeof config.algorithm).toBe('string');
     expect(typeof config.keyLength).toBe('number');
+    expect(typeof config.ivLength).toBe('number');
+    expect(typeof config.hashAlgorithm).toBe('string');
   });
 });
 

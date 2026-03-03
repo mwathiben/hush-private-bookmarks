@@ -34,9 +34,18 @@ import {
 
 import { cn } from '@/lib/utils';
 
+import {
+  CRYPTO_CONFIG,
+  encrypt,
+  decrypt,
+  deriveKey,
+  generateSalt,
+  verifyPassword,
+} from '@/lib/crypto';
+
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -82,6 +91,15 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof initSentry).toBe('function');
     expect(typeof captureException).toBe('function');
     expect(typeof getSentryScope).toBe('function');
+  });
+
+  it('crypto exports are callable', () => {
+    expect(typeof CRYPTO_CONFIG).toBe('object');
+    expect(typeof encrypt).toBe('function');
+    expect(typeof decrypt).toBe('function');
+    expect(typeof deriveKey).toBe('function');
+    expect(typeof generateSalt).toBe('function');
+    expect(typeof verifyPassword).toBe('function');
   });
 
   it('cn utility merges classes', () => {
@@ -178,10 +196,14 @@ describe('scaffold integration: type composition', () => {
       iterations: 600_000,
       algorithm: 'AES-256-GCM',
       keyLength: 256,
+      ivLength: 12,
+      hashAlgorithm: 'SHA-256',
     };
     expect(typeof config.iterations).toBe('number');
     expect(typeof config.algorithm).toBe('string');
     expect(typeof config.keyLength).toBe('number');
+    expect(typeof config.ivLength).toBe('number');
+    expect(typeof config.hashAlgorithm).toBe('string');
   });
 });
 
@@ -212,16 +234,16 @@ describe('scaffold integration: error class properties', () => {
   });
 });
 
-describe('scaffold integration: no circular dependencies', () => {
+describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(4);
+    expect(LIB_MODULES).toHaveLength(5);
   });
 });
 
 describe('scaffold integration: .gitignore hygiene', () => {
-  it('does not contain .env patterns', () => {
+  it('gitignores .env files', () => {
     const content = readFileSync(resolve(ROOT, '.gitignore'), 'utf-8');
-    expect(content).not.toMatch(/^\.env/m);
+    expect(content).toMatch(/^\.env/m);
   });
 });
 

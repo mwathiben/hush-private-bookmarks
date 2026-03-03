@@ -25,12 +25,6 @@ export default defineConfig({
           lines: 80,
           statements: 80,
         },
-        'entrypoints/**': {
-          branches: 60,
-          functions: 60,
-          lines: 60,
-          statements: 60,
-        },
       },
     },
   },

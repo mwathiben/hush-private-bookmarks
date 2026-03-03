@@ -1,0 +1,605 @@
+{
+    "project": {
+        "name": "Module 2: Crypto Module",
+        "description": "Extract crypto logic from Holy Private Bookmarks fork (src/js/crypto-wrapper.js), convert to TypeScript as lib/crypto.ts with typed errors, and create a comprehensive test suite (12+ test cases). This is the most security-critical module in the entire project. The core cryptographic parameters are extracted verbatim from Holy PB: 600,000 PBKDF2 iterations, AES-256-GCM, random 12-byte IVs, SHA-256 hash. These MUST NOT be modified. However, the API is an intentional evolution: Holy PB uses a stateful singleton (init -> encrypt/decrypt on cached key) with number[] storage. Hush modernizes to stateless pure functions (password passed per call), base64 string storage, and bundled salt+iterations in EncryptedStore. Any change to crypto.ts requires re-running the full crypto test suite AND a manual review of the diff.",
+        "version": "1.0.0",
+        "created": "2026-03-01",
+        "parent_plan": "Hush Consolidated Build Plan - Day 1 (second half)"
+    },
+    "user_stories": [
+        {
+            "id": "CRYPTO-001",
+            "category": "security",
+            "priority": "CRITICAL",
+            "title": "Extract and type the crypto logic from Holy PB crypto-wrapper.js",
+            "description": "Convert Holy PB's src/js/crypto-wrapper.js (~140 lines, IIFE exposing SecureCrypto singleton) into a typed, stateless TypeScript module lib/crypto.ts. The conversion preserves ALL cryptographic parameters exactly: AES-256-GCM algorithm, PBKDF2 with 600,000 iterations, SHA-256 hash, random 12-byte IVs via crypto.getRandomValues(). The API is modernized from stateful singleton to stateless pure functions - password is passed per call, output is EncryptedStore with base64 fields. Use Web Crypto API exclusively (crypto.subtle). No external crypto dependencies. Target: ~200 lines.",
+            "story_points": 8,
+            "steps": [
+                "RED: Write tests/unit/lib/crypto.test.ts with initial test: test('encrypt and decrypt roundtrip returns original plaintext', async () => { ... }) that encrypts a string with a password and decrypts it back, asserting equality",
+                "RED: Write test: test('PBKDF2 iterations are >= 600,000', () => { ... }) that asserts the CRYPTO_CONFIG.iterations constant >= 600000",
+                "RED: Write test: test('algorithm is AES-256-GCM', () => { ... }) that asserts CRYPTO_CONFIG.algorithm === 'AES-GCM' and CRYPTO_CONFIG.keyLength === 256",
+                "GREEN: Extend CryptoConfig interface in lib/types.ts to add ivLength: number and hashAlgorithm: string fields",
+                "GREEN: Create lib/crypto.ts by extracting crypto logic from Holy PB's src/js/crypto-wrapper.js. Convert IIFE to ES module exports. Add TypeScript types to all functions. Export: encrypt(plaintext: string, password: string): Promise<EncryptedStore>, decrypt(store: EncryptedStore, password: string): Promise<string>, verifyPassword(store: EncryptedStore, password: string): Promise<boolean>, deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>, generateSalt(): Uint8Array",
+                "Import types: import type { EncryptedStore, CryptoConfig } from '@/lib/types' and import { DecryptionError, InvalidPasswordError } from '@/lib/errors'",
+                "Export CRYPTO_CONFIG constant: { iterations: 600000, algorithm: 'AES-GCM', keyLength: 256, ivLength: 12, hashAlgorithm: 'SHA-256' }",
+                "Implement deriveKey() using crypto.subtle.importKey + crypto.subtle.deriveKey with PBKDF2. Use extractable: false for security.",
+                "Implement encrypt(): generate fresh salt via generateSalt(), derive key, encrypt with AES-GCM using random IV via crypto.getRandomValues(new Uint8Array(12)), return EncryptedStore with base64-encoded salt/iv/encrypted and iterations count",
+                "Implement decrypt() using crypto.subtle.decrypt, throwing DecryptionError on failure. Wrap Web Crypto DOMException with typed errors.",
+                "Implement verifyPassword() that attempts decrypt and returns boolean (catches InvalidPasswordError)",
+                "Implement generateSalt() returning crypto.getRandomValues(new Uint8Array(16))",
+                "Ensure zero module-level mutable state - no cached keys, no timers. Each function call is independent.",
+                "Preserve Holy PB's buffer wipe pattern: zero-fill encoded/decrypted Uint8Arrays after use",
+                "Run initial tests to verify roundtrip, iterations, and algorithm"
+            ],
+            "files": [
+                "lib/crypto.ts",
+                "lib/types.ts",
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "acceptance_criteria": [
+                "lib/crypto.ts exports encrypt(), decrypt(), verifyPassword(), deriveKey(), generateSalt(), CRYPTO_CONFIG",
+                "CRYPTO_CONFIG.iterations === 600000",
+                "CRYPTO_CONFIG.algorithm === 'AES-GCM'",
+                "CRYPTO_CONFIG.keyLength === 256",
+                "CRYPTO_CONFIG.ivLength === 12",
+                "CRYPTO_CONFIG.hashAlgorithm === 'SHA-256'",
+                "CryptoConfig interface in lib/types.ts extended with ivLength and hashAlgorithm fields",
+                "All crypto operations use Web Crypto API (crypto.subtle) exclusively",
+                "No external crypto dependencies (no sjcl, no crypto-js, no tweetnacl)",
+                "EncryptedStore output contains salt (base64), encrypted (base64), iv (base64), iterations (number)",
+                "Zero module-level mutable state (no cached keys, no timers)",
+                "deriveKey uses extractable: false",
+                "File is approximately 200 lines (within 2x target = 400 max)"
+            ],
+            "definition_of_done": [
+                "Roundtrip test passes (encrypt then decrypt returns original)",
+                "PBKDF2 iteration count test passes (>= 600,000)",
+                "Algorithm assertion test passes (AES-256-GCM)",
+                "`tsc --noEmit` passes",
+                "`npx eslint lib/crypto.ts` passes (no empty catch blocks)",
+                "Manual diff review against Holy PB src/js/crypto-wrapper.js confirms no crypto parameter changes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/crypto.test.ts && tsc --noEmit && npx eslint lib/crypto.ts",
+            "estimated_effort": "medium",
+            "passes": true,
+            "attempt_count": 1,
+            "depends_on": [
+                "SCAFFOLD-007",
+                "SCAFFOLD-004"
+            ]
+        },
+        {
+            "id": "CRYPTO-002",
+            "category": "security",
+            "priority": "CRITICAL",
+            "title": "Wrong password detection and typed error handling",
+            "description": "Verify that decryption with an incorrect password throws InvalidPasswordError (not a generic Error, not a silent failure, not undefined). Verify that DecryptionError is thrown for corrupted data. All error paths must be typed and testable - no empty catch blocks. Error classes are imported from @/lib/errors (defined in Module 1).",
+            "story_points": 5,
+            "steps": [
+                "RED: Write test: test('decrypt with wrong password throws InvalidPasswordError', async () => { ... }) that encrypts with password A, attempts decrypt with password B, and asserts InvalidPasswordError is thrown",
+                "RED: Write test: test('decrypt with corrupted ciphertext throws DecryptionError', async () => { ... }) that creates a valid EncryptedStore, corrupts the encrypted field, and asserts DecryptionError is thrown",
+                "RED: Write test: test('decrypt with corrupted IV throws DecryptionError', async () => { ... }) that corrupts the iv field",
+                "RED: Write test: test('decrypt with corrupted salt throws DecryptionError', async () => { ... }) that corrupts the salt field",
+                "RED: Write test: test('verifyPassword returns false for wrong password', async () => { ... }) that verifies verifyPassword() returns false (not throws) for incorrect passwords",
+                "RED: Write test: test('verifyPassword returns true for correct password', async () => { ... })",
+                "GREEN: Ensure decrypt() catches Web Crypto DOMException and wraps it in DecryptionError or InvalidPasswordError with proper context (original error in cause field via ErrorOptions). Ensure no empty catch blocks exist",
+                "GREEN: Ensure verifyPassword() catches InvalidPasswordError and returns false, does not swallow other errors",
+                "REFACTOR: Ensure error messages include context but NEVER include the password or key material in the error"
+            ],
+            "files": [
+                "lib/crypto.ts",
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Wrong password produces InvalidPasswordError (not generic Error)",
+                "Corrupted ciphertext produces DecryptionError",
+                "Corrupted IV produces DecryptionError",
+                "Corrupted salt produces DecryptionError",
+                "verifyPassword() returns boolean, never throws for password mismatch",
+                "All error objects include cause field with original Web Crypto error",
+                "No error message contains password or key material",
+                "Zero empty catch blocks in crypto.ts"
+            ],
+            "definition_of_done": [
+                "All 6 error handling tests pass",
+                "`npx eslint lib/crypto.ts` reports zero 'no-empty' violations",
+                "grep -c 'catch.*{}' lib/crypto.ts returns 0",
+                "`tsc --noEmit` passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/crypto.test.ts && npx eslint lib/crypto.ts && grep -c 'catch.*{\\s*}' lib/crypto.ts | grep '^0$'",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "CRYPTO-001"
+            ]
+        },
+        {
+            "id": "CRYPTO-003",
+            "category": "security",
+            "priority": "CRITICAL",
+            "title": "IV uniqueness and randomness verification",
+            "description": "Verify that every encryption operation produces a unique IV (Initialization Vector). Reused IVs with the same key in AES-GCM is a catastrophic vulnerability - it enables key recovery. This test must use the REAL crypto.getRandomValues(), not a mock.",
+            "story_points": 3,
+            "steps": [
+                "RED: Write test: test('each encryption produces a unique IV', async () => { ... }) that encrypts the same plaintext with the same password 100 times and asserts all 100 IVs are unique (Set size === 100)",
+                "RED: Write test: test('IVs are 12 bytes (96 bits) as required by AES-GCM', async () => { ... }) that encrypts once and verifies the IV field decodes from base64 to exactly 12 bytes",
+                "RED: Write test: test('different encryptions of same plaintext produce different ciphertext', async () => { ... }) that encrypts the same string twice with the same password and asserts the encrypted fields differ",
+                "GREEN: These tests should pass with the correct extraction from Holy PB (which already uses crypto.getRandomValues(new Uint8Array(12))). If any fail, the extraction has a bug",
+                "IMPORTANT: Do NOT mock crypto.getRandomValues or crypto.subtle. These tests must use the real Web Crypto API (available in Node.js 18+ and Vitest)"
+            ],
+            "files": [
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "acceptance_criteria": [
+                "100 encryptions of the same input produce 100 unique IVs",
+                "IVs are exactly 12 bytes when decoded from base64",
+                "Same plaintext + same password produces different ciphertext each time",
+                "Tests use real crypto.getRandomValues (NOT mocked)",
+                "Tests use real crypto.subtle (NOT mocked)"
+            ],
+            "definition_of_done": [
+                "All 3 IV tests pass",
+                "No mocks of Web Crypto API in test file (grep for 'mock' or 'spy' on crypto returns zero hits in these tests)",
+                "`tsc --noEmit` passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/crypto.test.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "CRYPTO-001"
+            ]
+        },
+        {
+            "id": "CRYPTO-004",
+            "category": "security",
+            "priority": "CRITICAL",
+            "title": "Edge case handling: empty input, large input, special characters",
+            "description": "Verify crypto module handles edge cases that AI-generated code commonly mishandles: empty strings, very large inputs (1MB+), Unicode/emoji, null bytes, strings with special JSON characters. These are the cases where 'plausible but insecure' code breaks.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write test: test('encrypt/decrypt empty string', async () => { ... }) that roundtrips an empty string",
+                "RED: Write test: test('encrypt/decrypt single character', async () => { ... }) that roundtrips 'a'",
+                "RED: Write test: test('encrypt/decrypt large input (1MB)', async () => { ... }) that creates a 1MB string and roundtrips it",
+                "RED: Write test: test('encrypt/decrypt Unicode characters', async () => { ... }) that roundtrips strings with emoji, CJK characters, RTL text",
+                "RED: Write test: test('encrypt/decrypt string with null bytes', async () => { ... }) that roundtrips 'hello\\x00world'",
+                "RED: Write test: test('encrypt/decrypt JSON special characters', async () => { ... }) that roundtrips '{\"key\": \"value with \\\"quotes\\\"\"}'",
+                "RED: Write test: test('encrypt with empty password throws', async () => { ... }) that asserts empty password is rejected",
+                "GREEN: Fix any edge cases that fail. Holy PB's implementation handles most of these via Web Crypto's built-in UTF-8 encoding, but the empty password case may need explicit validation",
+                "REFACTOR: Group edge case tests in a describe('edge cases', () => { ... }) block"
+            ],
+            "files": [
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Empty string encrypts and decrypts to empty string",
+                "Single character roundtrips correctly",
+                "1MB input roundtrips correctly (no truncation, no memory error)",
+                "Unicode (emoji, CJK, RTL) roundtrips correctly",
+                "Null bytes in plaintext survive roundtrip",
+                "JSON special characters roundtrip correctly",
+                "Empty password is explicitly rejected (not silently accepted)"
+            ],
+            "definition_of_done": [
+                "All 7 edge case tests pass",
+                "No test takes longer than 10 seconds (large input test may be slow)",
+                "`tsc --noEmit` passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/crypto.test.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "CRYPTO-001"
+            ]
+        },
+        {
+            "id": "CRYPTO-005",
+            "category": "security",
+            "priority": "CRITICAL",
+            "title": "Key derivation isolation and salt uniqueness",
+            "description": "Verify that different passwords derive different keys, that each encryption generates a unique salt, and that the key derivation function parameters match the Holy PB specification exactly. Tests verify key isolation indirectly through encrypt/decrypt behavior (not by exporting raw key material, since deriveKey uses extractable: false).",
+            "story_points": 3,
+            "steps": [
+                "RED: Write test: test('different passwords produce different encryption output', async () => { ... }) that encrypts the same plaintext with two different passwords using the same salt (call deriveKey + encrypt manually), and asserts the ciphertext differs AND cross-decryption fails",
+                "RED: Write test: test('same password with different salt produces different encryption output', async () => { ... }) that encrypts the same plaintext with the same password but two different salts and asserts the ciphertext differs",
+                "RED: Write test: test('each encryption generates a unique salt', async () => { ... }) that encrypts 50 times and asserts all salts are unique",
+                "RED: Write test: test('generateSalt returns 16 bytes', async () => { ... }) that calls generateSalt() and verifies the output is exactly 16 bytes",
+                "RED: Write test: test('deriveKey uses PBKDF2 with correct parameters', async () => { ... }) that verifies indirectly: encrypt with known password, then decrypt with same password succeeds (proves PBKDF2 params are consistent across calls)",
+                "GREEN: These should pass with correct Holy PB extraction. If tests fail, the PBKDF2 parameters were incorrectly ported"
+            ],
+            "files": [
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Different passwords produce different ciphertext for same plaintext",
+                "Same password + different salt produces different ciphertext",
+                "50 encryptions produce 50 unique salts",
+                "Salt is exactly 16 bytes",
+                "Key derivation is consistent (same password + same salt produces successful decrypt across calls)",
+                "No test exports raw key material (deriveKey uses extractable: false)"
+            ],
+            "definition_of_done": [
+                "All 5 key derivation tests pass",
+                "Tests use real Web Crypto API",
+                "`tsc --noEmit` passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/crypto.test.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "CRYPTO-001"
+            ]
+        },
+        {
+            "id": "CRYPTO-006",
+            "category": "security",
+            "priority": "HIGH",
+            "title": "Stateless module purity and call independence",
+            "description": "Verify that crypto.ts is a pure stateless module with zero module-level mutable state. Each encrypt/decrypt/verifyPassword call must be fully independent - no cached keys, no shared state between calls, no timers. Session management (key caching, auto-lock, activity tracking) is the consumer's responsibility (background worker module). This story validates the architectural boundary.",
+            "story_points": 2,
+            "steps": [
+                "RED: Write test: test('crypto.ts has no module-level mutable state', () => { ... }) that reads the source of lib/crypto.ts and asserts it contains no top-level let declarations (only const and function/type exports)",
+                "RED: Write test: test('sequential encrypt calls are independent', async () => { ... }) that encrypts with password A, then encrypts with password B, then decrypts each with the correct password - proving no cross-contamination",
+                "RED: Write test: test('concurrent encrypt calls are independent', async () => { ... }) that fires 10 encrypt calls simultaneously via Promise.all with different passwords and verifies each decrypts correctly with its own password",
+                "GREEN: These should pass if crypto.ts is correctly implemented as stateless. If any fail, there's shared mutable state leaking.",
+                "Verify: grep for 'let ' at module level in lib/crypto.ts returns zero hits (only 'const' and function declarations at top level)"
+            ],
+            "files": [
+                "lib/crypto.ts",
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Zero module-level let declarations in crypto.ts (only const, function, type exports)",
+                "Sequential encrypt/decrypt with different passwords produces correct results (no cross-contamination)",
+                "Concurrent encrypt/decrypt calls (Promise.all) produce correct results",
+                "No setTimeout, setInterval, or chrome.alarms references in crypto.ts",
+                "No cached CryptoKey references at module level"
+            ],
+            "definition_of_done": [
+                "All 3 statelessness tests pass",
+                "`tsc --noEmit` passes",
+                "`npx eslint lib/crypto.ts` passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/crypto.test.ts && npx eslint lib/crypto.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "CRYPTO-001"
+            ]
+        },
+        {
+            "id": "CRYPTO-007",
+            "category": "testing",
+            "priority": "HIGH",
+            "title": "EncryptedStore format validation and JSON serialization",
+            "description": "Verify that the EncryptedStore output format is well-defined, JSON-serializable, and internally consistent. The format uses base64-encoded salt, iv, and encrypted fields with an iterations count. Note: Holy PB uses a different format ({ iv: number[], data: number[] } with salt stored separately). Migration from Holy PB format to Hush EncryptedStore format is Module 14's responsibility, not this module's.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write test: test('EncryptedStore format contains exactly 4 fields', async () => { ... }) that encrypts data and asserts the result has exactly: salt, encrypted, iv, iterations - no extra fields",
+                "RED: Write test: test('EncryptedStore salt is valid base64 decoding to 16 bytes', async () => { ... })",
+                "RED: Write test: test('EncryptedStore iv is valid base64 decoding to 12 bytes', async () => { ... })",
+                "RED: Write test: test('EncryptedStore encrypted field is valid base64', async () => { ... })",
+                "RED: Write test: test('EncryptedStore iterations equals CRYPTO_CONFIG.iterations', async () => { ... })",
+                "RED: Write test: test('EncryptedStore can be serialized to JSON and deserialized back', async () => { ... }) that JSON.stringify/parse roundtrips the store and decrypt still works on the deserialized version",
+                "GREEN: Ensure encrypt() returns EncryptedStore with exactly these 4 fields. Use standard base64 alphabet (A-Z, a-z, 0-9, +, /, =).",
+                "REFACTOR: Add JSDoc to EncryptedStore type in lib/types.ts noting that Holy PB uses a different format ({ iv: number[], data: number[] }) and migration is handled in Module 14"
+            ],
+            "files": [
+                "lib/crypto.ts",
+                "lib/types.ts",
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "acceptance_criteria": [
+                "EncryptedStore has exactly 4 fields: salt, encrypted, iv, iterations",
+                "salt decodes from base64 to 16 bytes",
+                "iv decodes from base64 to 12 bytes",
+                "encrypted field is valid base64",
+                "iterations equals CRYPTO_CONFIG.iterations (600000)",
+                "JSON serialize/deserialize roundtrip works (decrypt succeeds on deserialized store)",
+                "Base64 encoding uses standard alphabet (A-Z, a-z, 0-9, +, /, =)"
+            ],
+            "definition_of_done": [
+                "All 6 format validation tests pass",
+                "EncryptedStore type in lib/types.ts has JSDoc noting Holy PB format difference",
+                "`tsc --noEmit` passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/crypto.test.ts && tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "CRYPTO-001"
+            ]
+        },
+        {
+            "id": "CRYPTO-008",
+            "category": "testing",
+            "priority": "HIGH",
+            "title": "Crypto module full test suite validation and coverage gate",
+            "description": "Final verification story: run the complete crypto test suite, verify 80%+ branch coverage on lib/crypto.ts, verify all tests use real Web Crypto (no mocks), verify no empty catch blocks, verify line count within target. This is the quality gate before committing the crypto module.",
+            "story_points": 3,
+            "steps": [
+                "Run `npx vitest run tests/unit/lib/crypto.test.ts --coverage` and verify branch coverage >= 80% on lib/crypto.ts",
+                "Count total test cases - must be >= 12 (per Build Plan specification)",
+                "Grep test file for 'mock', 'spy', 'fake' applied to crypto.subtle or crypto.getRandomValues - must find zero matches",
+                "Grep lib/crypto.ts for empty catch blocks - must find zero",
+                "Count lines in lib/crypto.ts - must be <= 400 (2x target of 200)",
+                "Run `tsc --noEmit` one final time",
+                "Run `npx eslint lib/crypto.ts` one final time",
+                "Verify the test file has describe blocks organized by: 'encrypt/decrypt roundtrip', 'error handling', 'IV uniqueness', 'edge cases', 'key derivation', 'stateless purity', 'format validation'"
+            ],
+            "files": [
+                "lib/crypto.ts",
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Branch coverage >= 80% on lib/crypto.ts",
+                "Total test count >= 12 (summing all stories: ~25 tests expected)",
+                "Zero mocks of Web Crypto API",
+                "Zero empty catch blocks in lib/crypto.ts",
+                "lib/crypto.ts line count <= 400",
+                "All tests pass",
+                "tsc clean",
+                "ESLint clean"
+            ],
+            "definition_of_done": [
+                "`npx vitest run tests/unit/lib/crypto.test.ts --coverage` shows >= 80% branches",
+                "All tests pass (exit 0)",
+                "`tsc --noEmit` exits 0",
+                "`npx eslint lib/crypto.ts` exits 0",
+                "wc -l lib/crypto.ts shows <= 400 lines",
+                "Ready to commit crypto module and hand off to Module 3 (Storage)"
+            ],
+            "verification": "npx vitest run tests/unit/lib/crypto.test.ts --coverage && tsc --noEmit && npx eslint lib/crypto.ts && wc -l lib/crypto.ts",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "CRYPTO-001",
+                "CRYPTO-002",
+                "CRYPTO-003",
+                "CRYPTO-004",
+                "CRYPTO-005",
+                "CRYPTO-006",
+                "CRYPTO-007"
+            ]
+        }
+    ],
+    "pre_existing_issues": [
+        {
+            "issue": "Holy PB crypto-wrapper.js uses IIFE pattern with window.SecureCrypto - must be converted to ES module exports without changing crypto logic",
+            "severity": "HIGH",
+            "action": "CRYPTO-001 handles this conversion. Review diff line-by-line."
+        },
+        {
+            "issue": "Holy PB secureWipe() has empty catch blocks (} catch (e) {}) - violates CLAUDE.md no-empty-catch-blocks rule. Must be fixed during conversion with proper error handling.",
+            "severity": "HIGH",
+            "action": "Replace empty catch blocks with typed error handling in CRYPTO-001. Verify via ESLint no-empty rule."
+        },
+        {
+            "issue": "Holy PB uses extractable: true for derived CryptoKeys - allows key material export. Hush should use extractable: false for security.",
+            "severity": "MEDIUM",
+            "action": "Set extractable: false in deriveKey(). CRYPTO-005 tests verify key isolation indirectly via encrypt/decrypt behavior, not by exporting raw key material."
+        },
+        {
+            "issue": "Holy PB stores crypto data as number[] (Array.from(new Uint8Array(encrypted))). Hush uses base64 strings in EncryptedStore. This is an intentional format change, not a bug.",
+            "severity": "MEDIUM",
+            "action": "Implement base64 encoding in encrypt(), base64 decoding in decrypt(). Holy PB to Hush format migration handled in Module 14."
+        },
+        {
+            "issue": "Web Crypto API availability in Vitest - Node.js 18+ provides global crypto, but some CI environments may need polyfill",
+            "severity": "MEDIUM",
+            "action": "Verify crypto.subtle is available in Vitest environment. If not, configure globalSetup in vitest.config.ts"
+        },
+        {
+            "issue": "Base64 encoding strategy - need btoa/atob equivalent that works in both browser and Node.js/Vitest. Holy PB does NOT use btoa/atob (it uses number[]). Hush needs base64 for compactness.",
+            "severity": "MEDIUM",
+            "action": "Use Buffer.from(bytes).toString('base64') pattern or globalThis.btoa with Uint8Array to binary string conversion. Verify works in jsdom test environment."
+        },
+        {
+            "issue": "Auto-lock timer in service worker context - setTimeout/setInterval behave differently in MV3 service workers (worker can be terminated). Timer may need chrome.alarms API for production.",
+            "severity": "HIGH",
+            "action": "NOT implemented in crypto.ts (stateless design). Session management including auto-lock is the background worker module's responsibility (Module 9). Document this boundary in crypto.ts JSDoc."
+        }
+    ],
+    "critical_path": "001 -> 002/003/004/005/006/007 -> 008",
+    "total_story_points": 34,
+    "total_stories": 8,
+    "metadata": {
+        "passing_stories": 1,
+        "build_plan_day": "Day 1 (second half)",
+        "session_protocol": "One Claude Code session. Generate crypto.ts + crypto.test.ts together. Review crypto.ts against Holy PB src/js/crypto-wrapper.js. Verify crypto parameters match exactly (iterations, algorithm, key length, IV length, hash). Verify API is stateless (no module-level mutable state). Run tsc --noEmit. Run vitest. Verify all tests pass with real Web Crypto (not mocked). Commit.",
+        "quality_gate": "All crypto tests pass. tsc clean. No empty catch blocks. PBKDF2 iterations = 600,000. Branch coverage >= 80%. Line count <= 400. Zero module-level mutable state.",
+        "human_review_required": "MANDATORY: Review crypto.ts against the original Holy PB src/js/crypto-wrapper.js. Verify no crypto parameters were changed (iterations, algorithm, key length, IV length, hash). API changes (stateless, base64, bundled salt) are intentional and expected.",
+        "crypto_guardrails": [
+            "Never modify PBKDF2 iteration count (600,000)",
+            "Never use ECB mode (must be GCM)",
+            "Never hardcode IVs (must use crypto.getRandomValues)",
+            "Never use Math.random() for any crypto operation",
+            "All crypto operations use Web Crypto API (crypto.subtle) exclusively",
+            "No external crypto dependencies",
+            "No empty catch blocks in crypto.ts",
+            "deriveKey must use extractable: false",
+            "Zero module-level mutable state (stateless design)"
+        ]
+    },
+    "progress_log": {
+        "file": "module-02-crypto.progress.md",
+        "format_rules": [
+            "Append a new session entry after completing each story (do NOT overwrite previous entries)",
+            "Each entry starts with `## Session: {ISO timestamp}` followed by `**Task**: {story_id} - {story_title}`",
+            "Set **Status**: PASSED or FAILED (attempt {n})",
+            "Include ### Work Done section with bullet points describing what was implemented",
+            "Include ### Files Created table (File | Purpose) for any new files",
+            "Include ### Files Modified table (File | Changes) for any changed files",
+            "Include ### Acceptance Criteria Verification with numbered checklist",
+            "Include ### Verification Results showing exact command output (tsc, vitest, eslint, etc.)",
+            "If story FAILED, include ### Failure Analysis with root cause before retrying",
+            "After all stories complete, append a ## Module Summary with total pass/fail counts and any notes for the next module",
+            "Update the story's `passes` field to true and increment `attempt_count` in the prd.json after each attempt",
+            "Update `metadata.passing_stories` count in the prd.json after each story passes"
+        ]
+    },
+    "context": {
+        "starting_state": {
+            "description": "Module 1 (Project Scaffold) is COMPLETE. The WXT + React + TypeScript project exists with all configuration files, directory structure, and shared types. You are adding lib/crypto.ts and its test suite to an existing, working project.",
+            "repo_exists": true,
+            "files_that_exist": [
+                "wxt.config.ts",
+                "tsconfig.json",
+                "vitest.config.ts",
+                "playwright.config.ts",
+                "eslint.config.js",
+                "CLAUDE.md",
+                "lib/types.ts",
+                "lib/errors.ts",
+                "lib/sentry.ts",
+                "entrypoints/popup/index.html",
+                "entrypoints/popup/main.tsx",
+                "entrypoints/popup/App.tsx",
+                "entrypoints/background.ts",
+                "components/ErrorBoundary.tsx",
+                "components/ui/dialog.tsx",
+                "components/ui/input.tsx",
+                "components/ui/button.tsx",
+                "components/ui/alert.tsx",
+                "globals.css",
+                "components.json",
+                "package.json",
+                "package-lock.json",
+                ".github/workflows/ci.yml",
+                ".github/workflows/nightly.yml",
+                "LICENSE",
+                "NOTICE",
+                "public/_locales/en/messages.json",
+                "tests/unit/sanity.test.ts",
+                "tests/e2e/sanity.test.ts",
+                "tests/e2e/fixtures/extension.ts"
+            ],
+            "files_that_do_not_exist_yet": [
+                "lib/crypto.ts",
+                "tests/unit/lib/crypto.test.ts"
+            ],
+            "npm_packages_installed": true,
+            "git_initialized": true,
+            "verification_commands_that_pass": [
+                "tsc --noEmit",
+                "npx eslint .",
+                "npx vitest run",
+                "wxt build"
+            ]
+        },
+        "external_dependencies": [
+            {
+                "name": "Holy Private Bookmarks",
+                "repo_url": "https://github.com/OSV-IT-Studio/holy-private-bookmarks",
+                "clone_location": "Fetch via GitHub API (mcp__github__get_file_contents) - /tmp/ does not persist on Windows",
+                "clone_required": true,
+                "files_to_extract": {
+                    "src/js/crypto-wrapper.js": {
+                        "description": "IIFE module exposing SecureCrypto singleton. ~140 lines. This is the PRIMARY source file for this module.",
+                        "what_to_extract": "PBKDF2 key derivation (600,000 iterations, SHA-256) -> AES-256-GCM encrypt/decrypt. Buffer wipe patterns for encoded/decrypted data.",
+                        "conversion_rules": [
+                            "Convert IIFE to ES module exports (export async function encrypt, decrypt, etc.)",
+                            "Add TypeScript types to all function parameters and return types",
+                            "Import types from @/lib/types (EncryptedStore, CryptoConfig) and errors from @/lib/errors (DecryptionError, InvalidPasswordError)",
+                            "Replace window.SecureCrypto singleton with named exports",
+                            "Convert stateful init/encrypt/decrypt to stateless encrypt(plaintext, password)/decrypt(store, password)",
+                            "Convert number[] output format (Array.from) to base64 string format",
+                            "Bundle salt + iterations into EncryptedStore output (Holy PB stores salt separately)",
+                            "Add generateSalt() as standalone export (Holy PB receives salt from outside)",
+                            "Replace empty catch blocks with typed error handling",
+                            "Set extractable: false on deriveKey (Holy PB uses true)",
+                            "Centralize hardcoded params into exported CRYPTO_CONFIG constant",
+                            "DO NOT change any cryptographic parameters (iterations, algorithm, key length, IV length, hash algorithm)",
+                            "Preserve buffer wipe patterns (zero-fill Uint8Arrays after use)"
+                        ]
+                    }
+                }
+            }
+        ],
+        "tech_stack": {
+            "runtime": "Node.js 20 LTS (already installed from Module 1)",
+            "crypto_api": "Web Crypto API (crypto.subtle) - available natively in Node.js 18+ and all target browsers. NO external crypto libraries.",
+            "forbidden_dependencies": [
+                "sjcl (used by original Hush - only needed in Module 14 for Hush 1.0 import, NOT here)",
+                "crypto-js",
+                "tweetnacl",
+                "bcrypt",
+                "Any npm package that provides encryption - Web Crypto API is the only allowed crypto provider"
+            ],
+            "testing": "Vitest (already configured in vitest.config.ts from Module 1). Tests MUST use real Web Crypto API - do NOT mock crypto.subtle or crypto.getRandomValues.",
+            "base64_note": "Holy PB does NOT use base64 - it stores as number[] via Array.from(). Hush introduces base64 encoding for compactness. Use Buffer.from(bytes).toString('base64') / Buffer.from(str, 'base64') or equivalent that works in both browser and Node.js/jsdom test environment."
+        },
+        "licensing": {
+            "extension_license": "GPL-3.0",
+            "crypto_ts_attribution": "lib/crypto.ts is derived from Holy Private Bookmarks src/js/crypto-wrapper.js (GPL-3.0, github.com/OSV-IT-Studio/holy-private-bookmarks). Preserve copyright notice at top of file."
+        },
+        "read_first": [
+            "CLAUDE.md (project conventions - especially Crypto Rules section)",
+            "lib/types.ts (type definitions: EncryptedStore, CryptoConfig)",
+            "lib/errors.ts (error classes: DecryptionError, InvalidPasswordError)",
+            "Holy PB src/js/crypto-wrapper.js via GitHub API (the source to extract from - read COMPLETELY before writing any code)",
+            "This PRD file (all 8 stories and their dependencies)"
+        ],
+        "inputs": [
+            {
+                "file": "lib/types.ts",
+                "from_module": "Module 1 (Scaffold)",
+                "what_it_provides": "Type definitions: EncryptedStore { salt: string; encrypted: string; iv: string; iterations: number }, CryptoConfig { iterations: number; algorithm: string; keyLength: number } (to be extended with ivLength and hashAlgorithm in CRYPTO-001), Result<T, E> utility type.",
+                "how_to_use": "import type { EncryptedStore, CryptoConfig } from '@/lib/types';"
+            },
+            {
+                "file": "lib/errors.ts",
+                "from_module": "Module 1 (Scaffold)",
+                "what_it_provides": "Error classes: DecryptionError (extends Error with ErrorOptions), InvalidPasswordError (extends Error with ErrorOptions). Both have readonly name field and support cause via ErrorOptions.",
+                "how_to_use": "import { DecryptionError, InvalidPasswordError } from '@/lib/errors';"
+            },
+            {
+                "file": "vitest.config.ts",
+                "from_module": "Module 1 (Scaffold)",
+                "what_it_provides": "Test runner configuration with v8 coverage, jsdom environment, path alias resolution via WxtVitest(), 80% coverage thresholds for lib/**.",
+                "how_to_use": "Tests run via: npx vitest run tests/unit/lib/crypto.test.ts"
+            },
+            {
+                "file": "CLAUDE.md",
+                "from_module": "Module 1 (Scaffold)",
+                "what_it_provides": "Crypto guardrails: never modify PBKDF2 iterations (600,000), never ECB, never hardcode IVs, never Math.random() for crypto, Web Crypto API exclusively.",
+                "how_to_use": "Read at session start. All crypto code must comply."
+            },
+            {
+                "file": "src/js/crypto-wrapper.js (via GitHub API)",
+                "from_module": "External (Holy Private Bookmarks - OSV-IT-Studio/holy-private-bookmarks)",
+                "what_it_provides": "Source crypto logic to extract from. IIFE singleton with deriveKey (PBKDF2 600k SHA-256), encrypt (AES-256-GCM, random 12-byte IV), decrypt, verifyPassword, secureWipe, startAutoLock methods.",
+                "how_to_use": "Fetch via mcp__github__get_file_contents. Read completely. Extract crypto logic following conversion_rules."
+            }
+        ],
+        "outputs": [
+            {
+                "file": "lib/crypto.ts",
+                "consumed_by": "Module 3 (Storage - uses encrypt/decrypt for StorageService), Module 6 (Password Sets - uses deriveKey for independent sets), Module 7 (BIP39 Recovery - uses deriveKey from mnemonic), Module 9 (Background Worker - wraps stateless functions with session/auto-lock management), Module 14 (Hush 1.0 Import - references EncryptedStore format for compatibility).",
+                "description": "Typed stateless crypto module exporting: encrypt(), decrypt(), verifyPassword(), deriveKey(), generateSalt(), CRYPTO_CONFIG constant. ~200 lines. AES-256-GCM, PBKDF2 600K iterations. Zero module-level mutable state."
+            },
+            {
+                "file": "tests/unit/lib/crypto.test.ts",
+                "consumed_by": "CI pipeline. Any future change to crypto.ts must re-run this full suite.",
+                "description": "~25 test cases covering: roundtrip, error handling, IV uniqueness, edge cases, key derivation, stateless purity, format validation. 80%+ branch coverage on crypto.ts."
+            }
+        ]
+    },
+    "execution_rules": {
+        "execution_order": "Execute stories in dependency order. Start with CRYPTO-001, then CRYPTO-002 through CRYPTO-007 (can be done in any order after 001), then CRYPTO-008 as final validation.",
+        "clarifying_questions": "You ARE encouraged to ask clarifying questions about intent, trade-offs, or ambiguous requirements - this helps ensure the implementation matches what's wanted. However, the PRD should already contain all factual context (repo URLs, file paths, tech versions, what exists vs what doesn't). If you find yourself asking for factual information that should have been in the PRD, flag it as a PRD gap and proceed with your best judgment.",
+        "research_encouraged": "You ARE encouraged to search the internet for best practices, updated documentation, and improved patterns. The PRD defines WHAT to build and the constraints. HOW to build it should incorporate current best practices from official docs (wxt.dev, vitejs.dev, playwright.dev, tailwindcss.com, ui.shadcn.com). If you find a better approach than what the PRD describes, propose it with reasoning.",
+        "prd_scope": "This PRD is one of 22 modules in a sequential build plan. The scope and story breakdown are intentional. If you believe a story should be split or reordered, propose the change with reasoning rather than silently restructuring.",
+        "progress_logging": "After completing each story, update this prd.json (passes, attempt_count, passing_stories) AND append to the progress.md file as specified in the progress_log section.",
+        "commit_protocol": "Commit after each story passes verification. Use conventional commit format: 'feat(crypto): CRYPTO-XXX - <title>'. Small, frequent commits.",
+        "failure_protocol": "If a story fails verification, log the failure in progress.md with root cause analysis. Increment attempt_count. Fix and retry. Maximum 3 attempts before flagging for human review.",
+        "crypto_extraction_protocol": "Before writing ANY code in CRYPTO-001, fetch Holy PB src/js/crypto-wrapper.js via GitHub API and read it top to bottom. Understand the full flow. Then extract crypto logic to TypeScript, applying conversion_rules. After extraction, verify: every crypto parameter must match exactly (iterations, algorithm, key length, IV length, hash). API changes (stateless, base64, bundled salt) are intentional evolution.",
+        "no_crypto_invention": "NEVER generate 'custom' or 'improved' crypto code. Extract core crypto logic from Holy PB. The only changes allowed are: TypeScript types, ES module syntax, typed errors, stateless API, base64 encoding, bundled EncryptedStore format, extractable:false, centralized CRYPTO_CONFIG. Zero changes to crypto algorithm, iteration count, key length, IV length, hash algorithm, or any security parameter."
+    }
+}

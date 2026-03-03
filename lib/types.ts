@@ -56,6 +56,8 @@ export interface CryptoConfig {
   readonly iterations: number;
   readonly algorithm: string;
   readonly keyLength: number;
+  readonly ivLength: number;
+  readonly hashAlgorithm: string;
 }
 
 /** Type-safe success/failure wrapper. Discriminated on the `success` field. */
