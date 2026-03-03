@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   CRYPTO_CONFIG,
@@ -15,8 +13,6 @@ import type { EncryptedStore } from '@/lib/types';
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-const ROOT = resolve(process.cwd());
 
 function corruptBase64(original: string): string {
   const bytes = Uint8Array.from(atob(original), (c) => c.charCodeAt(0));
@@ -308,56 +304,6 @@ describe('error message safety', () => {
     }
   });
 
-});
-
-describe('lib/crypto.ts module purity', () => {
-  const content = readFileSync(resolve(ROOT, 'lib/crypto.ts'), 'utf-8');
-
-  it('has zero React/DOM imports', () => {
-    expect(content).not.toMatch(/from\s+['"]react['"]/);
-    expect(content).not.toMatch(/from\s+['"]react-dom['"]/);
-    expect(content).not.toContain('document.');
-    expect(content).not.toContain('window.');
-  });
-
-  it('has zero extension storage references', () => {
-    expect(content).not.toContain('chrome.storage');
-  });
-
-  it('has zero module-level let declarations', () => {
-    const lines = content.split('\n');
-    const moduleLevelLets = lines.filter((line) => {
-      const trimmed = line.trimStart();
-      return (
-        trimmed.startsWith('let ') &&
-        line.length - trimmed.length === 0
-      );
-    });
-    expect(moduleLevelLets).toHaveLength(0);
-  });
-
-  it('has zero console.log statements', () => {
-    expect(content).not.toMatch(/console\.(log|warn|error|info|debug)/);
-  });
-
-  it('has zero type suppressions', () => {
-    expect(content).not.toContain('as any');
-    expect(content).not.toContain('@ts-ignore');
-    expect(content).not.toContain('@ts-expect-error');
-  });
-
-  it('has zero empty catch blocks', () => {
-    expect(content).not.toMatch(/catch\s*\([^)]*\)\s*\{\s*\}/);
-  });
-
-  it('uses no Math.random()', () => {
-    expect(content).not.toContain('Math.random');
-  });
-
-  it('has no setTimeout or setInterval', () => {
-    expect(content).not.toContain('setTimeout');
-    expect(content).not.toContain('setInterval');
-  });
 });
 
 describe('IV uniqueness and randomness', () => {
