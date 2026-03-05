@@ -22,7 +22,7 @@ declare const chrome: {
 };
 
 test.describe('STORAGE-006: Module integration verification', () => {
-  test('extension loads without console errors after storage module integration', async ({
+  test('extension loads without uncaught exceptions after storage module integration', async ({
     context,
     extensionId,
   }) => {
@@ -108,7 +108,7 @@ test.describe('STORAGE-006: Module integration verification', () => {
 
       // #when — check existence, measure bytes, remove, verify removal
       const exists = (await chrome.storage.local.get('holyPrivateData'))['holyPrivateData'] != null;
-      const bytes = await chrome.storage.local.getBytesInUse(null);
+      const bytes = await chrome.storage.local.getBytesInUse('holyPrivateData');
       await chrome.storage.local.remove('holyPrivateData');
       const afterRemove = (await chrome.storage.local.get('holyPrivateData'))['holyPrivateData'];
       return { exists, bytes, afterRemove };
