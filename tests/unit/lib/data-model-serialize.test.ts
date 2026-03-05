@@ -160,6 +160,31 @@ describe('DATAMODEL-005: JSON serialization & normalizeTree', () => {
       }
     });
 
+    it('rejects non-string id values from malformed JSON', () => {
+      // #given — deserialized JSON can contain null, numbers, booleans as id
+      const malformedTree = {
+        type: 'folder',
+        name: 'Root',
+        children: [
+          { type: 'bookmark', title: 'Null ID', url: 'https://a.com', dateAdded: 0, id: null },
+          { type: 'bookmark', title: 'Numeric ID', url: 'https://b.com', dateAdded: 0, id: 42 },
+          { type: 'bookmark', title: 'Boolean ID', url: 'https://c.com', dateAdded: 0, id: false },
+        ],
+        dateAdded: 0,
+        id: null,
+      } as unknown as BookmarkTree;
+
+      // #when
+      const normalized = normalizeTree(malformedTree);
+
+      // #then — all non-string IDs replaced with valid UUIDs
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      expect(normalized.id).toMatch(uuidRe);
+      for (const child of normalized.children) {
+        expect(child.id).toMatch(uuidRe);
+      }
+    });
+
     it('preserves existing IDs', () => {
       // #given
       const tree = deepFreeze(buildPopulatedTree());

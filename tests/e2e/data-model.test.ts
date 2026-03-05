@@ -410,7 +410,8 @@ test.describe('DATAMODEL-005: JSON serialization & normalizeTree E2E', () => {
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
-    // #when — inline mirror of normalizeTree logic with legacy data
+    // #when — page.evaluate runs in browser context (cannot import Node modules),
+    // so normalizeTree logic is mirrored inline to verify browser-native crypto.randomUUID()
     const result = await page.evaluate(() => {
       function hasValidId(node: { id?: unknown }): node is { id: string } {
         return typeof node.id === 'string' && node.id !== '';
