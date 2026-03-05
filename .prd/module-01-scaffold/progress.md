@@ -1053,11 +1053,11 @@ All 12 stories pass. Module 1 establishes the foundation for Hush Private Bookma
 | SCAFFOLD-001 | WXT + React + TS skeleton | ✅ |
 | SCAFFOLD-002 | TypeScript strict mode | ✅ |
 | SCAFFOLD-003 | Tailwind CSS v4 + shadcn/ui | ✅ |
-| SCAFFOLD-004 | Domain types (lib/types.ts) | ✅ |
-| SCAFFOLD-005 | Error classes (lib/errors.ts) | ✅ |
-| SCAFFOLD-006 | Sentry integration (lib/sentry.ts) | ✅ |
-| SCAFFOLD-007 | Unit test infrastructure (Vitest) | ✅ |
-| SCAFFOLD-008 | ESLint v10 flat config | ✅ |
+| SCAFFOLD-004 | Vitest configuration with coverage thresholds | ✅ |
+| SCAFFOLD-005 | Playwright E2E configuration with extension loading fixture | ✅ |
+| SCAFFOLD-006 | ESLint v10 flat config enforcing project conventions | ✅ |
+| SCAFFOLD-007 | Shared type definitions (lib/types.ts) | ✅ |
+| SCAFFOLD-008 | Update CLAUDE.md with Progress Logging Protocol and Licensing Rules | ✅ |
 | SCAFFOLD-009 | Privacy-safe Sentry setup | ✅ |
 | SCAFFOLD-010 | Directory structure + i18n + ErrorBoundary | ✅ |
 | SCAFFOLD-011 | GitHub Actions CI pipeline | ✅ |

@@ -40,7 +40,11 @@ test.describe('Scaffold integration', () => {
     extensionId,
   }) => {
     expect(extensionId).toBeTruthy();
-    const workers = context.serviceWorkers();
+    let workers = context.serviceWorkers();
+    if (workers.length === 0) {
+      await context.waitForEvent('serviceworker');
+      workers = context.serviceWorkers();
+    }
     expect(workers.length).toBeGreaterThan(0);
   });
 
@@ -70,7 +74,9 @@ test.describe('Scaffold integration', () => {
     const response = await page.goto(
       `chrome-extension://${extensionId}/manifest.json`,
     );
-    const manifest = await response?.json();
+    expect(response).not.toBeNull();
+    expect(response!.ok()).toBeTruthy();
+    const manifest = await response!.json();
 
     expect(manifest.name).toBe('Hush Private Bookmarks');
     expect(manifest.manifest_version).toBe(3);

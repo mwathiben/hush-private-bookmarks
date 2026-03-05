@@ -36,7 +36,8 @@ describe('stateless module purity and call independence', () => {
       const moduleLevelLets = lines.filter((line) => {
         const trimmed = line.trimStart();
         return (
-          trimmed.startsWith('let ') && line.length - trimmed.length === 0
+          /^(export\s+)?(let|var)\s+/.test(trimmed) &&
+          line.length - trimmed.length === 0
         );
       });
       expect(moduleLevelLets).toHaveLength(0);

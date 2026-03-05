@@ -52,6 +52,9 @@ function base64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+const SALT_BYTES = 16;
+const GCM_TAG_BYTES = 16;
+
 export function generateSalt(): Uint8Array<ArrayBuffer> {
   return crypto.getRandomValues(new Uint8Array(SALT_BYTES));
 }
@@ -125,9 +128,6 @@ interface StoreFields {
   iv: Uint8Array<ArrayBuffer>;
   encryptedBytes: Uint8Array<ArrayBuffer>;
 }
-
-const SALT_BYTES = 16;
-const GCM_TAG_BYTES = 16;
 
 function validateAndParseStore(store: EncryptedStore): StoreFields {
   if (store.iterations !== CRYPTO_CONFIG.iterations) {
