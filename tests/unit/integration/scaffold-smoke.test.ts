@@ -57,9 +57,23 @@ import {
   getStorageUsage,
 } from '@/lib/storage';
 
+import {
+  isBookmark,
+  isFolder,
+  generateId,
+  createEmptyTree,
+  getItemByPath,
+  findItemPath,
+  addBookmark,
+  addFolder,
+  removeItem,
+  updateBookmark,
+  renameFolder,
+} from '@/lib/data-model';
+
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -126,6 +140,20 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof hasData).toBe('function');
     expect(typeof clearAll).toBe('function');
     expect(typeof getStorageUsage).toBe('function');
+  });
+
+  it('data-model exports are callable', () => {
+    expect(typeof isBookmark).toBe('function');
+    expect(typeof isFolder).toBe('function');
+    expect(typeof generateId).toBe('function');
+    expect(typeof createEmptyTree).toBe('function');
+    expect(typeof getItemByPath).toBe('function');
+    expect(typeof findItemPath).toBe('function');
+    expect(typeof addBookmark).toBe('function');
+    expect(typeof addFolder).toBe('function');
+    expect(typeof removeItem).toBe('function');
+    expect(typeof updateBookmark).toBe('function');
+    expect(typeof renameFolder).toBe('function');
   });
 
   it('cn utility merges classes', () => {
@@ -265,7 +293,7 @@ describe('scaffold integration: error class properties', () => {
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(6);
+    expect(LIB_MODULES).toHaveLength(7);
   });
 });
 

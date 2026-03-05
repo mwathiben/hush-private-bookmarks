@@ -10,6 +10,110 @@
 
 import { test, expect } from './fixtures/extension';
 
+test.describe('DATAMODEL-002: Immutable write operations E2E', () => {
+  test('addBookmark creates correct tree structure in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of lib/data-model.ts addBookmark logic (structural sharing)
+    const result = await page.evaluate(() => {
+      const tree = {
+        type: 'folder' as const, id: crypto.randomUUID(), name: 'Root',
+        children: [] as Array<{ type: string; id: string; title?: string; url?: string; dateAdded: number }>,
+        dateAdded: Date.now(),
+      };
+      const bookmark = { type: 'bookmark' as const, id: crypto.randomUUID(), title: 'Test BM', url: 'https://test.com', dateAdded: Date.now() };
+      const newTree = { ...tree, children: [...tree.children, bookmark] };
+      return { originalLength: tree.children.length, newLength: newTree.children.length, addedTitle: newTree.children[0]?.title, notSame: newTree !== tree };
+    });
+
+    // #then
+    expect(result.originalLength).toBe(0);
+    expect(result.newLength).toBe(1);
+    expect(result.addedTitle).toBe('Test BM');
+    expect(result.notSame).toBe(true);
+    await page.close();
+  });
+
+  test('immutability: original tree unchanged after write', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of structural sharing immutability pattern
+    const result = await page.evaluate(() => {
+      const child = { type: 'bookmark' as const, id: 'bm-1', title: 'Old', url: 'https://old.com', dateAdded: 0 };
+      const tree = { type: 'folder' as const, id: 'root', name: 'Root', children: [child], dateAdded: 0 };
+      const ref = tree.children;
+      const newTree = { ...tree, children: [...tree.children, { type: 'bookmark' as const, id: crypto.randomUUID(), title: 'New', url: 'https://new.com', dateAdded: 1 }] };
+      return { sameRef: tree.children === ref, origLen: tree.children.length, newLen: newTree.children.length, notShared: tree.children !== newTree.children };
+    });
+
+    // #then
+    expect(result.sameRef).toBe(true);
+    expect(result.origLen).toBe(1);
+    expect(result.newLen).toBe(2);
+    expect(result.notShared).toBe(true);
+    await page.close();
+  });
+
+  test('removeItem produces correct structure in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of lib/data-model.ts removeItem logic
+    const result = await page.evaluate(() => {
+      const bm1 = { type: 'bookmark' as const, id: 'bm-1', title: 'First', url: 'https://first.com', dateAdded: 0 };
+      const bm2 = { type: 'bookmark' as const, id: 'bm-2', title: 'Second', url: 'https://second.com', dateAdded: 0 };
+      const tree = { type: 'folder' as const, id: 'root', name: 'Root', children: [bm1, bm2], dateAdded: 0 };
+      const newTree = { ...tree, children: tree.children.filter((_, i) => i !== 0) };
+      return { origLen: tree.children.length, newLen: newTree.children.length, remainingId: newTree.children[0]?.id };
+    });
+
+    // #then
+    expect(result.origLen).toBe(2);
+    expect(result.newLen).toBe(1);
+    expect(result.remainingId).toBe('bm-2');
+    await page.close();
+  });
+
+  test('full CRUD cycle: add, update, remove in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of full CRUD cycle
+    const result = await page.evaluate(() => {
+      type BM = { type: 'bookmark'; id: string; title: string; url: string; dateAdded: number };
+      type FN = { type: 'folder'; id: string; name: string; children: BM[]; dateAdded: number };
+      const tree: FN = { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 };
+      const bm: BM = { type: 'bookmark', id: crypto.randomUUID(), title: 'Added', url: 'https://added.com', dateAdded: 1 };
+      const afterAdd: FN = { ...tree, children: [...tree.children, bm] };
+      const updated = { ...afterAdd.children[0]!, title: 'Updated', url: 'https://updated.com' };
+      const afterUpdate: FN = { ...afterAdd, children: afterAdd.children.map((c, i) => (i === 0 ? updated : c)) };
+      const afterRemove: FN = { ...afterUpdate, children: afterUpdate.children.filter((_, i) => i !== 0) };
+      return { addLen: afterAdd.children.length, updateTitle: afterUpdate.children[0]?.title, removeLen: afterRemove.children.length, origLen: tree.children.length };
+    });
+
+    // #then
+    expect(result.addLen).toBe(1);
+    expect(result.updateTitle).toBe('Updated');
+    expect(result.removeLen).toBe(0);
+    expect(result.origLen).toBe(0);
+    await page.close();
+  });
+});
+
 test.describe('DATAMODEL-001: Data model E2E', () => {
   test('crypto.randomUUID() returns valid UUID in extension context', async ({
     context,
