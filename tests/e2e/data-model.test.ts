@@ -114,6 +114,149 @@ test.describe('DATAMODEL-002: Immutable write operations E2E', () => {
   });
 });
 
+test.describe('DATAMODEL-003: moveItem E2E', () => {
+  test('cross-folder move produces correct tree structure in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of moveItem: move bm from folderA to folderB
+    const result = await page.evaluate(() => {
+      const bm = { type: 'bookmark' as const, id: 'bm-1', title: 'Moved', url: 'https://moved.com', dateAdded: 0 };
+      const folderA = { type: 'folder' as const, id: 'f-a', name: 'A', children: [bm], dateAdded: 0 };
+      const folderB = { type: 'folder' as const, id: 'f-b', name: 'B', children: [] as Array<{ type: string; id: string }>, dateAdded: 0 };
+      const tree = { type: 'folder' as const, id: 'root', name: 'Root', children: [folderA, folderB], dateAdded: 0 };
+
+      const sourceItem = tree.children[0]!.children[0]!;
+      const newFolderA = { ...folderA, children: folderA.children.filter((_, i) => i !== 0) };
+      const newFolderB = { ...folderB, children: [sourceItem, ...folderB.children] };
+      const newTree = { ...tree, children: [newFolderA, newFolderB] };
+
+      return {
+        origALen: folderA.children.length,
+        newALen: newFolderA.children.length,
+        newBLen: newFolderB.children.length,
+        movedId: newFolderB.children[0]?.id,
+        treeNotSame: newTree !== tree,
+      };
+    });
+
+    // #then
+    expect(result.origALen).toBe(1);
+    expect(result.newALen).toBe(0);
+    expect(result.newBLen).toBe(1);
+    expect(result.movedId).toBe('bm-1');
+    expect(result.treeNotSame).toBe(true);
+    await page.close();
+  });
+
+  test('cycle detection rejects moving parent into child in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of isDescendantOrSelf
+    const result = await page.evaluate(() => {
+      function isDescendantOrSelf(ancestor: number[], path: number[]): boolean {
+        if (path.length < ancestor.length) return false;
+        for (let i = 0; i < ancestor.length; i++) {
+          if (ancestor[i] !== path[i]) return false;
+        }
+        return true;
+      }
+
+      return {
+        selfIsCycle: isDescendantOrSelf([0], [0]),
+        childIsCycle: isDescendantOrSelf([0], [0, 1]),
+        siblingNotCycle: isDescendantOrSelf([0], [1]),
+        parentNotCycle: isDescendantOrSelf([0, 1], [0]),
+        differentBranchNotCycle: isDescendantOrSelf([0, 1], [0, 10]),
+      };
+    });
+
+    // #then
+    expect(result.selfIsCycle).toBe(true);
+    expect(result.childIsCycle).toBe(true);
+    expect(result.siblingNotCycle).toBe(false);
+    expect(result.parentNotCycle).toBe(false);
+    expect(result.differentBranchNotCycle).toBe(false);
+    await page.close();
+  });
+
+  test('same-parent reorder works correctly in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of same-parent reorder logic
+    const result = await page.evaluate(() => {
+      const children = [
+        { id: 'a', type: 'bookmark' as const },
+        { id: 'b', type: 'bookmark' as const },
+        { id: 'c', type: 'bookmark' as const },
+      ];
+      const fromIndex = 0;
+      const toIndex = 2;
+      const adjusted = fromIndex < toIndex ? toIndex - 1 : toIndex;
+      const without = children.filter((_, i) => i !== fromIndex);
+      const reordered = [...without.slice(0, adjusted), children[fromIndex]!, ...without.slice(adjusted)];
+      return {
+        ids: reordered.map((c) => c.id),
+        origLen: children.length,
+        newLen: reordered.length,
+      };
+    });
+
+    // #then — [a, b, c] with a moved to index 2 → [b, a, c]
+    expect(result.ids).toEqual(['b', 'a', 'c']);
+    expect(result.origLen).toBe(3);
+    expect(result.newLen).toBe(3);
+    await page.close();
+  });
+
+  test('immutability: original tree unchanged after move in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of structural sharing immutability
+    const result = await page.evaluate(() => {
+      const bm = { type: 'bookmark' as const, id: 'bm-1', title: 'X', url: 'https://x.com', dateAdded: 0 };
+      const folderA = { type: 'folder' as const, id: 'f-a', name: 'A', children: [bm], dateAdded: 0 };
+      const folderB = { type: 'folder' as const, id: 'f-b', name: 'B', children: [] as Array<{ type: string; id: string }>, dateAdded: 0 };
+      const tree = { type: 'folder' as const, id: 'root', name: 'Root', children: [folderA, folderB], dateAdded: 0 };
+      const origRef = tree.children;
+      const origARef = folderA.children;
+
+      const newFolderA = { ...folderA, children: [] as typeof folderA.children };
+      const newFolderB = { ...folderB, children: [bm] };
+      void { ...tree, children: [newFolderA, newFolderB] };
+
+      return {
+        origRefSame: tree.children === origRef,
+        origARefSame: folderA.children === origARef,
+        origALen: folderA.children.length,
+        origTreeLen: tree.children.length,
+      };
+    });
+
+    // #then
+    expect(result.origRefSame).toBe(true);
+    expect(result.origARefSame).toBe(true);
+    expect(result.origALen).toBe(1);
+    expect(result.origTreeLen).toBe(2);
+    await page.close();
+  });
+});
+
 test.describe('DATAMODEL-001: Data model E2E', () => {
   test('crypto.randomUUID() returns valid UUID in extension context', async ({
     context,

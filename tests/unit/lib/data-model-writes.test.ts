@@ -301,6 +301,18 @@ describe('DATAMODEL-002: Immutable writes', () => {
       }
     });
 
+    it('renames root when path is empty', () => {
+      // #when
+      const result = renameFolder(POPULATED_TREE, [], 'New Root');
+
+      // #then
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.name).toBe('New Root');
+        expect(result.data.children).toHaveLength(POPULATED_TREE.children.length);
+      }
+    });
+
     it('returns type_mismatch if path points to Bookmark', () => {
       // #when
       const result = renameFolder(POPULATED_TREE, [1], 'Bad');

@@ -13,7 +13,16 @@
  */
 
 import type { Bookmark, BookmarkNode, BookmarkTree, Folder, Result } from '@/lib/types';
+import type { DataModelErrorContext } from '@/lib/errors';
 import { DataModelError } from '@/lib/errors';
+
+function fail(
+  message: string,
+  kind: DataModelErrorContext['kind'],
+  path?: readonly number[],
+): Result<never, DataModelError> {
+  return { success: false, error: new DataModelError(message, { kind, path }) };
+}
 
 export function isBookmark(node: BookmarkNode): node is Bookmark {
   return node.type === 'bookmark';
@@ -50,35 +59,11 @@ function walkPath(
   for (let i = 0; i < path.length; i++) {
     const index = path[i]!;
 
-    if (index < 0) {
-      return {
-        success: false,
-        error: new DataModelError(
-          `Invalid path index ${index} at depth ${i}`,
-          { kind: 'invalid_path', path },
-        ),
-      };
-    }
+    if (index < 0) return fail(`Invalid path index at depth ${i}`, 'invalid_path', path);
 
-    if (!isFolder(current)) {
-      return {
-        success: false,
-        error: new DataModelError(
-          `Expected folder at depth ${i}, found bookmark`,
-          { kind: 'type_mismatch', path },
-        ),
-      };
-    }
+    if (!isFolder(current)) return fail(`Expected folder at depth ${i}, found bookmark`, 'type_mismatch', path);
 
-    if (index >= current.children.length) {
-      return {
-        success: false,
-        error: new DataModelError(
-          `Index ${index} out of bounds at depth ${i} (${current.children.length} children)`,
-          { kind: 'path_not_found', path },
-        ),
-      };
-    }
+    if (index >= current.children.length) return fail(`Index out of bounds at depth ${i}`, 'path_not_found', path);
 
     current = current.children[index]!;
   }
@@ -127,37 +112,15 @@ function withReplacedChildren(
   for (let i = 0; i < parentPath.length; i++) {
     const index = parentPath[i]!;
 
-    if (index < 0) {
-      return {
-        success: false,
-        error: new DataModelError(`Invalid path index at depth ${i}`, { kind: 'invalid_path', path: parentPath }),
-      };
-    }
-
-    if (!isFolder(current)) {
-      return {
-        success: false,
-        error: new DataModelError(`Expected folder at depth ${i}`, { kind: 'type_mismatch', path: parentPath }),
-      };
-    }
-
-    if (index >= current.children.length) {
-      return {
-        success: false,
-        error: new DataModelError(`Index out of bounds at depth ${i}`, { kind: 'path_not_found', path: parentPath }),
-      };
-    }
+    if (index < 0) return fail(`Invalid path index at depth ${i}`, 'invalid_path', parentPath);
+    if (!isFolder(current)) return fail(`Expected folder at depth ${i}`, 'type_mismatch', parentPath);
+    if (index >= current.children.length) return fail(`Index out of bounds at depth ${i}`, 'path_not_found', parentPath);
 
     ancestors.push({ folder: current, childIndex: index });
     current = current.children[index]!;
   }
 
-  if (!isFolder(current)) {
-    return {
-      success: false,
-      error: new DataModelError('Target is not a folder', { kind: 'type_mismatch', path: parentPath }),
-    };
-  }
+  if (!isFolder(current)) return fail('Target is not a folder', 'type_mismatch', parentPath);
 
   let rebuilt: Folder = { ...current, children: replacer(current.children) };
 
@@ -199,12 +162,7 @@ export function removeItem(
   tree: BookmarkTree,
   path: readonly number[],
 ): Result<BookmarkTree, DataModelError> {
-  if (path.length === 0) {
-    return {
-      success: false,
-      error: new DataModelError('Cannot remove root', { kind: 'invalid_path', path }),
-    };
-  }
+  if (path.length === 0) return fail('Cannot remove root', 'invalid_path', path);
 
   const targetResult = walkPath(tree, path);
   if (!targetResult.success) return targetResult;
@@ -225,12 +183,7 @@ export function updateBookmark(
   const targetResult = walkPath(tree, path);
   if (!targetResult.success) return targetResult;
 
-  if (!isBookmark(targetResult.data)) {
-    return {
-      success: false,
-      error: new DataModelError('Target is not a bookmark', { kind: 'type_mismatch', path }),
-    };
-  }
+  if (!isBookmark(targetResult.data)) return fail('Target is not a bookmark', 'type_mismatch', path);
 
   const parentPath = path.slice(0, -1);
   const childIndex = path[path.length - 1]!;
@@ -252,18 +205,75 @@ export function renameFolder(
   const targetResult = walkPath(tree, path);
   if (!targetResult.success) return targetResult;
 
-  if (!isFolder(targetResult.data)) {
-    return {
-      success: false,
-      error: new DataModelError('Target is not a folder', { kind: 'type_mismatch', path }),
-    };
-  }
+  if (!isFolder(targetResult.data)) return fail('Target is not a folder', 'type_mismatch', path);
 
   const parentPath = path.slice(0, -1);
   const childIndex = path[path.length - 1]!;
 
   return withReplacedChildren(tree, parentPath, (children) =>
     children.map((c, i) => (i === childIndex ? { ...c, name: newName } : c)),
+  );
+}
+
+function isDescendantOrSelf(
+  ancestor: readonly number[],
+  path: readonly number[],
+): boolean {
+  if (path.length < ancestor.length) return false;
+  for (let i = 0; i < ancestor.length; i++) {
+    if (ancestor[i] !== path[i]) return false;
+  }
+  return true;
+}
+
+function pathsEqual(a: readonly number[], b: readonly number[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+export function moveItem(
+  tree: BookmarkTree,
+  fromPath: readonly number[],
+  toPath: readonly number[],
+  toIndex: number,
+): Result<BookmarkTree, DataModelError> {
+  if (fromPath.length === 0) return fail('Cannot move root', 'invalid_path', fromPath);
+  if (isDescendantOrSelf(fromPath, toPath)) return fail('Cannot move into own subtree', 'cycle_detected', fromPath);
+
+  const sourceResult = walkPath(tree, fromPath);
+  if (!sourceResult.success) return sourceResult;
+  const sourceItem = sourceResult.data;
+
+  const destResult = walkPath(tree, toPath);
+  if (!destResult.success) return destResult;
+  if (!isFolder(destResult.data)) return fail('Destination is not a folder', 'type_mismatch', toPath);
+  if (toIndex < 0 || toIndex > destResult.data.children.length) return fail('toIndex out of bounds', 'invalid_path', toPath);
+
+  const fromParent = fromPath.slice(0, -1);
+  const fromIndex = fromPath[fromPath.length - 1]!;
+
+  if (pathsEqual(fromParent, toPath)) {
+    const adjusted = fromIndex < toIndex ? toIndex - 1 : toIndex;
+    return withReplacedChildren(tree, toPath, (children) => {
+      const without = children.filter((_, i) => i !== fromIndex);
+      return [...without.slice(0, adjusted), sourceItem, ...without.slice(adjusted)];
+    });
+  }
+
+  const removeResult = withReplacedChildren(tree, fromParent, (children) =>
+    children.filter((_, i) => i !== fromIndex),
+  );
+  if (!removeResult.success) return removeResult;
+
+  let adjustedToPath: readonly number[] = toPath;
+  if (toPath.length > fromParent.length && isDescendantOrSelf(fromParent, toPath)
+    && fromIndex < toPath[fromParent.length]!) {
+    const adj = [...toPath];
+    adj[fromParent.length] = toPath[fromParent.length]! - 1;
+    adjustedToPath = adj;
+  }
+
+  return withReplacedChildren(removeResult.data, adjustedToPath, (children) =>
+    [...children.slice(0, toIndex), sourceItem, ...children.slice(toIndex)],
   );
 }
 
@@ -280,11 +290,5 @@ export function findItemPath(
     return { success: true, data: path };
   }
 
-  return {
-    success: false,
-    error: new DataModelError(
-      'Item not found in tree',
-      { kind: 'path_not_found' },
-    ),
-  };
+  return fail('Item not found in tree', 'path_not_found');
 }

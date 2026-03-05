@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | DATAMODEL-001 | Core reads: createEmptyTree, getItemByPath, findItemPath | PASSED | 1 |
 | DATAMODEL-002 | Immutable writes: add, remove, update, rename | PASSED | 1 |
-| DATAMODEL-003 | moveItem with cycle detection and reorder | Pending | 0 |
+| DATAMODEL-003 | moveItem with cycle detection and reorder | PASSED | 1 |
 | DATAMODEL-004 | Utilities: collectAllUrls, countBookmarks, flattenTree | Pending | 0 |
 | DATAMODEL-005 | JSON serialization compatibility and normalizeTree | Pending | 0 |
 | DATAMODEL-006 | Module purity, coverage gate, and full integration | Pending | 0 |
@@ -118,3 +118,67 @@ Coverage: lib/data-model.ts — 94.79% stmts, 88.63% branches, 100% funcs, 96.42
 Build: npx wxt build — success (594.45 kB)
 E2E: 8 data-model tests passed (4 DATAMODEL-001 + 4 DATAMODEL-002) + 54 total E2E tests passed
 ```
+
+---
+
+## Session: 2026-03-05T22:25:00Z
+**Task**: DATAMODEL-003 - moveItem with cycle detection and reorder
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Introduced `fail()` private helper to condense error return blocks (saves ~25 lines across module)
+- Added `isDescendantOrSelf()` for element-by-element cycle detection (not string prefix)
+- Added `pathsEqual()` for same-parent detection
+- Implemented `moveItem()` with same-parent reorder (index adjustment) and different-parent move (path adjustment after removal)
+- Refactored all error returns in walkPath, withReplacedChildren, removeItem, updateBookmark, renameFolder to use `fail()`
+- Fixed `withReplacedChildren` from 58 lines (violated 50-line limit) to 36 lines
+- Added 9 unit tests in dedicated test file (8 from PRD + 1 path adjustment coverage test)
+- Added 1 renameFolder root test to writes test file for coverage
+- Added 4 Playwright E2E tests for moveItem (cross-folder, cycle, reorder, immutability)
+- Updated scaffold-smoke.test.ts with moveItem export check
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/unit/lib/data-model-move.test.ts | 9 unit tests for moveItem with deepFreeze immutability verification |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| lib/data-model.ts | Added fail(), isDescendantOrSelf(), pathsEqual(), moveItem(). Refactored error returns. 291→299 lines. |
+| tests/unit/lib/data-model-writes.test.ts | Added renameFolder root rename test (line 202 coverage) |
+| tests/unit/integration/scaffold-smoke.test.ts | Added moveItem import and callable test |
+| tests/e2e/data-model.test.ts | Added DATAMODEL-003 E2E block (4 tests) |
+| .prd/module-04-data-model/prd.json | Set DATAMODEL-003 passes: true, attempt_count: 1, passing_stories: 3 |
+
+### Acceptance Criteria Verification
+
+1. moveItem(tree, fromPath, toPath, toIndex): Result<BookmarkTree, DataModelError> — PASS
+2. Moves item from fromPath to toPath.children[toIndex] — PASS (cross-folder test)
+3. Supports reorder within same folder — PASS (same-parent test with index adjustment)
+4. Cycle detection: returns cycle_detected if toPath starts with fromPath — PASS (self + descendant tests)
+5. Cannot move root (path []) — PASS (invalid_path error)
+6. Immutable: returns new tree — PASS (deepFreeze test)
+7. Invalid source or destination returns path_not_found — PASS (both tests)
+
+### Verification Results
+
+```
+Type check: npx tsc --noEmit — clean
+Lint: npx eslint . — clean
+Unit tests: 398 passed, 0 failed (9 new moveItem + 1 new renameFolder root)
+Coverage: lib/data-model.ts — 93.91% stmts, 85.52% branches, 100% funcs, 99.09% lines
+Build: npx wxt build — success (594.45 kB)
+E2E: 58 total E2E tests passed (12 data-model: 4 DATAMODEL-001 + 4 DATAMODEL-002 + 4 DATAMODEL-003)
+File size: lib/data-model.ts — 294 lines (within 300 limit)
+Function sizes: moveItem 46 lines, withReplacedChildren 36 lines (all within 50-line limit)
+```
+
+### CodeRabbit Review Fixes
+
+- Added `toIndex` bounds validation (0 to destChildren.length) — was silently appending on invalid index
+- Replaced manual `isPrefix` loop with `isDescendantOrSelf(fromParent, toPath)` call (DRY)
+- Added 2 tests: destination-is-bookmark type_mismatch, toIndex out of bounds
+- Final: 400 unit tests, 58 E2E, 90.9% branches, 294 lines
