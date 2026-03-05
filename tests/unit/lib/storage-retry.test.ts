@@ -50,7 +50,7 @@ describe('STORAGE-003: Retry logic with exponential backoff', () => {
     vi.restoreAllMocks();
   });
 
-  it('RETRY_CONFIG has maxAttempts: 3 and delays: [100, 200, 400]', () => {
+  it('RETRY_CONFIG has maxAttempts: 3 and delays: [100, 200]', () => {
     // #given — the exported constant
     // #when — imported
     // #then — matches expected configuration

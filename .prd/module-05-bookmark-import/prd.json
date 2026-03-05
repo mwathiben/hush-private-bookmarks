@@ -10,7 +10,7 @@
     },
     "holy_pb_shortfalls": {
         "preserve_verbatim": [
-            "The Chrome bookmark conversion algorithm from convertChromeBookmarks(): recursively walk Chrome's BookmarkTreeNode[], skip the hidden root nodes ('Bookmarks Bar', 'Other Bookmarks', 'Mobile Bookmarks'), convert each node into Hush's Bookmark or Folder type based on whether it has a url property",
+            "The Chrome bookmark conversion algorithm from convertChromeBookmarks(): recursively walk Chrome's BookmarkTreeNode[], skip Chrome root containers (identified by parentId === '0', i.e. id '1', '2', '3'), convert each node into Hush's Bookmark or Folder type based on whether it has a url property",
             "The mapping: Chrome node with url → Bookmark { type: 'bookmark', title, url, dateAdded }, Chrome node without url (folder) → Folder { type: 'folder', name: node.title, children: recursively converted, dateAdded }",
             "The date conversion: Chrome stores dateAdded as milliseconds since 1970 (same as Date.now()), Holy PB preserves this directly"
         ],
@@ -70,7 +70,7 @@
                 "RED: Write test: 'converts simple Chrome bookmark to Hush Bookmark' — single node with url → Bookmark { type: 'bookmark', title, url, dateAdded, id }",
                 "RED: Write test: 'converts Chrome folder to Hush Folder' — node without url but with children → Folder { type: 'folder', name, children, dateAdded, id }",
                 "RED: Write test: 'converts nested Chrome tree structure' — root with folders containing bookmarks, assert full tree structure matches",
-                "RED: Write test: 'skips Chrome root containers and flattens their children into Hush root' — Chrome root has children [Bookmarks Bar, Other Bookmarks, Mobile Bookmarks]. Their children are flattened into the Hush root Folder's children array. The containers themselves are always skipped.",
+                "RED: Write test: 'skips Chrome root containers and flattens their children into Hush root' — Chrome root (id '0') has children with parentId '0' (ids '1', '2', '3'). Detect containers by parentId === '0' (not by title). Their children are flattened into the Hush root Folder's children array. The containers themselves are always skipped.",
                 "RED: Write test: 'generates unique IDs for all imported items' — import tree with 10 items, assert all 10 have unique non-empty id strings",
                 "RED: Write test: 'handles missing dateAdded gracefully' — Chrome node without dateAdded gets Date.now()",
                 "RED: Write test: 'handles node with empty title' — gets 'Untitled' for bookmarks or 'Unnamed Folder' for folders",
@@ -87,7 +87,7 @@
                 "Converts Chrome BookmarkTreeNode[] to BookmarkTree (which is a Folder with children)",
                 "Bookmarks (nodes with url) → Bookmark type, Folders (nodes without url) → Folder type",
                 "Preserves nested folder structure",
-                "Always skips Chrome root containers (Bookmarks Bar, Other Bookmarks, Mobile Bookmarks), flattens their children into Hush root",
+                "Always skips Chrome root containers (detected by parentId === '0', i.e. ids '1'/'2'/'3'), flattens their children into Hush root",
                 "Generates unique IDs for all imported items via generateId()",
                 "Handles missing dateAdded (defaults to Date.now())",
                 "Handles empty titles ('Untitled' / 'Unnamed Folder')",
@@ -97,7 +97,7 @@
                 "Zero browser API calls (receives data, does NOT call chrome.bookmarks.getTree)"
             ],
             "definition_of_done": [
-                "All 10 Chrome import tests pass",
+                "All 9 Chrome import tests pass",
                 "tsc --noEmit passes",
                 "npx eslint lib/bookmark-import.ts passes",
                 "lib/bookmark-import.ts has zero browser/chrome API imports"
@@ -152,7 +152,7 @@
                 "Rejects HTML > 5MB with ImportError (size guard)"
             ],
             "definition_of_done": [
-                "All 14 HTML import tests pass",
+                "All 12 HTML import tests pass",
                 "tsc --noEmit passes",
                 "Test fixtures include realistic HTML from Chrome and Firefox"
             ],
@@ -339,7 +339,7 @@
         "chrome_bookmark_tree": {
             "description": "chrome.bookmarks.getTree() returns BookmarkTreeNode[] with root containing 3 children: Bookmarks Bar, Other Bookmarks, Mobile Bookmarks.",
             "root_structure": "getTree() → [{ id: '0', title: '', children: [{ id: '1', title: 'Bookmarks Bar', children: [...] }, { id: '2', title: 'Other Bookmarks', children: [...] }, { id: '3', title: 'Mobile Bookmarks', children: [...] }] }]",
-            "container_handling": "Always skip root containers (Bookmarks Bar, Other Bookmarks, Mobile Bookmarks). Flatten their children into the Hush root Folder's children array. The containers themselves are never preserved as Hush folders.",
+            "container_handling": "Always skip Chrome root containers detected by parentId === '0' (ids '1', '2', '3'). Do NOT match by title — titles are localized. Flatten their children into the Hush root Folder's children array. The containers themselves are never preserved as Hush folders.",
             "node_types": "Node with url → bookmark, Node without url but with children → folder. Some nodes may be separators (skip these)."
         },
         "licensing": {
@@ -432,7 +432,7 @@
     "metadata": {
         "passing_stories": 0,
         "build_plan_day": "Day 2 (final third)",
-        "estimated_test_count": "~41 tests across 4 stories (10 + 14 + 7 + 10)",
+        "estimated_test_count": "~38 tests across 4 stories (9 + 12 + 7 + 10)",
         "session_protocol": "One Claude Code session. Read lib/errors.ts first to confirm ImportErrorContext shape. Generate bookmark-import.ts + bookmark-import.test.ts. Run tsc + eslint + vitest. Commit.",
         "quality_gate": "All import tests pass. tsc clean. lib/ coverage >= 80%. Line count ≤ 200. Zero browser API calls.",
         "human_review_required": "Review Chrome import against Holy PB convertChromeBookmarks. Verify HTML import handles Chrome and Firefox exports. Verify ImportError context uses correct field names (source, format)."
