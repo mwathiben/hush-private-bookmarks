@@ -7,7 +7,7 @@
 | 01 | Project Scaffold | 1 | ✅ Complete | 12/12 | 48/48 |
 | 02 | Crypto Engine | 1 | ✅ Complete | 8/8 | 25/25 |
 | 03 | Storage Layer | 1 | ⬜ Not Started | 0/6 | 0/25 |
-| 04 | Data Model | - | ⬜ Not Started | - | - |
+| 04 | Data Model | 1 | ⬜ Not Started | 0/6 | 0/32 |
 | 05 | TBD | - | ⬜ Not Started | - | - |
 | 06 | TBD | - | ⬜ Not Started | - | - |
 | 07 | TBD | - | ⬜ Not Started | - | - |
