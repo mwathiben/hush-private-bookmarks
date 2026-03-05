@@ -20,6 +20,12 @@ export class InvalidPasswordError extends Error {
 export interface StorageErrorContext {
   readonly key?: string;
   readonly operation?: 'read' | 'write' | 'delete';
+  readonly reason?:
+    | 'not_found'
+    | 'corrupted'
+    | 'quota_exceeded'
+    | 'write_failed'
+    | 'read_failed';
 }
 
 /** Thrown when extension storage operations fail. Context is operation metadata, never PII. */
