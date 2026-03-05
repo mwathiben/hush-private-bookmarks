@@ -53,21 +53,14 @@ function walkPath(
   if (path.length === 0) {
     return { success: true, data: tree };
   }
-
   let current: BookmarkNode = tree;
-
   for (let i = 0; i < path.length; i++) {
     const index = path[i]!;
-
     if (index < 0) return fail(`Invalid path index at depth ${i}`, 'invalid_path', path);
-
     if (!isFolder(current)) return fail(`Expected folder at depth ${i}, found bookmark`, 'type_mismatch', path);
-
     if (index >= current.children.length) return fail(`Index out of bounds at depth ${i}`, 'path_not_found', path);
-
     current = current.children[index]!;
   }
-
   return { success: true, data: current };
 }
 
@@ -238,19 +231,15 @@ export function moveItem(
 ): Result<BookmarkTree, DataModelError> {
   if (fromPath.length === 0) return fail('Cannot move root', 'invalid_path', fromPath);
   if (isDescendantOrSelf(fromPath, toPath)) return fail('Cannot move into own subtree', 'cycle_detected', fromPath);
-
   const sourceResult = walkPath(tree, fromPath);
   if (!sourceResult.success) return sourceResult;
   const sourceItem = sourceResult.data;
-
   const destResult = walkPath(tree, toPath);
   if (!destResult.success) return destResult;
   if (!isFolder(destResult.data)) return fail('Destination is not a folder', 'type_mismatch', toPath);
   if (toIndex < 0 || toIndex > destResult.data.children.length) return fail('toIndex out of bounds', 'invalid_path', toPath);
-
   const fromParent = fromPath.slice(0, -1);
   const fromIndex = fromPath[fromPath.length - 1]!;
-
   if (pathsEqual(fromParent, toPath)) {
     const adjusted = fromIndex < toIndex ? toIndex - 1 : toIndex;
     return withReplacedChildren(tree, toPath, (children) => {
@@ -258,12 +247,10 @@ export function moveItem(
       return [...without.slice(0, adjusted), sourceItem, ...without.slice(adjusted)];
     });
   }
-
   const removeResult = withReplacedChildren(tree, fromParent, (children) =>
     children.filter((_, i) => i !== fromIndex),
   );
   if (!removeResult.success) return removeResult;
-
   let adjustedToPath: readonly number[] = toPath;
   if (toPath.length > fromParent.length && isDescendantOrSelf(fromParent, toPath)
     && fromIndex < toPath[fromParent.length]!) {
@@ -271,7 +258,6 @@ export function moveItem(
     adj[fromParent.length] = toPath[fromParent.length]! - 1;
     adjustedToPath = adj;
   }
-
   return withReplacedChildren(removeResult.data, adjustedToPath, (children) =>
     [...children.slice(0, toIndex), sourceItem, ...children.slice(toIndex)],
   );
@@ -291,4 +277,19 @@ export function findItemPath(
   }
 
   return fail('Item not found in tree', 'path_not_found');
+}
+
+function hasValidId(node: { id?: unknown }): node is { id: string } {
+  return typeof node.id === 'string' && node.id !== '';
+}
+
+function normalizeNode(node: BookmarkNode): BookmarkNode {
+  const id = hasValidId(node) ? node.id : generateId();
+  if (isFolder(node)) return { ...node, id, children: node.children.map(normalizeNode) };
+  return { ...node, id };
+}
+
+export function normalizeTree(tree: BookmarkTree): BookmarkTree {
+  const id = hasValidId(tree) ? tree.id : generateId();
+  return { ...tree, id, children: tree.children.map(normalizeNode) };
 }

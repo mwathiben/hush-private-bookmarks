@@ -70,6 +70,7 @@ import {
   updateBookmark,
   renameFolder,
   moveItem,
+  normalizeTree,
 } from '@/lib/data-model';
 
 const ROOT = resolve(process.cwd());
@@ -156,6 +157,7 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof updateBookmark).toBe('function');
     expect(typeof renameFolder).toBe('function');
     expect(typeof moveItem).toBe('function');
+    expect(typeof normalizeTree).toBe('function');
   });
 
   it('cn utility merges classes', () => {

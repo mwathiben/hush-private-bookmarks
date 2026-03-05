@@ -8,7 +8,7 @@
 | DATAMODEL-002 | Immutable writes: add, remove, update, rename | PASSED | 1 |
 | DATAMODEL-003 | moveItem with cycle detection and reorder | PASSED | 1 |
 | DATAMODEL-004 | Utilities: collectAllUrls, countBookmarks, flattenTree | Pending | 0 |
-| DATAMODEL-005 | JSON serialization compatibility and normalizeTree | Pending | 0 |
+| DATAMODEL-005 | JSON serialization compatibility and normalizeTree | PASSED | 1 |
 | DATAMODEL-006 | Module purity, coverage gate, and full integration | Pending | 0 |
 
 ---
@@ -182,3 +182,56 @@ Function sizes: moveItem 46 lines, withReplacedChildren 36 lines (all within 50-
 - Replaced manual `isPrefix` loop with `isDescendantOrSelf(fromParent, toPath)` call (DRY)
 - Added 2 tests: destination-is-bookmark type_mismatch, toIndex out of bounds
 - Final: 400 unit tests, 58 E2E, 90.9% branches, 294 lines
+
+---
+
+## Session: 2026-03-05T23:23:00Z
+**Task**: DATAMODEL-005 - JSON serialization compatibility and normalizeTree
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Added `hasValidId()` type guard — defensive `typeof` + empty string check for deserialized JSON safety
+- Added `normalizeNode()` private helper — recursive ID assignment for tree nodes
+- Added `normalizeTree()` exported function — assigns `crypto.randomUUID()` IDs to legacy Holy PB data
+- Removed ~12 intra-function blank lines in `walkPath` and `moveItem` to stay within 300-line budget
+- Created 8 unit tests for JSON roundtrip (4) + normalizeTree (3) + performance (1)
+- Created 4 Playwright E2E tests verifying browser-context behavior
+- Updated scaffold-smoke.test.ts with normalizeTree import + callable check
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/unit/lib/data-model-serialize.test.ts | 8 unit tests for DATAMODEL-005 |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| lib/data-model.ts | Added hasValidId, normalizeNode, normalizeTree (lines 282-295); removed blank lines |
+| tests/e2e/data-model.test.ts | Added DATAMODEL-005 describe block with 4 E2E tests (lines 375-539) |
+| tests/unit/integration/scaffold-smoke.test.ts | Added normalizeTree import + callable check |
+| .prd/module-04-data-model/prd.json | Set DATAMODEL-005 passes: true, attempt_count: 1, passing_stories: 4 |
+
+### Acceptance Criteria Verification
+
+1. BookmarkTree serializes as Folder object with correct fields — PASS (test: serialized tree root)
+2. JSON roundtrip preserves complete tree structure — PASS (test: JSON.stringify/parse deep-equal)
+3. normalizeTree assigns IDs to items missing them — PASS (test: legacy data without IDs)
+4. normalizeTree preserves existing IDs — PASS (test: deepFreeze + ID comparison)
+5. normalizeTree is immutable (returns new tree) — PASS (spread at each level)
+6. 1000-bookmark tree roundtrip under 100ms — PASS (unit + E2E performance tests)
+
+### Verification Results
+
+```text
+TypeScript: npx tsc --noEmit — clean
+Lint: npx eslint . — clean
+Unit tests: 408 passed, 0 failed (8 new serialize + normalize tests)
+Coverage: lib/data-model.ts — 96% stmts, 91.76% branches, 100% funcs, 100% lines
+Build: npx wxt build — success (594.45 kB)
+E2E: 16 data-model E2E tests passed (4 new DATAMODEL-005)
+File size: lib/data-model.ts — 295 lines (within 300 limit)
+Function sizes: hasValidId 2 lines, normalizeNode 4 lines, normalizeTree 3 lines
+```

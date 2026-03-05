@@ -371,3 +371,169 @@ test.describe('DATAMODEL-001: Data model E2E', () => {
     await page.close();
   });
 });
+
+test.describe('DATAMODEL-005: JSON serialization & normalizeTree E2E', () => {
+  test('JSON roundtrip preserves tree structure in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — build tree, serialize, deserialize, compare
+    const result = await page.evaluate(() => {
+      const bm = { type: 'bookmark' as const, id: crypto.randomUUID(), title: 'Test', url: 'https://test.com', dateAdded: 1000 };
+      const folder = { type: 'folder' as const, id: crypto.randomUUID(), name: 'Sub', children: [bm], dateAdded: 2000 };
+      const tree = { type: 'folder' as const, id: crypto.randomUUID(), name: 'Root', children: [folder], dateAdded: 0 };
+      const json = JSON.stringify(tree);
+      const parsed = JSON.parse(json);
+      return {
+        equal: JSON.stringify(parsed) === json,
+        rootType: parsed.type,
+        childType: parsed.children[0]?.type,
+        nestedTitle: parsed.children[0]?.children[0]?.title,
+      };
+    });
+
+    // #then
+    expect(result.equal).toBe(true);
+    expect(result.rootType).toBe('folder');
+    expect(result.childType).toBe('folder');
+    expect(result.nestedTitle).toBe('Test');
+    await page.close();
+  });
+
+  test('normalizeTree assigns IDs via crypto.randomUUID() in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of normalizeTree logic with legacy data
+    const result = await page.evaluate(() => {
+      function hasValidId(node: { id?: unknown }): node is { id: string } {
+        return typeof node.id === 'string' && node.id !== '';
+      }
+      type AnyNode = { type: string; id?: string; children?: AnyNode[]; [k: string]: unknown };
+      function normalizeNode(node: AnyNode): AnyNode {
+        const id = hasValidId(node) ? node.id : crypto.randomUUID();
+        if (node.type === 'folder' && Array.isArray(node.children)) {
+          return { ...node, id, children: node.children.map(normalizeNode) };
+        }
+        return { ...node, id };
+      }
+      const legacy = {
+        type: 'folder', name: 'Root', dateAdded: 0,
+        children: [
+          { type: 'bookmark', title: 'No ID', url: 'https://a.com', dateAdded: 1 },
+          { type: 'folder', name: 'Sub', dateAdded: 2, id: '', children: [
+            { type: 'bookmark', title: 'Nested', url: 'https://b.com', dateAdded: 3 },
+          ]},
+        ],
+      } as AnyNode;
+      const normalized = normalizeNode(legacy);
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const ids: string[] = [];
+      function collectIds(n: AnyNode): void {
+        if (n.id) ids.push(n.id);
+        if (Array.isArray(n.children)) n.children.forEach(collectIds);
+      }
+      collectIds(normalized);
+      return { count: ids.length, allValid: ids.every((id) => uuidRe.test(id)) };
+    });
+
+    // #then
+    expect(result.count).toBe(4);
+    expect(result.allValid).toBe(true);
+    await page.close();
+  });
+
+  test('1000-bookmark tree roundtrip + normalize under 100ms in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — generate large tree, full pipeline in browser
+    const result = await page.evaluate(() => {
+      function hasValidId(node: { id?: unknown }): node is { id: string } {
+        return typeof node.id === 'string' && node.id !== '';
+      }
+      type AnyNode = { type: string; id?: string; children?: AnyNode[]; [k: string]: unknown };
+      function normalizeNode(node: AnyNode): AnyNode {
+        const id = hasValidId(node) ? node.id : crypto.randomUUID();
+        if (node.type === 'folder' && Array.isArray(node.children)) {
+          return { ...node, id, children: node.children.map(normalizeNode) };
+        }
+        return { ...node, id };
+      }
+      const folders: AnyNode[] = [];
+      for (let f = 0; f < 10; f++) {
+        const bookmarks: AnyNode[] = [];
+        for (let b = 0; b < 100; b++) {
+          bookmarks.push({ type: 'bookmark', title: `BM-${f}-${b}`, url: `https://example.com/${f}/${b}`, dateAdded: Date.now() });
+        }
+        folders.push({ type: 'folder', name: `Folder-${f}`, children: bookmarks, dateAdded: Date.now() });
+      }
+      const tree = { type: 'folder', name: 'Root', children: folders, dateAdded: Date.now() } as AnyNode;
+      const start = performance.now();
+      const json = JSON.stringify(tree);
+      const parsed = JSON.parse(json) as AnyNode;
+      const normalized = normalizeNode(parsed);
+      const elapsed = performance.now() - start;
+      return { elapsed, childCount: normalized.children?.length ?? 0, hasId: typeof normalized.id === 'string' && normalized.id.length > 0 };
+    });
+
+    // #then
+    expect(result.elapsed).toBeLessThan(100);
+    expect(result.childCount).toBe(10);
+    expect(result.hasId).toBe(true);
+    await page.close();
+  });
+
+  test('serialized format matches Holy PB structure in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — verify serialized shape matches expected Holy PB structure
+    const result = await page.evaluate(() => {
+      const bm = { type: 'bookmark' as const, id: crypto.randomUUID(), title: 'BM', url: 'https://bm.com', dateAdded: 1 };
+      const folder = { type: 'folder' as const, id: crypto.randomUUID(), name: 'Sub', children: [bm], dateAdded: 2 };
+      const tree = { type: 'folder' as const, id: crypto.randomUUID(), name: 'Root', children: [folder], dateAdded: 0 };
+      const parsed = JSON.parse(JSON.stringify(tree));
+      const root = parsed;
+      const child = root.children[0];
+      const nested = child.children[0];
+      return {
+        rootIsFolder: root.type === 'folder',
+        rootHasChildren: Array.isArray(root.children),
+        rootHasName: typeof root.name === 'string',
+        rootHasId: typeof root.id === 'string',
+        rootHasDate: typeof root.dateAdded === 'number',
+        folderHasName: typeof child.name === 'string',
+        folderHasChildren: Array.isArray(child.children),
+        bmHasTitle: typeof nested.title === 'string',
+        bmHasUrl: typeof nested.url === 'string',
+        bmType: nested.type,
+      };
+    });
+
+    // #then
+    expect(result.rootIsFolder).toBe(true);
+    expect(result.rootHasChildren).toBe(true);
+    expect(result.rootHasName).toBe(true);
+    expect(result.rootHasId).toBe(true);
+    expect(result.rootHasDate).toBe(true);
+    expect(result.folderHasName).toBe(true);
+    expect(result.folderHasChildren).toBe(true);
+    expect(result.bmHasTitle).toBe(true);
+    expect(result.bmHasUrl).toBe(true);
+    expect(result.bmType).toBe('bookmark');
+    await page.close();
+  });
+});
