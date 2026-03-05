@@ -70,8 +70,8 @@ export function validateEncryptedStore(data: unknown): data is EncryptedStore {
     typeof record['iv'] === 'string' &&
     record['iv'] !== '' &&
     typeof record['iterations'] === 'number' &&
-    Number.isFinite(record['iterations']) &&
-    record['iterations'] > 0
+    Number.isInteger(record['iterations']) &&
+    (record['iterations'] as number) > 0
   );
 }
 

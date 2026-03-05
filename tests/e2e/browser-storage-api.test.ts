@@ -222,3 +222,77 @@ test.describe('Extension storage utility API coverage (STORAGE-004)', () => {
     await page.close();
   });
 });
+
+test.describe('Extension storage type guard validation (STORAGE-005)', () => {
+  test('valid EncryptedStore shape is preserved through chrome.storage.local roundtrip', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const result = await page.evaluate(async () => {
+      // #given — valid EncryptedStore-shaped object
+      const store = { salt: 'dGVzdA==', encrypted: 'ZW5j', iv: 'aXYxMg==', iterations: 600000 };
+      await chrome.storage.local.set({ holyPrivateData: store });
+      // #when — retrieve from storage
+      const raw = await chrome.storage.local.get('holyPrivateData');
+      const retrieved = raw['holyPrivateData'] as Record<string, unknown>;
+      return {
+        saltType: typeof retrieved['salt'],
+        encryptedType: typeof retrieved['encrypted'],
+        ivType: typeof retrieved['iv'],
+        iterationsType: typeof retrieved['iterations'],
+        iterationsValue: retrieved['iterations'],
+      };
+    });
+
+    expect(result.saltType).toBe('string');
+    expect(result.encryptedType).toBe('string');
+    expect(result.ivType).toBe('string');
+    expect(result.iterationsType).toBe('number');
+    expect(result.iterationsValue).toBe(600000);
+    await page.close();
+  });
+
+  test('object with wrong field types retains incorrect types through storage', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const result = await page.evaluate(async () => {
+      // #given — object where iterations is string (wrong type)
+      await chrome.storage.local.set({
+        holyPrivateData: { salt: 's', encrypted: 'e', iv: 'i', iterations: '600000' },
+      });
+      const raw = await chrome.storage.local.get('holyPrivateData');
+      const retrieved = raw['holyPrivateData'] as Record<string, unknown>;
+      return typeof retrieved['iterations'];
+    });
+
+    // #then — chrome.storage preserves wrong type; type guard must catch this
+    expect(result).toBe('string');
+    await page.close();
+  });
+
+  test('null stored under holyPrivateData is retrievable as null', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const result = await page.evaluate(async () => {
+      // #given — null stored under the storage key
+      await chrome.storage.local.set({ holyPrivateData: null });
+      const raw = await chrome.storage.local.get('holyPrivateData');
+      return raw['holyPrivateData'];
+    });
+
+    // #then — null is preserved; validateEncryptedStore must reject this
+    expect(result).toBeNull();
+    await page.close();
+  });
+});

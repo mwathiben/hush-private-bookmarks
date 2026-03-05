@@ -8,7 +8,7 @@
 | STORAGE-002 | Error handling for all failure modes | PASSED | 1 |
 | STORAGE-003 | Retry logic with exponential backoff | PASSED | 1 |
 | STORAGE-004 | Utility functions: hasData, clearAll, getStorageUsage | PASSED | 1 |
-| STORAGE-005 | validateEncryptedStore type guard and module purity | Pending | 0 |
+| STORAGE-005 | validateEncryptedStore type guard and module purity | PASSED | 1 |
 | STORAGE-006 | Full test suite validation and integration verification | Pending | 0 |
 
 **Critical Path**: 001 -> 002 -> 003 -> 004/005 -> 006
@@ -238,3 +238,53 @@
 - WXT fake-browser mock does NOT provide `getBytesInUse` — unit tests naturally exercise the Firefox fallback path. Chrome path verified by Playwright E2E.
 - Error cause sanitization: replace raw browser errors with generic `new Error('...')` messages in StorageError cause chain. Prevents PII/implementation details leaking to Sentry.
 - `clearAll()` uses `remove(STORAGE_KEY)` not `clear()` — removes only Hush data, not all extension storage. Uses `operation: 'delete'` + `reason: 'write_failed'` (retryable via `isRetryable`).
+
+---
+
+## Session: 2026-03-05T20:00:00Z
+**Task**: STORAGE-005 - validateEncryptedStore type guard and module purity
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created `tests/unit/lib/storage-validate.test.ts` with 31 unit tests in 2 describe blocks
+- Type guard tests: valid inputs (2), primitive rejection (6), missing fields (5), wrong field types (4), edge values (8 incl. NaN, Infinity, -1, -Infinity, empty strings, zero, fractional)
+- Module purity tests: zero React/DOM imports, uses wxt/browser not chrome.*, zero console.log, zero type suppressions, zero empty catch blocks
+- Comment filter for purity tests strips `*`, `//`, and `/*` lines — prevents false positives from JSDoc containing "chrome.storage.local"
+- Added 3 Playwright E2E tests: valid EncryptedStore roundtrip, wrong field types retained through storage, null stored under holyPrivateData
+- Security fix: changed `Number.isFinite()` to `Number.isInteger()` in `validateEncryptedStore` — rejects fractional iterations (0.5, 1.7) which are invalid for PBKDF2
+- CodeRabbit review: 8 issues found, 3 fixed (fractional iterations security fix, comment filter `/*` gap, console.log check uses `codeOnly`)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/unit/lib/storage-validate.test.ts | 31 unit tests for validateEncryptedStore type guard + module purity |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| lib/storage.ts | Line 73: `Number.isFinite()` → `Number.isInteger()` (security fix for fractional iterations); line 74: added `as number` cast after isInteger guard |
+| tests/e2e/browser-storage-api.test.ts | Added 3 E2E tests in STORAGE-005 describe block (298 lines total) |
+
+### Acceptance Criteria Verification
+
+1. validateEncryptedStore is exported publicly from lib/storage.ts — PASS
+2. Returns true only for objects with: salt (string), encrypted (string), iv (string), iterations (number) — PASS
+3. Returns false for null, undefined, primitives, partial objects, wrong types — PASS (22 rejection tests)
+4. lib/storage.ts has zero React/DOM imports — PASS
+5. lib/storage.ts uses 'wxt/browser' not 'chrome' for storage access — PASS
+
+### Verification Results
+
+- `npx tsc --noEmit` — 0 errors
+- `npx eslint lib/storage.ts tests/unit/lib/storage-validate.test.ts tests/e2e/browser-storage-api.test.ts` — 0 errors
+- `npx vitest run` — 345 tests, 21 files, all passing
+- `npx vitest run --coverage` — lib/: 99.45% stmts, 89.15% branches, 100% funcs, 99.43% lines; storage.ts: 98.46% stmts, 91.11% branches
+- `npx wxt build` — successful (594.45 kB)
+- `npm run test:e2e` — 43 tests, all passing
+
+### Learnings
+- `Number.isInteger()` is strictly stronger than `Number.isFinite()` for iteration validation — rejects NaN, Infinity, AND fractional numbers. Use isInteger for PBKDF2 iterations.
+- Comment filter for purity tests must handle 3 patterns: `*` (JSDoc body), `//` (line comments), `/*` (comment openers including `/**`). Missing `/*` causes false positives on JSDoc opener lines.
+- Console.log purity check should use `codeOnly` (comment-stripped) not `content` (raw) — prevents false positives if console.log appears in comments.
