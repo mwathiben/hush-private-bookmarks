@@ -252,13 +252,13 @@ describe('STORAGE-002: Error handling for all failure modes', () => {
     // #when — attempt to load
     const result = await loadEncryptedData(MOCK_PASSWORD);
 
-    // #then — Result failure with StorageError wrapping DecryptionError as 'corrupted'
+    // #then — Result failure with StorageError reason 'corrupted', sanitized cause
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error).toBeInstanceOf(StorageError);
       const err = result.error as StorageError;
       expect(err.context.reason).toBe('corrupted');
-      expect(err.cause).toBeInstanceOf(DecryptionError);
+      expect(err.cause).toBeInstanceOf(Error);
     }
   });
 

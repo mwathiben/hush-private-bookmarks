@@ -7,7 +7,7 @@
 | STORAGE-001 | Encrypted save and load roundtrip | PASSED | 1 |
 | STORAGE-002 | Error handling for all failure modes | PASSED | 1 |
 | STORAGE-003 | Retry logic with exponential backoff | PASSED | 1 |
-| STORAGE-004 | Utility functions: hasData, clearAll, getStorageUsage | Pending | 0 |
+| STORAGE-004 | Utility functions: hasData, clearAll, getStorageUsage | PASSED | 1 |
 | STORAGE-005 | validateEncryptedStore type guard and module purity | Pending | 0 |
 | STORAGE-006 | Full test suite validation and integration verification | Pending | 0 |
 
@@ -177,3 +177,64 @@
 - `vi.useFakeTimers()` + `vi.advanceTimersByTimeAsync()` works correctly with WXT's in-memory storage mock (Promises are microtasks, unaffected by fake timers).
 - For non-retryable errors, `await loadEncryptedData()` resolves immediately without needing `advanceTimersByTimeAsync` — `withRetry` short-circuits before reaching `setTimeout`.
 - CodeRabbit catch: `delays` array had 3 elements but only 2 were consumed (`maxAttempts - 1` retries). Dead config is misleading — trim to match actual usage.
+
+---
+
+## Session: 2026-03-05T18:00:00Z
+**Task**: STORAGE-004 - Utility functions: hasData, clearAll, getStorageUsage
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Phase 0A: Extracted `handleDecryptError()` helper from `loadEncryptedData` (reduced from 67 to 47 lines, fixing pre-existing 50-line function limit violation)
+- Phase 0B: Sanitized error causes in 3 locations — replaced raw browser error forwarding with generic messages (`'Storage write failed'`, `'Storage read failed'`, `'Decryption failed'`, `'Storage operation failed'`). Prevents PII/browser-specific errors leaking to Sentry cause chain.
+- Phase 2: Added `DEFAULT_STORAGE_QUOTA = 10_485_760` constant with JSDoc noting `unlimitedStorage` permission
+- Phase 2: Implemented `hasData()` — checks if encrypted data exists without decrypting
+- Phase 2: Implemented `clearAll()` — removes Hush data via `browser.storage.local.remove(STORAGE_KEY)` (not `clear()` — preserves other extension data)
+- Phase 2: Implemented `getStorageUsage()` — cross-browser: uses `getBytesInUse(null)` on Chrome, falls back to `Blob([JSON.stringify(all)]).size` on Firefox (Bugzilla #1385832: Firefox lacks `getBytesInUse` for `storage.local`)
+- Created `tests/unit/lib/storage-utils.test.ts` with 9 unit tests (6 PRD + 3 error paths)
+- Added 2 Playwright E2E tests for STORAGE-004 (`getBytesInUse` positive number, `get` confirms existence)
+- Removed 1 duplicate E2E test (remove+get was already covered by pre-existing test at line 84)
+- Fixed `storage.test.ts` assertion at line 261 after error cause sanitization (`toBeInstanceOf(Error)` instead of `toBeInstanceOf(DecryptionError)`)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/unit/lib/storage-utils.test.ts | 9 unit tests for hasData, clearAll, getStorageUsage, DEFAULT_STORAGE_QUOTA |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| lib/storage.ts | Extracted handleDecryptError helper; sanitized 3 error causes; added DEFAULT_STORAGE_QUOTA, hasData, clearAll, getStorageUsage; 263 lines |
+| tests/unit/lib/storage.test.ts | Fixed assertion at line 261 after error cause sanitization |
+| tests/e2e/browser-storage-api.test.ts | Extended chrome type with getBytesInUse; added 2 E2E tests (STORAGE-004 describe block) |
+
+### Acceptance Criteria Verification
+
+1. `hasData(): Promise<Result<boolean, StorageError>>` — PASS
+2. `clearAll(): Promise<Result<void, StorageError>>` — PASS
+3. `getStorageUsage(): Promise<Result<{ used: number; quota: number }, StorageError>>` — PASS
+4. `DEFAULT_STORAGE_QUOTA = 10_485_760` (10MB) as named exported constant — PASS
+5. JSDoc on DEFAULT_STORAGE_QUOTA notes unlimitedStorage permission — PASS
+6. All three functions use Result return types — PASS
+
+### Verification Results
+
+- `npx tsc --noEmit` — 0 errors
+- `npx eslint lib/storage.ts tests/unit/lib/storage-utils.test.ts tests/e2e/browser-storage-api.test.ts` — 0 errors
+- `npx vitest run` — 314 tests, 20 files, all passing
+- `npx vitest run --coverage` — storage.ts: 98.46% statements, 91.11% branches, 100% functions
+- `npx wxt build` — successful (594.45 kB)
+- `npm run test:e2e` — 40 tests, all passing
+- lib/storage.ts: 263 lines (under 300 limit), all functions under 50 lines
+- Zero `console.log`, `as any`, `@ts-ignore`, `@ts-expect-error`, empty catches
+
+### Pre-existing Issues Found
+- `storage.test.ts` at 306 lines — exceeds 300-line limit. Pre-existing (not introduced by STORAGE-004). Flagged for STORAGE-005/006.
+
+### Learnings
+- Firefox lacks `getBytesInUse()` for `storage.local` (Bugzilla #1385832, open since Firefox 54). Must use runtime feature detection with `Blob` + `JSON.stringify` fallback.
+- WXT fake-browser mock does NOT provide `getBytesInUse` — unit tests naturally exercise the Firefox fallback path. Chrome path verified by Playwright E2E.
+- Error cause sanitization: replace raw browser errors with generic `new Error('...')` messages in StorageError cause chain. Prevents PII/implementation details leaking to Sentry.
+- `clearAll()` uses `remove(STORAGE_KEY)` not `clear()` — removes only Hush data, not all extension storage. Uses `operation: 'delete'` + `reason: 'write_failed'` (retryable via `isRetryable`).

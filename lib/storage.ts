@@ -104,11 +104,37 @@ export async function saveEncryptedData(
             operation: 'write',
             reason: isQuotaError ? 'quota_exceeded' : 'write_failed',
           },
-          { cause: error instanceof Error ? error : new Error(String(error)) },
+          { cause: new Error('Storage write failed') },
         ),
       };
     }
   });
+}
+
+function handleDecryptError(
+  error: unknown,
+): Result<never, StorageError | InvalidPasswordError> {
+  if (error instanceof InvalidPasswordError) {
+    return { success: false, error };
+  }
+  if (error instanceof DecryptionError) {
+    return {
+      success: false,
+      error: new StorageError(
+        'Decryption failed: data may be corrupted',
+        { key: STORAGE_KEY, operation: 'read', reason: 'corrupted' },
+        { cause: new Error('Decryption failed') },
+      ),
+    };
+  }
+  return {
+    success: false,
+    error: new StorageError(
+      'Unexpected error during decryption',
+      { key: STORAGE_KEY, operation: 'read', reason: 'read_failed' },
+      { cause: new Error('Storage operation failed') },
+    ),
+  };
 }
 
 /** Load encrypted blob from extension storage, validate, and decrypt. */
@@ -119,13 +145,13 @@ export async function loadEncryptedData(
     let raw: Record<string, unknown>;
     try {
       raw = await browser.storage.local.get(STORAGE_KEY);
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: new StorageError(
           'Failed to read from extension storage',
           { key: STORAGE_KEY, operation: 'read', reason: 'read_failed' },
-          { cause: error instanceof Error ? error : new Error(String(error)) },
+          { cause: new Error('Storage read failed') },
         ),
       };
     }
@@ -155,25 +181,81 @@ export async function loadEncryptedData(
       const plaintext = await decrypt(stored, password);
       return { success: true, data: plaintext };
     } catch (error) {
-      if (error instanceof InvalidPasswordError) {
-        return { success: false, error };
-      }
-      if (error instanceof DecryptionError) {
-        return {
-          success: false,
-          error: new StorageError(
-            'Decryption failed: data may be corrupted',
-            { key: STORAGE_KEY, operation: 'read', reason: 'corrupted' },
-            { cause: error },
-          ),
-        };
-      }
+      return handleDecryptError(error);
+    }
+  });
+}
+
+/**
+ * Default chrome.storage.local quota in bytes (10 MB).
+ * Extensions can request the `unlimitedStorage` permission to bypass this limit.
+ */
+export const DEFAULT_STORAGE_QUOTA = 10_485_760;
+
+/** Check if encrypted data exists without decrypting. */
+export async function hasData(): Promise<Result<boolean, StorageError>> {
+  return withRetry(async () => {
+    try {
+      const raw = await browser.storage.local.get(STORAGE_KEY);
+      return { success: true, data: raw[STORAGE_KEY] != null };
+    } catch {
       return {
         success: false,
         error: new StorageError(
-          'Unexpected error during decryption',
+          'Failed to check for existing data',
           { key: STORAGE_KEY, operation: 'read', reason: 'read_failed' },
-          { cause: error instanceof Error ? error : new Error(String(error)) },
+          { cause: new Error('Storage read failed') },
+        ),
+      };
+    }
+  });
+}
+
+/** Remove all Hush data from extension storage. */
+export async function clearAll(): Promise<Result<void, StorageError>> {
+  return withRetry(async () => {
+    try {
+      await browser.storage.local.remove(STORAGE_KEY);
+      return { success: true, data: undefined };
+    } catch {
+      return {
+        success: false,
+        error: new StorageError(
+          'Failed to clear storage data',
+          { key: STORAGE_KEY, operation: 'delete', reason: 'write_failed' },
+          { cause: new Error('Storage delete failed') },
+        ),
+      };
+    }
+  });
+}
+
+/**
+ * Report storage consumption against the default quota.
+ * On Firefox (which lacks getBytesInUse for storage.local), falls back to
+ * estimating usage via JSON serialization size.
+ */
+export async function getStorageUsage(): Promise<
+  Result<{ used: number; quota: number }, StorageError>
+> {
+  return withRetry(async () => {
+    try {
+      let used: number;
+      const storage = browser.storage.local;
+      if ('getBytesInUse' in storage && typeof storage.getBytesInUse === 'function') {
+        used = await storage.getBytesInUse(null);
+      } else {
+        const all = await storage.get(null);
+        used = new Blob([JSON.stringify(all)]).size;
+      }
+      return { success: true, data: { used, quota: DEFAULT_STORAGE_QUOTA } };
+    } catch {
+      return {
+        success: false,
+        error: new StorageError(
+          'Failed to get storage usage',
+          { key: STORAGE_KEY, operation: 'read', reason: 'read_failed' },
+          { cause: new Error('Storage usage check failed') },
         ),
       };
     }

@@ -16,6 +16,7 @@ declare const chrome: {
       get: (key: string | null) => Promise<Record<string, unknown>>;
       set: (items: Record<string, unknown>) => Promise<void>;
       remove: (key: string) => Promise<void>;
+      getBytesInUse: (keys: string | string[] | null) => Promise<number>;
     };
   };
 };
@@ -176,6 +177,48 @@ test.describe('Extension storage rapid operations (retry-wrapped smoke)', () => 
       });
     }
 
+    await page.close();
+  });
+});
+
+test.describe('Extension storage utility API coverage (STORAGE-004)', () => {
+  test('chrome.storage.local.getBytesInUse returns a positive number', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const result = await page.evaluate(async () => {
+      // #given — some data in storage
+      await chrome.storage.local.set({ holyPrivateData: { salt: 'a', encrypted: 'b', iv: 'c', iterations: 600000 } });
+      // #when — check bytes in use
+      return chrome.storage.local.getBytesInUse(null);
+    });
+
+    // #then — returns a positive number
+    expect(typeof result).toBe('number');
+    expect(result).toBeGreaterThan(0);
+    await page.close();
+  });
+
+  test('chrome.storage.local.get confirms data existence after set', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const result = await page.evaluate(async () => {
+      // #given — data stored under holyPrivateData key
+      await chrome.storage.local.set({ holyPrivateData: { data: 'exists' } });
+      // #when — retrieve and check existence
+      const stored = await chrome.storage.local.get('holyPrivateData');
+      return stored['holyPrivateData'] != null;
+    });
+
+    // #then — data exists
+    expect(result).toBe(true);
     await page.close();
   });
 });
