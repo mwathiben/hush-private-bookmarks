@@ -1,0 +1,449 @@
+{
+    "project": {
+        "name": "Module 5: Bookmark Import",
+        "description": "Create lib/bookmark-import.ts — import bookmarks from two external sources: (1) Chrome's native bookmarks API tree (chrome.bookmarks.getTree) and (2) HTML bookmark files exported from any browser (Netscape bookmark format). Both converters transform external data into Hush's internal BookmarkTree format using types from lib/types.ts. Chrome bookmark import is extracted from Holy PB's shared.js convertChromeBookmarks function. HTML import is a new implementation replacing Holy PB's html-importer.js (278 lines). Both are Free tier features. Also includes encrypted JSON backup export/import. Target: ≤200 lines.",
+        "version": "1.1.0",
+        "created": "2026-03-03",
+        "revised": "2026-03-05",
+        "revision_notes": "v1.1.0 — Fixes from Claude Code pre-implementation review: (1) CRITICAL: ImportError context shape mismatch — actual errors.ts has ImportErrorContext { source?: string; format?: string }, not { source: string; reason?: string }. All references corrected. (2) Added dependency execution note. (3) Module count standardized to 22. (4) Test count corrected to ~41. (5) ImportStats defined locally in bookmark-import.ts. (6) Line count standardized to ≤200. (7) Added progress_log.format_rules. (8) Removed ambiguous Chrome root container qualifier. (9) ADD_DATE milliseconds heuristic promoted to explicit test case.",
+        "parent_plan": "Hush Consolidated Build Plan — Day 2 (final third)"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": [
+            "The Chrome bookmark conversion algorithm from convertChromeBookmarks(): recursively walk Chrome's BookmarkTreeNode[], skip the hidden root nodes ('Bookmarks Bar', 'Other Bookmarks', 'Mobile Bookmarks'), convert each node into Hush's Bookmark or Folder type based on whether it has a url property",
+            "The mapping: Chrome node with url → Bookmark { type: 'bookmark', title, url, dateAdded }, Chrome node without url (folder) → Folder { type: 'folder', name: node.title, children: recursively converted, dateAdded }",
+            "The date conversion: Chrome stores dateAdded as milliseconds since 1970 (same as Date.now()), Holy PB preserves this directly"
+        ],
+        "falls_short": [
+            {
+                "id": 1,
+                "deficiency": "Holy PB's convertChromeBookmarks has zero error handling — if the Chrome bookmarks API returns unexpected data (null, empty, malformed nodes), it crashes silently",
+                "hush_requires": "Handle gracefully: null/undefined nodes (skip), nodes without title (use URL or 'Untitled'), empty folders (include them — user may want the structure), Chrome API failure (return ImportError)"
+            },
+            {
+                "id": 2,
+                "deficiency": "Holy PB's convertChromeBookmarks does not generate IDs for imported items — they get no id field",
+                "hush_requires": "Generate unique IDs for all imported items using generateId() from lib/data-model.ts"
+            },
+            {
+                "id": 3,
+                "deficiency": "Holy PB's html-importer.js (278 lines) uses DOM parsing via DOMParser — this is fine for popup/manager context but has no error handling for malformed HTML",
+                "hush_requires": "HTML parser must work in both popup (DOM available) and tests (jsdom). Use DOMParser which is available in both. Add robust error handling for malformed HTML, missing attributes, and encoding issues."
+            },
+            {
+                "id": 4,
+                "deficiency": "Holy PB's html-importer.js has hardcoded assumptions about HTML structure — it only handles the exact Netscape bookmark format and breaks on variations exported by different browsers",
+                "hush_requires": "Handle Netscape format variations from: Chrome, Firefox, Edge, Safari, Opera. The format is standardized (NETSCAPE-Bookmark-file-1) but browsers add their own quirks."
+            },
+            {
+                "id": 5,
+                "deficiency": "Holy PB's html-importer.js does not handle duplicate bookmarks — importing the same HTML file twice creates duplicates",
+                "hush_requires": "Acceptable for v1.0 (matching Holy PB behavior). Deduplication is a future enhancement. Document this limitation."
+            }
+        ],
+        "do_not_incorporate": [
+            "Holy PB's html-importer.js UI code (DOM manipulation for progress indicators) — the import module is pure lib/, UI is in Module 12",
+            "Holy PB's import flow that writes directly to storage — our import functions ONLY convert data. The caller (UI layer) handles storage via lib/storage.ts",
+            "Holy PB's global window attachment pattern (window.HolyImporter) — use ES module exports"
+        ],
+        "build_from_scratch": [
+            "convertChromeBookmarks(chromeNodes: ChromeBookmarkTreeNode[]): Result<{ tree: BookmarkTree; stats: ImportStats }, ImportError> — typed version with error handling and ID generation",
+            "parseHtmlBookmarks(html: string): Result<{ tree: BookmarkTree; stats: ImportStats }, ImportError> — parse Netscape bookmark HTML format into internal tree structure",
+            "exportEncryptedBackup(tree: BookmarkTree, password: string): Promise<string> — encrypted JSON backup export",
+            "importEncryptedBackup(blob: string, password: string): Promise<Result<BookmarkTree, ImportError | InvalidPasswordError>> — encrypted JSON backup import",
+            "ChromeBookmarkTreeNode type definition (mirrors chrome.bookmarks.BookmarkTreeNode but locally defined to avoid chrome types dependency in lib/)",
+            "ImportStats type defined locally in bookmark-import.ts: { bookmarksImported: number, foldersImported: number, errors: string[] }",
+            "Comprehensive test suite with real-world HTML export fixtures from Chrome, Firefox",
+            "ADD_DATE milliseconds heuristic: if timestamp > 9999999999999, assume already in milliseconds (don't multiply by 1000)"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "IMPORT-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "Convert Chrome bookmarks API tree to internal format",
+            "description": "Create lib/bookmark-import.ts with convertChromeBookmarks() function. Takes Chrome's BookmarkTreeNode[] (the result of chrome.bookmarks.getTree()) and converts it to Hush's BookmarkTree format. Free tier feature for migrating existing Chrome bookmarks into encrypted storage.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write tests/unit/lib/bookmark-import.test.ts with ChromeBookmarkTreeNode type fixture (mirrors chrome.bookmarks.BookmarkTreeNode: { id, title, url?, children?, dateAdded?, parentId? })",
+                "RED: Write test: 'converts simple Chrome bookmark to Hush Bookmark' — single node with url → Bookmark { type: 'bookmark', title, url, dateAdded, id }",
+                "RED: Write test: 'converts Chrome folder to Hush Folder' — node without url but with children → Folder { type: 'folder', name, children, dateAdded, id }",
+                "RED: Write test: 'converts nested Chrome tree structure' — root with folders containing bookmarks, assert full tree structure matches",
+                "RED: Write test: 'skips Chrome root containers and flattens their children into Hush root' — Chrome root has children [Bookmarks Bar, Other Bookmarks, Mobile Bookmarks]. Their children are flattened into the Hush root Folder's children array. The containers themselves are always skipped.",
+                "RED: Write test: 'generates unique IDs for all imported items' — import tree with 10 items, assert all 10 have unique non-empty id strings",
+                "RED: Write test: 'handles missing dateAdded gracefully' — Chrome node without dateAdded gets Date.now()",
+                "RED: Write test: 'handles node with empty title' — gets 'Untitled' for bookmarks or 'Unnamed Folder' for folders",
+                "RED: Write test: 'returns ImportError for null input' — assert Result is failure with context.source = 'chrome'",
+                "RED: Write test: 'returns import statistics' — assert result includes { bookmarksImported: number, foldersImported: number }",
+                "GREEN: Create lib/bookmark-import.ts with convertChromeBookmarks(). Define local ChromeBookmarkTreeNode interface. Define local ImportStats type (exported). Recursively convert nodes. Import generateId from '@/lib/data-model'.",
+                "REFACTOR: Extract convertNode() helper for single-node conversion"
+            ],
+            "files": [
+                "lib/bookmark-import.ts",
+                "tests/unit/lib/bookmark-import.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Converts Chrome BookmarkTreeNode[] to BookmarkTree (which is a Folder with children)",
+                "Bookmarks (nodes with url) → Bookmark type, Folders (nodes without url) → Folder type",
+                "Preserves nested folder structure",
+                "Always skips Chrome root containers (Bookmarks Bar, Other Bookmarks, Mobile Bookmarks), flattens their children into Hush root",
+                "Generates unique IDs for all imported items via generateId()",
+                "Handles missing dateAdded (defaults to Date.now())",
+                "Handles empty titles ('Untitled' / 'Unnamed Folder')",
+                "Returns Result<{ tree: BookmarkTree; stats: ImportStats }, ImportError>",
+                "ImportStats type defined and exported from bookmark-import.ts (not types.ts)",
+                "ImportError uses context.source (optional string) and context.format (optional string) per actual ImportErrorContext in errors.ts",
+                "Zero browser API calls (receives data, does NOT call chrome.bookmarks.getTree)"
+            ],
+            "definition_of_done": [
+                "All 10 Chrome import tests pass",
+                "tsc --noEmit passes",
+                "npx eslint lib/bookmark-import.ts passes",
+                "lib/bookmark-import.ts has zero browser/chrome API imports"
+            ],
+            "verification": "npx vitest run tests/unit/lib/bookmark-import.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "IMPORT-002",
+            "category": "core",
+            "priority": "HIGH",
+            "title": "Parse HTML bookmark files (Netscape format) into internal format",
+            "description": "Add parseHtmlBookmarks() to lib/bookmark-import.ts that parses the standard Netscape bookmark file format (NETSCAPE-Bookmark-file-1) used by all major browsers for bookmark export. Uses DOMParser to parse HTML, walks DOM tree to extract bookmarks and folders. Free tier feature.",
+            "story_points": 8,
+            "steps": [
+                "RED: Create test fixture CHROME_HTML_EXPORT — realistic Chrome bookmark HTML export string with folders and bookmarks, using ADD_DATE in seconds",
+                "RED: Create test fixture FIREFOX_HTML_EXPORT — Firefox adds TAGS attribute and different folder structure",
+                "RED: Write test: 'parses Chrome HTML export with bookmarks and folders' — parse CHROME_HTML_EXPORT, assert correct counts",
+                "RED: Write test: 'extracts bookmark URL from HREF attribute'",
+                "RED: Write test: 'extracts bookmark title from anchor text'",
+                "RED: Write test: 'extracts ADD_DATE as dateAdded (converts seconds to milliseconds)' — ADD_DATE='1609459200' (Jan 1 2021 in seconds) should convert to 1609459200000 (milliseconds)",
+                "RED: Write test: 'ADD_DATE already in milliseconds is not double-converted' — if ADD_DATE > 9999999999999, assume already milliseconds and do not multiply by 1000. This prevents dates in year 50000+.",
+                "RED: Write test: 'preserves folder hierarchy from DL/DT/DD nesting'",
+                "RED: Write test: 'handles Firefox HTML export'",
+                "RED: Write test: 'handles empty HTML file — returns empty tree (not error)'",
+                "RED: Write test: 'handles malformed HTML gracefully — returns ImportError or partial result'",
+                "RED: Write test: 'handles bookmarks with special characters in title/URL'",
+                "RED: Write test: 'generates unique IDs for all imported items'",
+                "RED: Write test: 'returns import statistics'",
+                "GREEN: Implement parseHtmlBookmarks(). Use DOMParser. Walk DL lists, DT items, A anchors for bookmarks, H3 headers for folders. ADD_DATE conversion: parse as integer, if > 9999999999999 use as-is, else multiply by 1000.",
+                "REFACTOR: Extract walkDL(dl: Element) helper for recursive folder parsing"
+            ],
+            "files": [
+                "lib/bookmark-import.ts",
+                "tests/unit/lib/bookmark-import.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Parses NETSCAPE-Bookmark-file-1 format HTML from Chrome, Firefox, Edge",
+                "Extracts: URL from HREF, title from anchor text, dateAdded from ADD_DATE",
+                "Preserves folder hierarchy from DL/DT nesting",
+                "ADD_DATE conversion: seconds → milliseconds (multiply by 1000)",
+                "ADD_DATE heuristic: if value > 9999999999999, assume already milliseconds (do not multiply)",
+                "Handles empty input (returns empty tree, not error)",
+                "Handles malformed HTML (returns ImportError with context.format = 'netscape-html')",
+                "Handles special characters in URLs and titles",
+                "Generates unique IDs for all imported items",
+                "Returns Result<{ tree: BookmarkTree; stats: ImportStats }, ImportError>",
+                "Uses DOMParser (available in jsdom test environment)",
+                "Rejects HTML > 5MB with ImportError (size guard)"
+            ],
+            "definition_of_done": [
+                "All 14 HTML import tests pass",
+                "tsc --noEmit passes",
+                "Test fixtures include realistic HTML from Chrome and Firefox"
+            ],
+            "verification": "npx vitest run tests/unit/lib/bookmark-import.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "IMPORT-001"
+            ]
+        },
+        {
+            "id": "IMPORT-003",
+            "category": "core",
+            "priority": "MEDIUM",
+            "title": "Encrypted JSON backup export and import",
+            "description": "Add exportEncryptedBackup() and importEncryptedBackup(). Export serializes BookmarkTree to JSON, encrypts, returns string blob for file save. Import decrypts, parses, returns BookmarkTree. Free tier encrypted JSON backup/restore feature.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write test: 'exportEncryptedBackup produces JSON string containing EncryptedStore'",
+                "RED: Write test: 'importEncryptedBackup decrypts and returns BookmarkTree'",
+                "RED: Write test: 'importEncryptedBackup fails with wrong password — InvalidPasswordError'",
+                "RED: Write test: 'importEncryptedBackup fails with invalid JSON blob — ImportError with context.format = \"hush-backup\"'",
+                "RED: Write test: 'importEncryptedBackup fails with valid JSON but not EncryptedStore — ImportError'",
+                "RED: Write test: 'export/import roundtrip preserves all bookmarks and folder structure'",
+                "RED: Write test: 'exported blob includes version field for future format changes'",
+                "GREEN: Implement exportEncryptedBackup and importEncryptedBackup using encrypt/decrypt from lib/crypto.ts",
+                "REFACTOR: Define BACKUP_VERSION = 1 constant"
+            ],
+            "files": [
+                "lib/bookmark-import.ts",
+                "tests/unit/lib/bookmark-import.test.ts"
+            ],
+            "acceptance_criteria": [
+                "exportEncryptedBackup(tree: BookmarkTree, password: string): Promise<string>",
+                "importEncryptedBackup(blob: string, password: string): Promise<Result<BookmarkTree, ImportError | InvalidPasswordError>>",
+                "exportEncryptedBackup returns JSON string containing EncryptedStore + version field",
+                "importEncryptedBackup decrypts and returns BookmarkTree",
+                "Wrong password produces InvalidPasswordError",
+                "Invalid JSON produces ImportError with context.format = 'hush-backup'",
+                "Valid JSON but not EncryptedStore produces ImportError",
+                "Roundtrip preserves complete tree structure",
+                "Backup format includes version field (BACKUP_VERSION = 1)"
+            ],
+            "definition_of_done": [
+                "All 7 backup tests pass",
+                "tsc --noEmit passes",
+                "Uses real encrypt/decrypt from lib/crypto.ts (not mocked)"
+            ],
+            "verification": "npx vitest run tests/unit/lib/bookmark-import.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "IMPORT-001"
+            ]
+        },
+        {
+            "id": "IMPORT-004",
+            "category": "quality",
+            "priority": "MEDIUM",
+            "title": "Edge cases, module purity, and full integration verification",
+            "description": "Test edge cases across all import functions, verify module purity, run full test suite. Edge cases: large imports (1000+ bookmarks), deeply nested folders (10+ levels), data: URLs, javascript: URLs, very large HTML files.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write test: 'Chrome import: 1000 bookmarks in 50 folders'",
+                "RED: Write test: 'Chrome import: deeply nested folders (10 levels)'",
+                "RED: Write test: 'HTML import: handles data: URLs'",
+                "RED: Write test: 'HTML import: handles javascript: URLs'",
+                "RED: Write test: 'HTML import: rejects files > 5MB with ImportError'",
+                "RED: Write test: 'HTML import: handles very large file (100KB+) within limit'",
+                "RED: Write purity test: 'bookmark-import.ts has zero React/DOM imports (DOMParser is OK)'",
+                "RED: Write purity test: 'bookmark-import.ts has zero browser/chrome API imports'",
+                "RED: Write purity test: 'bookmark-import.ts has no circular imports'",
+                "Update scaffold-smoke.test.ts: add bookmark-import.ts to LIB_MODULES, add exports test for convertChromeBookmarks, parseHtmlBookmarks, exportEncryptedBackup, importEncryptedBackup, BACKUP_VERSION, ImportStats type, ChromeBookmarkTreeNode type",
+                "Verify full suite: tsc + eslint + vitest + coverage + wxt build + npm run test:e2e",
+                "Verify lib/bookmark-import.ts ≤ 200 lines, all functions ≤ 50 lines"
+            ],
+            "files": [
+                "lib/bookmark-import.ts",
+                "tests/unit/lib/bookmark-import.test.ts",
+                "tests/unit/integration/scaffold-smoke.test.ts"
+            ],
+            "acceptance_criteria": [
+                "1000+ bookmark import completes without error or timeout",
+                "10+ level folder nesting preserved correctly",
+                "data: and javascript: URLs imported (not filtered — user's data is preserved)",
+                "HTML > 5MB rejected with ImportError",
+                "100KB+ HTML file within limit parses without timeout",
+                "Zero React/DOM imports (DOMParser is a standard Web API, allowed)",
+                "Zero browser/chrome API imports",
+                "No circular imports",
+                "scaffold-smoke.test.ts updated with bookmark-import.ts",
+                "lib/bookmark-import.ts branch coverage >= 80%",
+                "lib/bookmark-import.ts ≤ 200 lines"
+            ],
+            "definition_of_done": [
+                "All edge case + purity tests pass (~10 tests)",
+                "Full verification: tsc + eslint + vitest + coverage + wxt build + npm run test:e2e",
+                "Coverage >= 80% branches on bookmark-import.ts",
+                "Zero regressions"
+            ],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "IMPORT-001",
+                "IMPORT-002",
+                "IMPORT-003"
+            ]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "project_scaffold": "Module 1 complete. Full CI, testing infrastructure, Sentry, shadcn/ui.",
+            "crypto_module": "Module 2 complete. lib/crypto.ts with encrypt/decrypt/CRYPTO_CONFIG.",
+            "storage_module": "Module 3 complete. lib/storage.ts with saveEncryptedData/loadEncryptedData/validateEncryptedStore.",
+            "data_model": "Module 4 complete. lib/data-model.ts with createEmptyTree, getItemByPath, findItemPath, addBookmark, addFolder, removeItem, moveItem, updateBookmark, renameFolder, collectAllUrls, countBookmarks, flattenTree, generateId, normalizeTree, isBookmark, isFolder.",
+            "types": "lib/types.ts defines: Bookmark, Folder, BookmarkNode, BookmarkTree (= Folder), EncryptedStore, Result<T, E>",
+            "errors": "lib/errors.ts defines: ImportError extends Error with readonly context: ImportErrorContext. ImportErrorContext = { source?: string; format?: string }. Also: StorageError, InvalidPasswordError, DataModelError."
+        },
+        "what_does_not_exist": {
+            "bookmark_import": "lib/bookmark-import.ts does not exist. No import/export functionality exists yet.",
+            "bookmark_import_tests": "tests/unit/lib/bookmark-import.test.ts does not exist.",
+            "html_fixtures": "No HTML bookmark file test fixtures exist yet."
+        },
+        "dependency_note": "This PRD assumes Modules 1-4 are complete when execution begins. The build plan enforces sequential execution: Module 3 → Module 4 → Module 5. Do NOT attempt to implement Module 5 until Modules 3 and 4 have shipped and their tests pass.",
+        "import_error_context_critical_note": "ImportErrorContext in errors.ts has { source?: string; format?: string }. source is OPTIONAL (not required). The field is 'format' NOT 'reason'. All ImportError instances in this module should set context.source (e.g., 'chrome', 'html', 'backup') and context.format where relevant (e.g., 'netscape-html', 'hush-backup', 'chrome-api').",
+        "holy_pb_reference": {
+            "clone_location": "/tmp/holy-pb-reference/",
+            "clone_command": "git clone https://github.com/nicholasgasior/holy-private-bookmarks.git /tmp/holy-pb-reference",
+            "relevant_files": [
+                {
+                    "file": "/tmp/holy-pb-reference/src/js/shared.js",
+                    "lines": 888,
+                    "what_to_extract": "convertChromeBookmarks() function (~50 lines). Search for 'convertChromeBookmarks' in the IIFE.",
+                    "extraction_notes": "Extract the conversion algorithm. Rewrite with TypeScript types, error handling, and ID generation."
+                },
+                {
+                    "file": "/tmp/holy-pb-reference/src/js/html-importer.js",
+                    "lines": 278,
+                    "what_to_extract": "The Netscape bookmark HTML parsing algorithm. Walks DL/DT/DD elements to build folder tree.",
+                    "extraction_notes": "Do NOT copy verbatim — it mixes parsing with UI progress indicators. Extract parsing algorithm, rewrite cleanly."
+                }
+            ],
+            "github_api_url_shared": "https://api.github.com/repos/nicholasgasior/holy-private-bookmarks/contents/src/js/shared.js",
+            "github_api_url_html_importer": "https://api.github.com/repos/nicholasgasior/holy-private-bookmarks/contents/src/js/html-importer.js"
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "runtime": "Node.js 20 LTS",
+            "html_parsing": "DOMParser — available in browser contexts and jsdom. Use: new DOMParser().parseFromString(html, 'text/html'). Do NOT use external HTML parsing libraries.",
+            "testing": "Vitest with jsdom. DOMParser available in jsdom. Chrome bookmark fixtures are TypeScript objects. HTML fixtures are template literal strings.",
+            "forbidden_patterns": [
+                "chrome.bookmarks.getTree() — module receives data, does NOT call browser APIs",
+                "Direct storage writes — import functions return BookmarkTree, caller persists",
+                "External HTML parsing libraries (cheerio, htmlparser2, parse5)",
+                "React or DOM manipulation (DOMParser for parsing is fine)"
+            ]
+        },
+        "error_context_usage": {
+            "description": "ImportError uses ImportErrorContext { source?: string; format?: string }. This module should set both fields on every ImportError for clear error discrimination.",
+            "examples": {
+                "chrome_import_error": "new ImportError('message', { source: 'chrome', format: 'chrome-api' })",
+                "html_import_error": "new ImportError('message', { source: 'html', format: 'netscape-html' })",
+                "backup_import_error": "new ImportError('message', { source: 'backup', format: 'hush-backup' })",
+                "size_limit_error": "new ImportError('HTML file exceeds 5MB limit', { source: 'html', format: 'netscape-html' })"
+            }
+        },
+        "netscape_bookmark_format": {
+            "description": "NETSCAPE-Bookmark-file-1 is the de facto standard for bookmark import/export. All major browsers use this format.",
+            "structure": "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=UTF-8'>\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n  <DT><H3 ADD_DATE='1234567890'>Folder Name</H3>\n  <DL><p>\n    <DT><A HREF='https://example.com' ADD_DATE='1234567890'>Example</A>\n  </DL><p>\n</DL><p>",
+            "key_elements": {
+                "DL": "Definition List — contains bookmarks/folders",
+                "DT": "Definition Term — wrapper for bookmark or folder",
+                "A_HREF": "Bookmark: <A HREF='url' ADD_DATE='seconds_since_epoch'>title</A>",
+                "H3": "Folder header: <H3 ADD_DATE='seconds_since_epoch'>Name</H3> followed by <DL> children",
+                "ADD_DATE": "Timestamp in SECONDS since Unix epoch (NOT milliseconds — must multiply by 1000 for internal format). HEURISTIC: if value > 9999999999999, it's probably already in milliseconds — do not double-convert.",
+                "PERSONAL_TOOLBAR_FOLDER": "Chrome's Bookmarks Bar has this attribute"
+            }
+        },
+        "chrome_bookmark_tree": {
+            "description": "chrome.bookmarks.getTree() returns BookmarkTreeNode[] with root containing 3 children: Bookmarks Bar, Other Bookmarks, Mobile Bookmarks.",
+            "root_structure": "getTree() → [{ id: '0', title: '', children: [{ id: '1', title: 'Bookmarks Bar', children: [...] }, { id: '2', title: 'Other Bookmarks', children: [...] }, { id: '3', title: 'Mobile Bookmarks', children: [...] }] }]",
+            "container_handling": "Always skip root containers (Bookmarks Bar, Other Bookmarks, Mobile Bookmarks). Flatten their children into the Hush root Folder's children array. The containers themselves are never preserved as Hush folders.",
+            "node_types": "Node with url → bookmark, Node without url but with children → folder. Some nodes may be separators (skip these)."
+        },
+        "licensing": {
+            "extension_license": "GPL-3.0",
+            "attribution": "Chrome bookmark conversion algorithm derived from Holy Private Bookmarks shared.js convertChromeBookmarks (GPL-3.0). HTML bookmark parsing is a new implementation."
+        },
+        "read_first": [
+            "CLAUDE.md (project conventions)",
+            "lib/types.ts (Bookmark, Folder, BookmarkNode, BookmarkTree = Folder, EncryptedStore, Result<T, E>)",
+            "lib/errors.ts — CRITICAL: ImportErrorContext = { source?: string; format?: string }. NOT { source: string; reason?: string }.",
+            "lib/data-model.ts (generateId function)",
+            "lib/crypto.ts (encrypt/decrypt for backup export/import)",
+            "/tmp/holy-pb-reference/src/js/shared.js (convertChromeBookmarks function)",
+            "/tmp/holy-pb-reference/src/js/html-importer.js (Netscape HTML parsing approach)",
+            "This PRD file"
+        ],
+        "inputs": [
+            {
+                "file": "lib/types.ts",
+                "from_module": "Module 1 (Scaffold)",
+                "what_it_provides": "Bookmark, Folder, BookmarkNode, BookmarkTree (= Folder), EncryptedStore, Result<T, E>",
+                "how_to_use": "import type { Bookmark, Folder, BookmarkNode, BookmarkTree } from '@/lib/types';"
+            },
+            {
+                "file": "lib/errors.ts",
+                "from_module": "Module 1 (Scaffold)",
+                "what_it_provides": "ImportError with ImportErrorContext { source?: string; format?: string }. InvalidPasswordError.",
+                "how_to_use": "import { ImportError, InvalidPasswordError } from '@/lib/errors';",
+                "critical_note": "ImportErrorContext has 'format', NOT 'reason'. source is optional."
+            },
+            {
+                "file": "lib/data-model.ts",
+                "from_module": "Module 4 (Data Model)",
+                "what_it_provides": "generateId(): string — unique ID generator for bookmark/folder items",
+                "how_to_use": "import { generateId } from '@/lib/data-model';"
+            },
+            {
+                "file": "lib/crypto.ts",
+                "from_module": "Module 2 (Crypto)",
+                "what_it_provides": "encrypt(), decrypt()",
+                "how_to_use": "import { encrypt, decrypt } from '@/lib/crypto';"
+            }
+        ],
+        "outputs": [
+            {
+                "file": "lib/bookmark-import.ts",
+                "consumed_by": "Module 10 (Popup UI — Chrome import), Module 12 (Settings — HTML import, backup), Module 13 (Manager)",
+                "description": "Bookmark import module. ≤200 lines. Exports: convertChromeBookmarks, parseHtmlBookmarks, exportEncryptedBackup, importEncryptedBackup, ImportStats type, ChromeBookmarkTreeNode type, BACKUP_VERSION constant."
+            },
+            {
+                "file": "tests/unit/lib/bookmark-import.test.ts",
+                "consumed_by": "CI pipeline",
+                "description": "~41 test cases. 80%+ branch coverage."
+            }
+        ]
+    },
+    "known_risks": [
+        {
+            "issue": "DOMParser behavior differences between jsdom and real browsers",
+            "severity": "MEDIUM",
+            "action": "Test with real browser HTML exports. Add Playwright E2E if discrepancies found."
+        },
+        {
+            "issue": "Large HTML files could cause DOMParser to hang",
+            "severity": "LOW",
+            "action": "Reject HTML > 5MB with ImportError. This is ~100K bookmarks worth of HTML."
+        },
+        {
+            "issue": "Backup format versioning needed for future changes",
+            "severity": "LOW",
+            "action": "BACKUP_VERSION = 1 in exported JSON. importEncryptedBackup checks version."
+        },
+        {
+            "issue": "ImportError constructor signature must match actual errors.ts — constructor(message: string, context: ImportErrorContext, options?: ErrorOptions)",
+            "severity": "HIGH",
+            "action": "Read lib/errors.ts before implementation to confirm the exact constructor signature. context is REQUIRED (not optional). Do NOT assume context fields based on PRD alone."
+        }
+    ],
+    "critical_path": "001 -> 002/003 -> 004",
+    "total_story_points": 23,
+    "total_stories": 4,
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-05-bookmark-import/",
+            "format": "Append-only. Each entry: ## IMPORT-XXX — <title>\n- Status: PASS | FAIL (attempt N)\n- Tests: N passing, N failing\n- Coverage: N% branches\n- Notes: <any issues encountered>\n- Timestamp: ISO 8601",
+            "update_trigger": "After each story completion or failure",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "build_plan_day": "Day 2 (final third)",
+        "estimated_test_count": "~41 tests across 4 stories (10 + 14 + 7 + 10)",
+        "session_protocol": "One Claude Code session. Read lib/errors.ts first to confirm ImportErrorContext shape. Generate bookmark-import.ts + bookmark-import.test.ts. Run tsc + eslint + vitest. Commit.",
+        "quality_gate": "All import tests pass. tsc clean. lib/ coverage >= 80%. Line count ≤ 200. Zero browser API calls.",
+        "human_review_required": "Review Chrome import against Holy PB convertChromeBookmarks. Verify HTML import handles Chrome and Firefox exports. Verify ImportError context uses correct field names (source, format)."
+    },
+    "execution_rules": {
+        "execution_order": "IMPORT-001 first, then 002/003 (parallel), then 004 as final validation.",
+        "clarifying_questions": "You ARE encouraged to ask clarifying questions. PRD should contain all factual context.",
+        "research_encouraged": "Research Netscape bookmark format. Test with real browser exports.",
+        "prd_scope": "Module 5 of 22 in a sequential build plan. Do NOT implement until Modules 1-4 are complete.",
+        "progress_logging": "Update prd.json + progress.md per progress_log.format_rules after each story.",
+        "commit_protocol": "Format: 'feat(import): IMPORT-XXX — <title>'.",
+        "failure_protocol": "Log failure, increment attempt_count. Max 3 attempts."
+    }
+}

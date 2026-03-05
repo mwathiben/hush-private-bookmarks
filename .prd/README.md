@@ -8,19 +8,24 @@
 | 02 | Crypto Engine | 1 | ✅ Complete | 8/8 | 25/25 |
 | 03 | Storage Layer | 1 | ⬜ Not Started | 0/6 | 0/25 |
 | 04 | Data Model | 1 | ⬜ Not Started | 0/6 | 0/32 |
-| 05 | TBD | - | ⬜ Not Started | - | - |
-| 06 | TBD | - | ⬜ Not Started | - | - |
-| 07 | TBD | - | ⬜ Not Started | - | - |
-| 08 | TBD | - | ⬜ Not Started | - | - |
-| 09 | TBD | - | ⬜ Not Started | - | - |
-| 10 | TBD | - | ⬜ Not Started | - | - |
-| 11 | TBD | - | ⬜ Not Started | - | - |
-| 12 | TBD | - | ⬜ Not Started | - | - |
-| 13 | TBD | - | ⬜ Not Started | - | - |
-| 14 | TBD | - | ⬜ Not Started | - | - |
-| 15 | TBD | - | ⬜ Not Started | - | - |
-| 16 | TBD | - | ⬜ Not Started | - | - |
-| 17 | TBD | - | ⬜ Not Started | - | - |
+| 05 | Bookmark Import | 1 | ⬜ Not Started | 0/4 | 0/23 |
+| 06 | Password Sets | - | ⬜ Not Started | - | - |
+| 07 | BIP39 Recovery | - | ⬜ Not Started | - | - |
+| 08 | Incognito Mode | - | ⬜ Not Started | - | - |
+| 09 | Background Service Worker | - | ⬜ Not Started | - | - |
+| 10 | Popup UI — Auth Screens | - | ⬜ Not Started | - | - |
+| 11 | Popup UI — Bookmark Management | - | ⬜ Not Started | - | - |
+| 12 | Popup UI — Settings & Utilities | - | ⬜ Not Started | - | - |
+| 13 | Full-Page Manager | - | ⬜ Not Started | - | - |
+| 14 | Hush 1.0 Import | - | ⬜ Not Started | - | - |
+| 15a | Cloud Sync Client | - | ⬜ Not Started | - | - |
+| 16a | Payment Integration (ProGate) | - | ⬜ Not Started | - | - |
+| 16b | Folder Locking (Free) | - | ⬜ Not Started | - | - |
+| 16c | Tags & Search (Pro) | - | ⬜ Not Started | - | - |
+| 16d | Panic Button (Pro) | - | ⬜ Not Started | - | - |
+| 16e | New-Tab Dashboard (Pro) | - | ⬜ Not Started | - | - |
+| 17 | Cross-Browser & E2E Tests | - | ⬜ Not Started | - | - |
+| 18 | Store Prep & Launch Assets | - | ⬜ Not Started | - | - |
 
 ## Structure
 
