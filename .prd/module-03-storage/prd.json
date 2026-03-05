@@ -1,0 +1,469 @@
+{
+    "project": {
+        "name": "Module 3: Storage Service",
+        "description": "Create lib/storage.ts — a thin wrapper around browser.storage.local (via WXT's cross-browser storage API) that encrypts data before saving and decrypts after loading. Uses encrypt/decrypt from lib/crypto.ts (Module 2). The storage key 'holyPrivateData' is preserved for backward compatibility with Holy PB. All functions return Result<T, E> types — no exceptions for expected errors. Target: ~100-150 lines.",
+        "version": "1.1.0",
+        "created": "2026-03-03",
+        "revised": "2026-03-05",
+        "revision_notes": "v1.1.0 — 7 fixes from Claude Code pre-implementation review: (1) Added reason field to StorageErrorContext, (2) Fixed loadEncryptedData return type to union StorageError | InvalidPasswordError, (3) Promoted function signatures to acceptance criteria, (4) Made validateEncryptedStore a public export, (5) Added progress_log.format_rules, (6) Fixed test count, command conventions, and named magic constants, (7) Added prerequisite step to extend StorageErrorContext in errors.ts.",
+        "parent_plan": "Hush Consolidated Build Plan — Day 2 (first third)"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": [
+            "The storage key 'holyPrivateData' used for the single encrypted blob in browser.storage.local — this is the key Holy PB uses and maintaining it allows potential future migration paths",
+            "The encrypt-entire-tree-as-single-blob pattern — Holy PB stores the complete bookmark tree as one encrypted string under one key. This is simple, atomic, and avoids partial-write corruption. Hush preserves this pattern.",
+            "The flow: serialize BookmarkTree to JSON string → encrypt string with user password → store encrypted blob under 'holyPrivateData'. Reverse for load."
+        ],
+        "falls_short": [
+            {
+                "id": 1,
+                "deficiency": "Holy PB's saveEncrypted/loadEncrypted in shared.js have zero error handling — chrome.runtime.lastError is never checked, storage failures are silent",
+                "hush_requires": "Every storage operation returns Result<T, StorageError>. StorageError includes typed context: { key, operation, reason } where reason is a discriminated union. No silent failures."
+            },
+            {
+                "id": 2,
+                "deficiency": "Holy PB has no retry logic — if a transient storage write fails (e.g., browser is busy), the data is lost",
+                "hush_requires": "Exponential backoff retry for transient failures (read/write errors). Configurable via RETRY_CONFIG constant. NOT retried: permanent errors (quota exceeded, corrupted data, wrong password)."
+            },
+            {
+                "id": 3,
+                "deficiency": "Holy PB cannot distinguish between 'no data saved yet' (first run) and 'data is corrupted' — both return undefined from loadEncrypted",
+                "hush_requires": "loadEncryptedData returns distinct error reasons: 'not_found' (no data under key — first run), 'corrupted' (data exists but fails JSON parse or EncryptedStore validation), 'read_failed' (browser storage API error)."
+            },
+            {
+                "id": 4,
+                "deficiency": "Holy PB uses raw chrome.storage.local which only works in Chrome — no Firefox/Edge compatibility",
+                "hush_requires": "Use WXT's browser.storage.local (auto-polyfilled via webextension-polyfill). Import from 'wxt/browser' not 'chrome'."
+            },
+            {
+                "id": 5,
+                "deficiency": "Holy PB has no concept of storage quota — if the encrypted blob exceeds Chrome's 10MB default limit (or 5MB per-item QUOTA_BYTES_PER_ITEM), the write silently fails",
+                "hush_requires": "Quota awareness: check estimated size before write. DEFAULT_STORAGE_QUOTA constant (10MB). QuotaExceededError detection. getStorageUsage() utility. Note: extensions can request 'unlimitedStorage' permission to bypass this limit — not needed for v1.0 but the architecture should not hardcode the 10MB assumption."
+            }
+        ],
+        "do_not_incorporate": [
+            "Holy PB's window.HolyShared global attachment pattern — use ES module exports",
+            "Holy PB's direct UI coupling in shared.js (the same file that does storage also manipulates DOM) — lib/storage.ts is pure storage, zero UI",
+            "chrome.storage.session usage — not needed for persistent encrypted bookmark storage"
+        ],
+        "build_from_scratch": [
+            "saveEncryptedData(plaintext: string, password: string): Promise<Result<void, StorageError>> — encrypt + save with error handling",
+            "loadEncryptedData(password: string): Promise<Result<string, StorageError | InvalidPasswordError>> — load + decrypt with typed error reasons including wrong password",
+            "hasData(): Promise<Result<boolean, StorageError>> — check if encrypted data exists without decrypting",
+            "clearAll(): Promise<Result<void, StorageError>> — remove all Hush data from storage",
+            "getStorageUsage(): Promise<Result<{ used: number; quota: number }, StorageError>> — storage quota info",
+            "validateEncryptedStore(data: unknown): data is EncryptedStore — type guard for stored data validation (public export, used by Module 5 backup import and Module 14 migration)",
+            "Exponential backoff retry wrapper with RETRY_CONFIG constant (maxAttempts: 3, delays: [100, 200, 400])",
+            "STORAGE_KEY = 'holyPrivateData' constant",
+            "DEFAULT_STORAGE_QUOTA = 10_485_760 constant (10MB in bytes)"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "STORAGE-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "Encrypted save and load roundtrip",
+            "description": "Create lib/storage.ts with saveEncryptedData() and loadEncryptedData(). Save encrypts plaintext with the user's password (via lib/crypto.ts encrypt()) and stores the resulting EncryptedStore JSON under the key 'holyPrivateData' in browser.storage.local. Load retrieves the blob, validates it with validateEncryptedStore(), and decrypts it back to plaintext.",
+            "story_points": 8,
+            "steps": [
+                "PREREQUISITE: Extend StorageErrorContext in lib/errors.ts to add reason field: reason?: 'not_found' | 'corrupted' | 'quota_exceeded' | 'write_failed' | 'read_failed'. This is required before any storage tests can reference error reasons.",
+                "RED: Write tests/unit/lib/storage.test.ts. Mock browser.storage.local (WXT provides this via wxt/testing or manual mock). Write test: 'saveEncryptedData stores encrypted data under holyPrivateData key'",
+                "RED: Write test: 'loadEncryptedData retrieves and decrypts data stored by saveEncryptedData' — save then load with same password, assert plaintext matches",
+                "RED: Write test: 'saveEncryptedData stores valid EncryptedStore JSON' — save, read raw storage, parse JSON, assert it has salt/encrypted/iv/iterations fields",
+                "RED: Write test: 'loadEncryptedData returns not_found error when no data exists' — fresh storage, assert Result is failure with reason 'not_found'",
+                "RED: Write test: 'STORAGE_KEY constant equals holyPrivateData'",
+                "GREEN: Create lib/storage.ts. Import encrypt/decrypt from '@/lib/crypto'. Import browser from 'wxt/browser'. Define STORAGE_KEY = 'holyPrivateData'. Implement saveEncryptedData(plaintext: string, password: string): Promise<Result<void, StorageError>> and loadEncryptedData(password: string): Promise<Result<string, StorageError | InvalidPasswordError>>.",
+                "REFACTOR: Extract validateEncryptedStore(data: unknown): data is EncryptedStore type guard as a public export"
+            ],
+            "files": [
+                "lib/storage.ts",
+                "lib/errors.ts",
+                "tests/unit/lib/storage.test.ts"
+            ],
+            "acceptance_criteria": [
+                "saveEncryptedData(plaintext: string, password: string): Promise<Result<void, StorageError>> — encrypts plaintext and stores under STORAGE_KEY",
+                "loadEncryptedData(password: string): Promise<Result<string, StorageError | InvalidPasswordError>> — loads, validates, and decrypts. Returns union error type (never throws for expected errors).",
+                "Save/load roundtrip preserves plaintext exactly",
+                "Data stored under STORAGE_KEY = 'holyPrivateData'",
+                "Stored value is valid EncryptedStore JSON (salt, encrypted, iv, iterations)",
+                "loadEncryptedData returns StorageError with reason 'not_found' when no data exists",
+                "validateEncryptedStore is a public export (type guard)",
+                "StorageErrorContext in lib/errors.ts has reason?: 'not_found' | 'corrupted' | 'quota_exceeded' | 'write_failed' | 'read_failed'",
+                "Uses browser.storage.local from 'wxt/browser' (not chrome.storage.local)"
+            ],
+            "definition_of_done": [
+                "All 5 core roundtrip tests pass",
+                "tsc --noEmit passes",
+                "npx eslint lib/storage.ts passes",
+                "StorageErrorContext.reason field added to lib/errors.ts"
+            ],
+            "verification": "npx vitest run tests/unit/lib/storage.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "STORAGE-002",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "Error handling for all failure modes",
+            "description": "Add comprehensive error handling to saveEncryptedData and loadEncryptedData. Every failure mode must produce a typed StorageError (or InvalidPasswordError) with a specific reason — never an unhandled exception for expected errors.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write test: 'loadEncryptedData returns corrupted error for invalid JSON in storage' — store raw string 'not-json' under key, assert Result failure with reason 'corrupted'",
+                "RED: Write test: 'loadEncryptedData returns corrupted error for valid JSON but not EncryptedStore' — store '{}' under key, assert reason 'corrupted'",
+                "RED: Write test: 'loadEncryptedData returns InvalidPasswordError for wrong password' — save with password A, load with password B. Assert error is InvalidPasswordError (not StorageError). The return type Result<string, StorageError | InvalidPasswordError> allows caller to pattern-match on error type.",
+                "RED: Write test: 'saveEncryptedData returns quota_exceeded error when data exceeds quota' — mock storage.local.set to throw QuotaExceededError, assert reason 'quota_exceeded'",
+                "RED: Write test: 'saveEncryptedData returns write_failed error for generic storage failure' — mock storage.local.set to throw generic error, assert reason 'write_failed'",
+                "RED: Write test: 'loadEncryptedData returns read_failed error for generic storage failure' — mock storage.local.get to throw, assert reason 'read_failed'",
+                "GREEN: Add try/catch to saveEncryptedData and loadEncryptedData. Catch QuotaExceededError specifically. Catch InvalidPasswordError from decrypt() and return it directly in the Result. Wrap all other errors in StorageError with appropriate reason.",
+                "REFACTOR: Ensure all error paths set the reason field on StorageErrorContext"
+            ],
+            "files": [
+                "lib/storage.ts",
+                "tests/unit/lib/storage.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Invalid JSON in storage → StorageError with reason 'corrupted'",
+                "Valid JSON but not EncryptedStore → StorageError with reason 'corrupted'",
+                "Wrong password → InvalidPasswordError (part of union return type, not thrown)",
+                "Storage quota exceeded → StorageError with reason 'quota_exceeded'",
+                "Generic write failure → StorageError with reason 'write_failed'",
+                "Generic read failure → StorageError with reason 'read_failed'",
+                "No error path throws — all return Result failures"
+            ],
+            "definition_of_done": [
+                "All 6 error handling tests pass",
+                "tsc --noEmit passes",
+                "Zero empty catch blocks"
+            ],
+            "verification": "npx vitest run tests/unit/lib/storage.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "STORAGE-001"
+            ]
+        },
+        {
+            "id": "STORAGE-003",
+            "category": "core",
+            "priority": "HIGH",
+            "title": "Retry logic with exponential backoff",
+            "description": "Add retry logic for transient storage failures. Uses exponential backoff defined in a RETRY_CONFIG constant. Only retries transient errors (read_failed, write_failed). Does NOT retry permanent errors (quota_exceeded, corrupted, not_found, InvalidPasswordError).",
+            "story_points": 3,
+            "steps": [
+                "RED: Write test: 'retries on transient read failure up to RETRY_CONFIG.maxAttempts times' — mock storage.local.get to fail twice then succeed, assert final result is success",
+                "RED: Write test: 'retries on transient write failure' — mock storage.local.set to fail once then succeed",
+                "RED: Write test: 'does NOT retry on quota_exceeded error' — mock quota error, assert only 1 attempt",
+                "RED: Write test: 'does NOT retry on InvalidPasswordError' — assert only 1 attempt",
+                "RED: Write test: 'returns last error after all retries exhausted' — mock 3 consecutive failures, assert Result is failure",
+                "RED: Write test: 'RETRY_CONFIG has maxAttempts: 3 and delays: [100, 200, 400]'",
+                "GREEN: Create withRetry() helper. Define RETRY_CONFIG = { maxAttempts: 3, delays: [100, 200, 400] } as a named constant. Wrap save/load in withRetry. Check error reason before retrying — only retry 'read_failed' and 'write_failed'.",
+                "REFACTOR: Ensure withRetry is internal (not exported) — it's an implementation detail"
+            ],
+            "files": [
+                "lib/storage.ts",
+                "tests/unit/lib/storage.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Transient read/write failures are retried up to RETRY_CONFIG.maxAttempts (3) times",
+                "Exponential backoff delays defined in RETRY_CONFIG.delays: [100, 200, 400] ms",
+                "Permanent errors (quota_exceeded, corrupted, not_found) are NOT retried",
+                "InvalidPasswordError is NOT retried",
+                "After all retries exhausted, returns the last StorageError",
+                "RETRY_CONFIG is a named exported constant (for testing), not magic numbers"
+            ],
+            "definition_of_done": [
+                "All 6 retry tests pass",
+                "tsc --noEmit passes",
+                "No magic number delays in implementation"
+            ],
+            "verification": "npx vitest run tests/unit/lib/storage.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "STORAGE-002"
+            ]
+        },
+        {
+            "id": "STORAGE-004",
+            "category": "core",
+            "priority": "MEDIUM",
+            "title": "Utility functions: hasData, clearAll, getStorageUsage",
+            "description": "Add three utility functions for storage management. hasData() checks if encrypted data exists without decrypting. clearAll() removes all Hush data. getStorageUsage() reports storage consumption against DEFAULT_STORAGE_QUOTA.",
+            "story_points": 3,
+            "steps": [
+                "RED: Write test: 'hasData returns true when data exists under STORAGE_KEY'",
+                "RED: Write test: 'hasData returns false when no data exists'",
+                "RED: Write test: 'clearAll removes data from storage'",
+                "RED: Write test: 'clearAll followed by hasData returns false'",
+                "RED: Write test: 'getStorageUsage returns { used: number, quota: number }' — assert quota equals DEFAULT_STORAGE_QUOTA",
+                "RED: Write test: 'DEFAULT_STORAGE_QUOTA equals 10_485_760 (10MB)'",
+                "GREEN: Implement hasData(), clearAll(), getStorageUsage(). Define DEFAULT_STORAGE_QUOTA = 10_485_760. Note in JSDoc that extensions can request unlimitedStorage permission to bypass this limit.",
+                "REFACTOR: Ensure all three return Result types"
+            ],
+            "files": [
+                "lib/storage.ts",
+                "tests/unit/lib/storage.test.ts"
+            ],
+            "acceptance_criteria": [
+                "hasData(): Promise<Result<boolean, StorageError>>",
+                "clearAll(): Promise<Result<void, StorageError>>",
+                "getStorageUsage(): Promise<Result<{ used: number; quota: number }, StorageError>>",
+                "DEFAULT_STORAGE_QUOTA = 10_485_760 (10MB) as named exported constant",
+                "JSDoc on DEFAULT_STORAGE_QUOTA notes unlimitedStorage permission option",
+                "All three functions use Result return types"
+            ],
+            "definition_of_done": [
+                "All 6 utility tests pass",
+                "tsc --noEmit passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/storage.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "STORAGE-001"
+            ]
+        },
+        {
+            "id": "STORAGE-005",
+            "category": "quality",
+            "priority": "MEDIUM",
+            "title": "validateEncryptedStore type guard and module purity",
+            "description": "Verify validateEncryptedStore works as a public type guard. Verify module purity: lib/storage.ts must have zero React/DOM imports, only browser.storage.local from 'wxt/browser' as the sole browser API.",
+            "story_points": 3,
+            "steps": [
+                "RED: Write test: 'validateEncryptedStore returns true for valid EncryptedStore' — object with salt, encrypted, iv, iterations fields",
+                "RED: Write test: 'validateEncryptedStore returns false for null/undefined/string/number'",
+                "RED: Write test: 'validateEncryptedStore returns false for object missing required fields'",
+                "RED: Write test: 'validateEncryptedStore returns false for object with wrong field types'",
+                "RED: Write purity test: 'storage.ts has zero React/DOM imports' — read source, assert no react/ReactDOM imports",
+                "RED: Write purity test: 'storage.ts only imports browser from wxt/browser' — assert no chrome.* imports",
+                "GREEN: Ensure validateEncryptedStore checks all 4 required fields with correct types (string for salt/encrypted/iv, number for iterations)",
+                "REFACTOR: Tighten type guard if needed"
+            ],
+            "files": [
+                "lib/storage.ts",
+                "tests/unit/lib/storage.test.ts"
+            ],
+            "acceptance_criteria": [
+                "validateEncryptedStore is exported publicly from lib/storage.ts",
+                "Returns true only for objects with: salt (string), encrypted (string), iv (string), iterations (number)",
+                "Returns false for null, undefined, primitives, partial objects, wrong types",
+                "lib/storage.ts has zero React/DOM imports",
+                "lib/storage.ts uses 'wxt/browser' not 'chrome' for storage access"
+            ],
+            "definition_of_done": [
+                "All 6 validation + purity tests pass",
+                "tsc --noEmit passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/storage.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "STORAGE-001"
+            ]
+        },
+        {
+            "id": "STORAGE-006",
+            "category": "quality",
+            "priority": "MEDIUM",
+            "title": "Full test suite validation and integration verification",
+            "description": "Run complete verification sequence. Update scaffold-smoke.test.ts with storage.ts. Verify coverage gate, line count limits, and zero regressions.",
+            "story_points": 3,
+            "steps": [
+                "Update scaffold-smoke.test.ts: add storage.ts to LIB_MODULES array, add exports test for saveEncryptedData, loadEncryptedData, hasData, clearAll, getStorageUsage, validateEncryptedStore, STORAGE_KEY, DEFAULT_STORAGE_QUOTA, RETRY_CONFIG",
+                "Verify full test suite: tsc + eslint + vitest + coverage + wxt build + npm run test:e2e",
+                "Verify lib/storage.ts <= 150 lines, all functions <= 50 lines",
+                "Verify lib/storage.ts branch coverage >= 80%",
+                "Verify zero type suppressions (no @ts-ignore, no as any, no ! assertions)",
+                "Verify zero empty catch blocks",
+                "Verify zero console.log statements"
+            ],
+            "files": [
+                "lib/storage.ts",
+                "tests/unit/lib/storage.test.ts",
+                "tests/unit/integration/scaffold-smoke.test.ts"
+            ],
+            "acceptance_criteria": [
+                "scaffold-smoke.test.ts updated with storage.ts module and all public exports",
+                "lib/storage.ts branch coverage >= 80%",
+                "lib/storage.ts <= 150 lines",
+                "All functions <= 50 lines",
+                "Zero type suppressions",
+                "Zero empty catch blocks",
+                "Zero console.log statements",
+                "Full verification passes: tsc + eslint + vitest + coverage + wxt build + npm run test:e2e",
+                "Zero regressions in existing Module 1 and Module 2 test suites"
+            ],
+            "definition_of_done": [
+                "All tests pass (~30 tests across storage suite)",
+                "Full verification sequence completes successfully",
+                "Coverage gate met",
+                "Zero regressions"
+            ],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": [
+                "STORAGE-001",
+                "STORAGE-002",
+                "STORAGE-003",
+                "STORAGE-004",
+                "STORAGE-005"
+            ]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "project_scaffold": "Module 1 complete. WXT + React + TypeScript + Tailwind v4 + shadcn/ui + Vitest + Playwright + ESLint + Sentry. 203 unit tests, 10 E2E tests passing.",
+            "crypto_module": "Module 2 complete. lib/crypto.ts exports: encrypt(plaintext, password) -> Promise<EncryptedStore>, decrypt(store, password) -> Promise<string> (throws InvalidPasswordError on wrong password), deriveKey(password, salt) -> Promise<CryptoKey>, generateSalt() -> string, verifyPassword(store, password) -> Promise<boolean>, CRYPTO_CONFIG (algorithm: 'AES-GCM', keyLength: 256, iterations: 600000, hash: 'SHA-256'). 266+ tests passing.",
+            "types": "lib/types.ts defines: Bookmark, Folder, BookmarkNode, BookmarkTree, EncryptedStore { salt: string; encrypted: string; iv: string; iterations: number }, Result<T, E> = { success: true; data: T } | { success: false; error: E }",
+            "errors": "lib/errors.ts defines: StorageError extends Error with context: StorageErrorContext { key: string; operation: 'read' | 'write' | 'delete' }. InvalidPasswordError extends Error. NOTE: StorageErrorContext currently does NOT have a reason field — STORAGE-001 must add it as a prerequisite step.",
+            "wxt_browser": "WXT provides browser.storage.local via 'wxt/browser' import. This is a cross-browser polyfill for chrome.storage.local / browser.storage.local. API: browser.storage.local.get(key), browser.storage.local.set({key: value}), browser.storage.local.remove(key), browser.storage.local.getBytesInUse()."
+        },
+        "what_does_not_exist": {
+            "storage_module": "lib/storage.ts does not exist. No storage functionality exists yet.",
+            "storage_tests": "tests/unit/lib/storage.test.ts does not exist.",
+            "reason_field": "StorageErrorContext does NOT have a 'reason' field yet — must be added in STORAGE-001 prerequisite step."
+        },
+        "holy_pb_reference": {
+            "clone_location": "/tmp/holy-pb-reference/",
+            "clone_command": "git clone https://github.com/nicholasgasior/holy-private-bookmarks.git /tmp/holy-pb-reference",
+            "relevant_files": [
+                {
+                    "file": "/tmp/holy-pb-reference/src/js/shared.js",
+                    "lines": 888,
+                    "what_to_extract": "saveEncrypted() and loadEncrypted() functions (~30 lines total). Search for 'holyPrivateData' in the IIFE to find the storage key and save/load logic.",
+                    "extraction_notes": "The save/load pattern is simple: JSON.stringify the tree, encrypt, store under key. Reverse for load. Extract the pattern, add error handling and Result types."
+                }
+            ],
+            "github_api_url": "https://api.github.com/repos/nicholasgasior/holy-private-bookmarks/contents/src/js/shared.js"
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "runtime": "Node.js 20 LTS",
+            "storage_api": "browser.storage.local from 'wxt/browser'. This is WXT's cross-browser wrapper around chrome.storage.local / browser.storage.local. It returns Promises (no callback API).",
+            "testing": "Vitest with jsdom environment. browser.storage.local must be mocked in tests. WXT may provide test utilities (check wxt/testing). If not, create a manual mock that implements get/set/remove/getBytesInUse.",
+            "forbidden_patterns": [
+                "chrome.storage.local — use browser.storage.local from 'wxt/browser'",
+                "chrome.storage.session — not needed for persistent storage",
+                "Direct DOM manipulation — lib/storage.ts is pure storage logic",
+                "React imports — lib/ module purity rule",
+                "Throwing exceptions for expected errors — use Result<T, E> returns"
+            ]
+        },
+        "error_model": {
+            "description": "Union Result type pattern. loadEncryptedData returns Result<string, StorageError | InvalidPasswordError>. Callers pattern-match on error type to distinguish storage failures from wrong password. This is consistent with the Result-everywhere approach and avoids mixed error models (Result + throw).",
+            "wrong_password_flow": "decrypt() in lib/crypto.ts THROWS InvalidPasswordError. lib/storage.ts catches this and wraps it into the Result failure. The caller never sees a thrown exception from loadEncryptedData.",
+            "permanent_vs_transient": "Permanent errors (not_found, corrupted, quota_exceeded, InvalidPasswordError) are returned immediately. Transient errors (read_failed, write_failed) are retried before returning."
+        },
+        "licensing": {
+            "extension_license": "GPL-3.0",
+            "storage_attribution": "Storage pattern (encrypt-tree-as-blob under holyPrivateData key) derived from Holy Private Bookmarks shared.js (GPL-3.0)."
+        },
+        "read_first": [
+            "CLAUDE.md (project conventions)",
+            "lib/types.ts (EncryptedStore, Result<T, E>)",
+            "lib/errors.ts (StorageError, StorageErrorContext, InvalidPasswordError)",
+            "lib/crypto.ts (encrypt, decrypt, CRYPTO_CONFIG)",
+            "/tmp/holy-pb-reference/src/js/shared.js (search for holyPrivateData)",
+            "This PRD file"
+        ],
+        "inputs": [
+            {
+                "file": "lib/types.ts",
+                "from_module": "Module 1 (Scaffold)",
+                "what_it_provides": "EncryptedStore, Result<T, E>, BookmarkTree",
+                "how_to_use": "import type { EncryptedStore, Result } from '@/lib/types';"
+            },
+            {
+                "file": "lib/errors.ts",
+                "from_module": "Module 1 (Scaffold)",
+                "what_it_provides": "StorageError, StorageErrorContext, InvalidPasswordError",
+                "how_to_use": "import { StorageError, InvalidPasswordError } from '@/lib/errors';",
+                "modification_needed": "Add reason field to StorageErrorContext: reason?: 'not_found' | 'corrupted' | 'quota_exceeded' | 'write_failed' | 'read_failed'"
+            },
+            {
+                "file": "lib/crypto.ts",
+                "from_module": "Module 2 (Crypto)",
+                "what_it_provides": "encrypt(plaintext, password) -> Promise<EncryptedStore>, decrypt(store, password) -> Promise<string> (throws InvalidPasswordError)",
+                "how_to_use": "import { encrypt, decrypt } from '@/lib/crypto';"
+            }
+        ],
+        "outputs": [
+            {
+                "file": "lib/storage.ts",
+                "consumed_by": "Module 8 (Background Service Worker — auto-save), Module 10 (Popup UI — unlock/lock), Module 12 (Settings — clear data), Module 15a (Sync Client — read/write local store)",
+                "description": "Storage service. ~100-150 lines. Public exports: saveEncryptedData, loadEncryptedData, hasData, clearAll, getStorageUsage, validateEncryptedStore, STORAGE_KEY, DEFAULT_STORAGE_QUOTA, RETRY_CONFIG."
+            },
+            {
+                "file": "lib/errors.ts (modified)",
+                "consumed_by": "All modules that handle storage errors",
+                "description": "StorageErrorContext gains reason field for typed error discrimination."
+            },
+            {
+                "file": "tests/unit/lib/storage.test.ts",
+                "consumed_by": "CI pipeline",
+                "description": "~30 test cases covering: roundtrip, error handling, retry, utilities, validation, purity. 80%+ branch coverage."
+            }
+        ]
+    },
+    "known_risks": [
+        {
+            "issue": "browser.storage.local mocking in Vitest — WXT may or may not provide test utilities for storage",
+            "severity": "MEDIUM",
+            "action": "Check if wxt/testing exports a storage mock. If not, create a minimal mock: { get: vi.fn(), set: vi.fn(), remove: vi.fn(), getBytesInUse: vi.fn() }. Mock at module level."
+        },
+        {
+            "issue": "QuotaExceededError detection — Chrome throws DOMException with name 'QuotaExceededError', Firefox may throw differently",
+            "severity": "MEDIUM",
+            "action": "Check error.name === 'QuotaExceededError' OR error.message includes 'quota'. WXT's polyfill may normalize this. Test with both patterns."
+        },
+        {
+            "issue": "decrypt() throws InvalidPasswordError — must be caught and wrapped into Result, not allowed to propagate",
+            "severity": "HIGH",
+            "action": "loadEncryptedData must have a try/catch specifically for decrypt(). If InvalidPasswordError, return { success: false, error: new InvalidPasswordError() }. This is the key architectural decision (union Result type)."
+        },
+        {
+            "issue": "StorageErrorContext modification — adding reason field to errors.ts could affect existing Module 1/2 tests if they assert on context shape",
+            "severity": "LOW",
+            "action": "reason is optional (?), so existing code won't break. Run full test suite after modification to confirm."
+        }
+    ],
+    "critical_path": "001 -> 002 -> 003 -> 004/005 -> 006",
+    "total_story_points": 25,
+    "total_stories": 6,
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-03-storage/",
+            "format": "Append-only. Each entry: ## STORAGE-XXX — <title>\n- Status: PASS | FAIL (attempt N)\n- Tests: N passing, N failing\n- Coverage: N% branches\n- Notes: <any issues encountered>\n- Timestamp: ISO 8601",
+            "update_trigger": "After each story completion or failure",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "build_plan_day": "Day 2 (first third)",
+        "estimated_test_count": "~30 tests across 6 stories",
+        "session_protocol": "One Claude Code session. Extend errors.ts first (add reason field). Then generate storage.ts + storage.test.ts. Mock browser.storage.local. Run tsc + eslint + vitest. Commit.",
+        "quality_gate": "All storage tests pass. tsc clean. No empty catch blocks. lib/ coverage >= 80%. Line count <= 150. Zero browser/chrome API calls except browser.storage.local via wxt/browser.",
+        "human_review_required": "Review error model: confirm loadEncryptedData returns Result<string, StorageError | InvalidPasswordError> (union type, not thrown). Verify retry logic only retries transient errors."
+    },
+    "execution_rules": {
+        "execution_order": "Execute stories in dependency order: STORAGE-001 first (includes errors.ts prerequisite), then STORAGE-002, then STORAGE-003, then STORAGE-004 and STORAGE-005 (parallel), then STORAGE-006 as final validation.",
+        "clarifying_questions": "You ARE encouraged to ask clarifying questions about intent or trade-offs. The PRD should contain all factual context needed. If you must ask a factual question, it indicates a PRD gap.",
+        "prd_scope": "Module 3 of 22 in a sequential build plan.",
+        "progress_logging": "After completing each story, update this prd.json (passes, attempt_count) AND append to progress.md per progress_log.format_rules.",
+        "commit_protocol": "Commit after each story. Format: 'feat(storage): STORAGE-XXX — <title>'.",
+        "failure_protocol": "Log failure in progress.md with root cause. Increment attempt_count. Max 3 attempts per story."
+    }
+}
