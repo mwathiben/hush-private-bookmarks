@@ -97,7 +97,7 @@ E2E: 4 data-model tests passed + 50 total E2E tests passed
 
 ### Acceptance Criteria Verification
 
-1. generateId(): string — uses crypto.randomUUID(): PASS
+1. generateId() (from DATAMODEL-001) is integrated and used by addBookmark/addFolder write functions: PASS
 2. All write operations return Result<BookmarkTree, DataModelError>: PASS
 3. All write operations return NEW trees — original never mutated: PASS (deepFreeze tests)
 4. addBookmark auto-generates id for new bookmark: PASS
