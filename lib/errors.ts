@@ -63,3 +63,28 @@ export class ImportError extends Error {
     this.context = context;
   }
 }
+
+/** Path and kind metadata for data model errors. Never contains bookmark content. */
+export interface DataModelErrorContext {
+  readonly kind:
+    | 'path_not_found'
+    | 'invalid_path'
+    | 'type_mismatch'
+    | 'cycle_detected';
+  readonly path?: readonly number[];
+}
+
+/** Thrown when tree traversal or CRUD operations fail. Context is structural, never PII. */
+export class DataModelError extends Error {
+  readonly name = 'DataModelError' as const;
+  readonly context: DataModelErrorContext;
+
+  constructor(
+    message: string,
+    context: DataModelErrorContext,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.context = context;
+  }
+}

@@ -6,6 +6,7 @@ import {
   InvalidPasswordError,
   StorageError,
   ImportError,
+  DataModelError,
 } from '@/lib/errors';
 
 const ROOT = resolve(process.cwd());
@@ -99,6 +100,31 @@ describe('ImportError', () => {
   it('supports cause chaining', () => {
     const cause = new Error('original');
     const err = new ImportError('wrapped', { format: 'json' }, { cause });
+    expect(err.cause).toBe(cause);
+  });
+});
+
+describe('DataModelError', () => {
+  it('is an instance of Error', () => {
+    const err = new DataModelError('path invalid', { kind: 'invalid_path', path: [-1] });
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(DataModelError);
+  });
+
+  it('has name "DataModelError"', () => {
+    const err = new DataModelError('test', { kind: 'path_not_found' });
+    expect(err.name).toBe('DataModelError');
+  });
+
+  it('exposes typed context with kind and path', () => {
+    const err = new DataModelError('not found', { kind: 'path_not_found', path: [0, 2, 1] });
+    expect(err.context.kind).toBe('path_not_found');
+    expect(err.context.path).toEqual([0, 2, 1]);
+  });
+
+  it('supports cause chaining', () => {
+    const cause = new Error('original');
+    const err = new DataModelError('wrapped', { kind: 'type_mismatch' }, { cause });
     expect(err.cause).toBe(cause);
   });
 });
