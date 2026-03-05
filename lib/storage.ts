@@ -62,16 +62,15 @@ export function validateEncryptedStore(data: unknown): data is EncryptedStore {
     return false;
   }
   const record = data as Record<string, unknown>;
+  const salt = record['salt'];
+  const encrypted = record['encrypted'];
+  const iv = record['iv'];
+  const iterations = record['iterations'];
   return (
-    typeof record['salt'] === 'string' &&
-    record['salt'] !== '' &&
-    typeof record['encrypted'] === 'string' &&
-    record['encrypted'] !== '' &&
-    typeof record['iv'] === 'string' &&
-    record['iv'] !== '' &&
-    typeof record['iterations'] === 'number' &&
-    Number.isInteger(record['iterations']) &&
-    (record['iterations'] as number) > 0
+    typeof salt === 'string' && salt !== '' &&
+    typeof encrypted === 'string' && encrypted !== '' &&
+    typeof iv === 'string' && iv !== '' &&
+    typeof iterations === 'number' && Number.isInteger(iterations) && iterations > 0
   );
 }
 

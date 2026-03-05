@@ -1,3 +1,5 @@
+// @vitest-environment happy-dom
+
 import { describe, expect, it } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -43,9 +45,21 @@ import {
   verifyPassword,
 } from '@/lib/crypto';
 
+import {
+  STORAGE_KEY,
+  RETRY_CONFIG,
+  DEFAULT_STORAGE_QUOTA,
+  validateEncryptedStore,
+  saveEncryptedData,
+  loadEncryptedData,
+  hasData,
+  clearAll,
+  getStorageUsage,
+} from '@/lib/storage';
+
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -102,11 +116,25 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof verifyPassword).toBe('function');
   });
 
+  it('storage exports are callable', () => {
+    expect(typeof STORAGE_KEY).toBe('string');
+    expect(typeof RETRY_CONFIG).toBe('object');
+    expect(typeof DEFAULT_STORAGE_QUOTA).toBe('number');
+    expect(typeof validateEncryptedStore).toBe('function');
+    expect(typeof saveEncryptedData).toBe('function');
+    expect(typeof loadEncryptedData).toBe('function');
+    expect(typeof hasData).toBe('function');
+    expect(typeof clearAll).toBe('function');
+    expect(typeof getStorageUsage).toBe('function');
+  });
+
   it('cn utility merges classes', () => {
     expect(cn('px-2', 'px-4')).toBe('px-4');
     expect(cn('text-red-500', 'text-blue-500')).toBe('text-blue-500');
   });
 });
+
+const BROWSER_STORAGE_ALLOWED = new Set(['storage.ts']);
 
 describe('scaffold integration: lib/ module purity', () => {
   for (const mod of LIB_MODULES) {
@@ -119,6 +147,7 @@ describe('scaffold integration: lib/ module purity', () => {
       });
 
       it('has zero direct browser.storage access', () => {
+        if (BROWSER_STORAGE_ALLOWED.has(mod)) return;
         expect(content).not.toContain('browser.storage');
         expect(content).not.toContain('chrome.storage');
       });
@@ -236,7 +265,7 @@ describe('scaffold integration: error class properties', () => {
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(5);
+    expect(LIB_MODULES).toHaveLength(6);
   });
 });
 
