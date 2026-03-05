@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | STORAGE-001 | Encrypted save and load roundtrip | PASSED | 1 |
 | STORAGE-002 | Error handling for all failure modes | PASSED | 1 |
-| STORAGE-003 | Retry logic with exponential backoff | Pending | 0 |
+| STORAGE-003 | Retry logic with exponential backoff | PASSED | 1 |
 | STORAGE-004 | Utility functions: hasData, clearAll, getStorageUsage | Pending | 0 |
 | STORAGE-005 | validateEncryptedStore type guard and module purity | Pending | 0 |
 | STORAGE-006 | Full test suite validation and integration verification | Pending | 0 |
@@ -119,3 +119,61 @@
 - CodeRabbit found 2 real coverage gaps: unexpected Error from decrypt() and non-Error thrown values — both worth testing
 - loadEncryptedData at 64 lines exceeds 50-line function limit — needs extraction in STORAGE-006
 - Playwright cannot simulate QuotaExceededError in E2E (10MB storage limit) — unit tests with mocks are the correct layer
+
+---
+
+## Session: 2026-03-05T17:00:00Z
+**Task**: STORAGE-003 - Retry logic with exponential backoff
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Added `RETRY_CONFIG` exported constant: `{ maxAttempts: 3, delays: [100, 200] } as const`
+- Added internal `isRetryable()` function: returns false for `InvalidPasswordError`, true only for `read_failed`/`write_failed`
+- Added internal `withRetry<T, E>()` generic function: first attempt outside loop, retries inside with `setTimeout` delays
+- Wrapped `saveEncryptedData` and `loadEncryptedData` bodies in `withRetry` lambdas
+- Explicit type parameter `withRetry<string, StorageError | InvalidPasswordError>` on `loadEncryptedData` call to fix generic inference narrowing
+- Created separate test file `storage-retry.test.ts` (existing file at 295 lines, adding more would exceed 300-line limit)
+- Updated 4 STORAGE-002 tests to chain 3x `mockRejectedValueOnce` for retry exhaustion compatibility
+- Added 1 Playwright E2E smoke test: rapid sequential set/get cycles
+- CodeRabbit review found dead config: `delays[2]` (400ms) was never consumed (3 attempts = 2 retries = 2 delays). Fixed to `[100, 200]`.
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| tests/unit/lib/storage-retry.test.ts | 6 retry-specific unit tests with fake timers |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| lib/storage.ts | Added RETRY_CONFIG, isRetryable(), withRetry(), wrapped save/load; 182 lines |
+| tests/unit/lib/storage.test.ts | 4 tests updated: chained 3x mockRejectedValueOnce for retryable errors |
+| tests/e2e/browser-storage-api.test.ts | Added rapid operations E2E smoke test |
+
+### Acceptance Criteria Verification
+
+1. Transient read/write failures retried up to maxAttempts (3) times — PASS
+2. Exponential backoff delays in RETRY_CONFIG.delays: [100, 200] ms — PASS (fixed from [100, 200, 400] after CodeRabbit review found delays[2] was dead config)
+3. Permanent errors (quota_exceeded, corrupted, not_found) NOT retried — PASS
+4. InvalidPasswordError NOT retried — PASS (security-critical: prevents brute-force)
+5. After all retries exhausted, returns last StorageError — PASS
+6. RETRY_CONFIG is exported constant, no magic numbers — PASS
+
+### Verification Results
+
+- `npx tsc --noEmit` — 0 errors
+- `npx eslint lib/storage.ts tests/unit/lib/storage.test.ts tests/unit/lib/storage-retry.test.ts tests/e2e/browser-storage-api.test.ts` — 0 errors
+- `npx vitest run` — 305 tests, 19 files, all passing
+- `npx vitest run --coverage` — storage.ts: 100% statements, 91.48% branches, 100% functions, 100% lines
+- `npx wxt build` — successful (594.45 kB total)
+- `npm run test:e2e` — 38 tests, all passing
+- lib/storage.ts: 182 lines (over PRD's 150 target, under CLAUDE.md's 300; flagged for STORAGE-006)
+- Zero `console.log`, `as any`, `@ts-ignore`, `!` assertions, empty catches
+
+### Learnings
+- `withRetry` generic inference: TypeScript narrows `E` to just `StorageError` when the lambda returns both `StorageError` and `InvalidPasswordError`. Fix: explicit type parameter at call site.
+- `mockRejectedValue` (persistent) vs `mockRejectedValueOnce` matters for retry tests — use persistent when the error should repeat on every call, use chained `ValueOnce` when testing exhaustion.
+- `vi.useFakeTimers()` + `vi.advanceTimersByTimeAsync()` works correctly with WXT's in-memory storage mock (Promises are microtasks, unaffected by fake timers).
+- For non-retryable errors, `await loadEncryptedData()` resolves immediately without needing `advanceTimersByTimeAsync` — `withRetry` short-circuits before reaching `setTimeout`.
+- CodeRabbit catch: `delays` array had 3 elements but only 2 were consumed (`maxAttempts - 1` retries). Dead config is misleading — trim to match actual usage.

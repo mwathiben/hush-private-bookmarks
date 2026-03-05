@@ -201,10 +201,12 @@ describe('STORAGE-002: Error handling for all failure modes', () => {
   });
 
   it('saveEncryptedData returns write_failed error for generic storage failure', async () => {
-    // #given — browser.storage.local.set rejects with generic Error
-    vi.spyOn(browser.storage.local, 'set').mockRejectedValueOnce(
-      new Error('disk full'),
-    );
+    // #given — browser.storage.local.set rejects with generic Error (3x for retry exhaustion)
+    const spy = vi.spyOn(browser.storage.local, 'set');
+    spy
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockRejectedValueOnce(new Error('disk full'));
 
     // #when — attempt to save
     const result = await saveEncryptedData(MOCK_PLAINTEXT, MOCK_PASSWORD);
@@ -220,10 +222,12 @@ describe('STORAGE-002: Error handling for all failure modes', () => {
   });
 
   it('loadEncryptedData returns read_failed error for generic storage failure', async () => {
-    // #given — browser.storage.local.get rejects with generic Error
-    vi.spyOn(browser.storage.local, 'get').mockRejectedValueOnce(
-      new Error('storage unavailable'),
-    );
+    // #given — browser.storage.local.get rejects with generic Error (3x for retry exhaustion)
+    const spy = vi.spyOn(browser.storage.local, 'get');
+    spy
+      .mockRejectedValueOnce(new Error('storage unavailable'))
+      .mockRejectedValueOnce(new Error('storage unavailable'))
+      .mockRejectedValueOnce(new Error('storage unavailable'));
 
     // #when — attempt to load
     const result = await loadEncryptedData(MOCK_PASSWORD);
@@ -259,9 +263,12 @@ describe('STORAGE-002: Error handling for all failure modes', () => {
   });
 
   it('loadEncryptedData returns read_failed for unexpected non-typed error from decrypt', async () => {
-    // #given — valid EncryptedStore, decrypt throws a plain Error (e.g., empty password)
+    // #given — valid EncryptedStore, decrypt throws a plain Error (3x for retry exhaustion)
     await browser.storage.local.set({ [STORAGE_KEY]: MOCK_STORE });
-    vi.mocked(decrypt).mockRejectedValueOnce(new Error('Password cannot be empty'));
+    vi.mocked(decrypt)
+      .mockRejectedValueOnce(new Error('Password cannot be empty'))
+      .mockRejectedValueOnce(new Error('Password cannot be empty'))
+      .mockRejectedValueOnce(new Error('Password cannot be empty'));
 
     // #when — attempt to load
     const result = await loadEncryptedData(MOCK_PASSWORD);
@@ -277,8 +284,12 @@ describe('STORAGE-002: Error handling for all failure modes', () => {
   });
 
   it('saveEncryptedData wraps non-Error thrown values safely', async () => {
-    // #given — browser.storage.local.set rejects with a string (not an Error instance)
-    vi.spyOn(browser.storage.local, 'set').mockRejectedValueOnce('raw string error');
+    // #given — browser.storage.local.set rejects with a string (3x for retry exhaustion)
+    const spy = vi.spyOn(browser.storage.local, 'set');
+    spy
+      .mockRejectedValueOnce('raw string error')
+      .mockRejectedValueOnce('raw string error')
+      .mockRejectedValueOnce('raw string error');
 
     // #when — attempt to save
     const result = await saveEncryptedData(MOCK_PLAINTEXT, MOCK_PASSWORD);

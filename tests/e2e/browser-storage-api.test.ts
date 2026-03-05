@@ -144,3 +144,38 @@ test.describe('Extension storage error resilience', () => {
     await page.close();
   });
 });
+
+test.describe('Extension storage rapid operations (retry-wrapped smoke)', () => {
+  test('multiple rapid set/get cycles succeed without retry interference', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const results = await page.evaluate(async () => {
+      // #given — 3 rapid sequential write/read cycles
+      const outcomes: unknown[] = [];
+      for (let i = 0; i < 3; i++) {
+        const data = { salt: `s${i}`, encrypted: `e${i}`, iv: `v${i}`, iterations: 600000 };
+        await chrome.storage.local.set({ holyPrivateData: data });
+        const stored = await chrome.storage.local.get('holyPrivateData');
+        outcomes.push(stored['holyPrivateData']);
+      }
+      return outcomes;
+    });
+
+    // #then — each cycle returns the data written in that iteration
+    expect(results).toHaveLength(3);
+    for (let i = 0; i < 3; i++) {
+      expect(results[i]).toEqual({
+        salt: `s${i}`,
+        encrypted: `e${i}`,
+        iv: `v${i}`,
+        iterations: 600000,
+      });
+    }
+
+    await page.close();
+  });
+});

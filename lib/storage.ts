@@ -29,6 +29,33 @@ import { decrypt, encrypt } from '@/lib/crypto';
 /** Holy PB backward-compatible key for the single encrypted blob. */
 export const STORAGE_KEY = 'holyPrivateData';
 
+export const RETRY_CONFIG = {
+  maxAttempts: 3,
+  delays: [100, 200],
+} as const;
+
+function isRetryable(error: StorageError | InvalidPasswordError): boolean {
+  if (error instanceof InvalidPasswordError) return false;
+  return error.context.reason === 'read_failed' || error.context.reason === 'write_failed';
+}
+
+async function withRetry<T, E extends StorageError | InvalidPasswordError>(
+  operation: () => Promise<Result<T, E>>,
+): Promise<Result<T, E>> {
+  let lastResult = await operation();
+  for (let attempt = 1; attempt < RETRY_CONFIG.maxAttempts; attempt++) {
+    if (lastResult.success || !isRetryable(lastResult.error)) {
+      return lastResult;
+    }
+    const delay = RETRY_CONFIG.delays[attempt - 1];
+    if (delay !== undefined) {
+      await new Promise<void>(resolve => { setTimeout(resolve, delay); });
+    }
+    lastResult = await operation();
+  }
+  return lastResult;
+}
+
 /** Type guard: validates unknown data conforms to EncryptedStore shape. */
 export function validateEncryptedStore(data: unknown): data is EncryptedStore {
   if (data === null || typeof data !== 'object') {
@@ -53,98 +80,102 @@ export async function saveEncryptedData(
   plaintext: string,
   password: string,
 ): Promise<Result<void, StorageError>> {
-  try {
-    const store = await encrypt(plaintext, password);
-    await browser.storage.local.set({ [STORAGE_KEY]: store });
-    return { success: true, data: undefined };
-  } catch (error) {
-    const isQuotaError =
-      error instanceof Error &&
-      (error.name === 'QuotaExceededError' ||
-        error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
-        (typeof DOMException !== 'undefined' &&
-          error instanceof DOMException &&
-          error.code === 22));
-    return {
-      success: false,
-      error: new StorageError(
-        isQuotaError
-          ? 'Storage quota exceeded'
-          : 'Failed to save encrypted data',
-        {
-          key: STORAGE_KEY,
-          operation: 'write',
-          reason: isQuotaError ? 'quota_exceeded' : 'write_failed',
-        },
-        { cause: error instanceof Error ? error : new Error(String(error)) },
-      ),
-    };
-  }
+  return withRetry(async () => {
+    try {
+      const store = await encrypt(plaintext, password);
+      await browser.storage.local.set({ [STORAGE_KEY]: store });
+      return { success: true, data: undefined };
+    } catch (error) {
+      const isQuotaError =
+        error instanceof Error &&
+        (error.name === 'QuotaExceededError' ||
+          error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+          (typeof DOMException !== 'undefined' &&
+            error instanceof DOMException &&
+            error.code === 22));
+      return {
+        success: false,
+        error: new StorageError(
+          isQuotaError
+            ? 'Storage quota exceeded'
+            : 'Failed to save encrypted data',
+          {
+            key: STORAGE_KEY,
+            operation: 'write',
+            reason: isQuotaError ? 'quota_exceeded' : 'write_failed',
+          },
+          { cause: error instanceof Error ? error : new Error(String(error)) },
+        ),
+      };
+    }
+  });
 }
 
 /** Load encrypted blob from extension storage, validate, and decrypt. */
 export async function loadEncryptedData(
   password: string,
 ): Promise<Result<string, StorageError | InvalidPasswordError>> {
-  let raw: Record<string, unknown>;
-  try {
-    raw = await browser.storage.local.get(STORAGE_KEY);
-  } catch (error) {
-    return {
-      success: false,
-      error: new StorageError(
-        'Failed to read from extension storage',
-        { key: STORAGE_KEY, operation: 'read', reason: 'read_failed' },
-        { cause: error instanceof Error ? error : new Error(String(error)) },
-      ),
-    };
-  }
-
-  const stored = raw[STORAGE_KEY];
-  if (stored == null) {
-    return {
-      success: false,
-      error: new StorageError(
-        'No encrypted data found',
-        { key: STORAGE_KEY, operation: 'read', reason: 'not_found' },
-      ),
-    };
-  }
-
-  if (!validateEncryptedStore(stored)) {
-    return {
-      success: false,
-      error: new StorageError(
-        'Stored data is not a valid encrypted store',
-        { key: STORAGE_KEY, operation: 'read', reason: 'corrupted' },
-      ),
-    };
-  }
-
-  try {
-    const plaintext = await decrypt(stored, password);
-    return { success: true, data: plaintext };
-  } catch (error) {
-    if (error instanceof InvalidPasswordError) {
-      return { success: false, error };
-    }
-    if (error instanceof DecryptionError) {
+  return withRetry<string, StorageError | InvalidPasswordError>(async () => {
+    let raw: Record<string, unknown>;
+    try {
+      raw = await browser.storage.local.get(STORAGE_KEY);
+    } catch (error) {
       return {
         success: false,
         error: new StorageError(
-          'Decryption failed: data may be corrupted',
-          { key: STORAGE_KEY, operation: 'read', reason: 'corrupted' },
-          { cause: error },
+          'Failed to read from extension storage',
+          { key: STORAGE_KEY, operation: 'read', reason: 'read_failed' },
+          { cause: error instanceof Error ? error : new Error(String(error)) },
         ),
       };
     }
-    return {
-      success: false,
-      error: new StorageError(
-        'Unexpected error during decryption',
-        { key: STORAGE_KEY, operation: 'read', reason: 'read_failed' },
-        { cause: error instanceof Error ? error : new Error(String(error)) },
-      ),
-    };
-  }
+
+    const stored = raw[STORAGE_KEY];
+    if (stored == null) {
+      return {
+        success: false,
+        error: new StorageError(
+          'No encrypted data found',
+          { key: STORAGE_KEY, operation: 'read', reason: 'not_found' },
+        ),
+      };
+    }
+
+    if (!validateEncryptedStore(stored)) {
+      return {
+        success: false,
+        error: new StorageError(
+          'Stored data is not a valid encrypted store',
+          { key: STORAGE_KEY, operation: 'read', reason: 'corrupted' },
+        ),
+      };
+    }
+
+    try {
+      const plaintext = await decrypt(stored, password);
+      return { success: true, data: plaintext };
+    } catch (error) {
+      if (error instanceof InvalidPasswordError) {
+        return { success: false, error };
+      }
+      if (error instanceof DecryptionError) {
+        return {
+          success: false,
+          error: new StorageError(
+            'Decryption failed: data may be corrupted',
+            { key: STORAGE_KEY, operation: 'read', reason: 'corrupted' },
+            { cause: error },
+          ),
+        };
+      }
+      return {
+        success: false,
+        error: new StorageError(
+          'Unexpected error during decryption',
+          { key: STORAGE_KEY, operation: 'read', reason: 'read_failed' },
+          { cause: error instanceof Error ? error : new Error(String(error)) },
+        ),
+      };
+    }
+  });
 }
