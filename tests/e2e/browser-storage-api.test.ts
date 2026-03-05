@@ -99,3 +99,48 @@ test.describe('Extension storage API roundtrip', () => {
     await page.close();
   });
 });
+
+test.describe('Extension storage error resilience', () => {
+  test('chrome.storage.local stores and retrieves invalid string under holyPrivateData', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const result = await page.evaluate(async () => {
+      // #given — store corrupted (non-EncryptedStore) string under the storage key
+      await chrome.storage.local.set({ holyPrivateData: 'corrupted-not-json' });
+      // #when — retrieve it
+      const stored = await chrome.storage.local.get('holyPrivateData');
+      // #then — Chrome API stores/retrieves any data; validation is app-level
+      return { value: stored['holyPrivateData'], type: typeof stored['holyPrivateData'] };
+    });
+
+    expect(result.value).toBe('corrupted-not-json');
+    expect(result.type).toBe('string');
+
+    await page.close();
+  });
+
+  test('chrome.storage.local stores partial object without error', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const result = await page.evaluate(async () => {
+      // #given — store object missing required EncryptedStore fields
+      await chrome.storage.local.set({ holyPrivateData: { salt: 'abc' } });
+      // #when — retrieve it
+      const stored = await chrome.storage.local.get('holyPrivateData');
+      return stored['holyPrivateData'];
+    });
+
+    // #then — Chrome API stores any object; validateEncryptedStore is the guard
+    expect(result).toEqual({ salt: 'abc' });
+
+    await page.close();
+  });
+});

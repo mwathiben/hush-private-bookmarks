@@ -12,7 +12,11 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { browser } from 'wxt/browser';
-import { StorageError } from '@/lib/errors';
+import {
+  DecryptionError,
+  InvalidPasswordError,
+  StorageError,
+} from '@/lib/errors';
 import type { EncryptedStore } from '@/lib/types';
 
 vi.mock('@/lib/crypto', () => ({
@@ -107,6 +111,185 @@ describe('STORAGE-001: Encrypted save and load roundtrip', () => {
       expect(storageErr.context.reason).toBe('not_found');
       expect(storageErr.context.key).toBe(STORAGE_KEY);
       expect(storageErr.context.operation).toBe('read');
+    }
+  });
+});
+
+describe('STORAGE-002: Error handling for all failure modes', () => {
+  beforeEach(async () => {
+    await browser.storage.local.clear();
+    vi.mocked(encrypt).mockResolvedValue(MOCK_STORE);
+    vi.mocked(decrypt).mockResolvedValue(MOCK_PLAINTEXT);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('loadEncryptedData returns corrupted error for invalid JSON in storage', async () => {
+    // #given — raw string stored under STORAGE_KEY (not an EncryptedStore object)
+    await browser.storage.local.set({ [STORAGE_KEY]: 'not-json' });
+
+    // #when — attempt to load
+    const result = await loadEncryptedData(MOCK_PASSWORD);
+
+    // #then — Result failure with reason 'corrupted'
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      const err = result.error as StorageError;
+      expect(err.context.reason).toBe('corrupted');
+      expect(err.context.key).toBe(STORAGE_KEY);
+      expect(err.context.operation).toBe('read');
+    }
+  });
+
+  it('loadEncryptedData returns corrupted error for valid JSON but not EncryptedStore', async () => {
+    // #given — object stored but missing required EncryptedStore fields
+    await browser.storage.local.set({ [STORAGE_KEY]: { foo: 'bar' } });
+
+    // #when — attempt to load
+    const result = await loadEncryptedData(MOCK_PASSWORD);
+
+    // #then — Result failure with reason 'corrupted'
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      const err = result.error as StorageError;
+      expect(err.context.reason).toBe('corrupted');
+    }
+  });
+
+  it('loadEncryptedData returns InvalidPasswordError for wrong password', async () => {
+    // #given — valid EncryptedStore in storage, decrypt throws InvalidPasswordError
+    await browser.storage.local.set({ [STORAGE_KEY]: MOCK_STORE });
+    vi.mocked(decrypt).mockRejectedValueOnce(
+      new InvalidPasswordError('Decryption failed: wrong password or corrupted data'),
+    );
+
+    // #when — attempt to load with wrong password
+    const result = await loadEncryptedData('wrong-password');
+
+    // #then — Result failure with InvalidPasswordError (not StorageError)
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(InvalidPasswordError);
+      expect(result.error).not.toBeInstanceOf(StorageError);
+    }
+  });
+
+  it('saveEncryptedData returns quota_exceeded error when storage quota exceeded', async () => {
+    // #given — browser.storage.local.set rejects with QuotaExceededError
+    vi.spyOn(browser.storage.local, 'set').mockRejectedValueOnce(
+      Object.assign(new Error('QUOTA_BYTES quota exceeded'), {
+        name: 'QuotaExceededError',
+      }),
+    );
+
+    // #when — attempt to save
+    const result = await saveEncryptedData(MOCK_PLAINTEXT, MOCK_PASSWORD);
+
+    // #then — Result failure with reason 'quota_exceeded'
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      const err = result.error as StorageError;
+      expect(err.context.reason).toBe('quota_exceeded');
+      expect(err.context.operation).toBe('write');
+      expect(err.context.key).toBe(STORAGE_KEY);
+    }
+  });
+
+  it('saveEncryptedData returns write_failed error for generic storage failure', async () => {
+    // #given — browser.storage.local.set rejects with generic Error
+    vi.spyOn(browser.storage.local, 'set').mockRejectedValueOnce(
+      new Error('disk full'),
+    );
+
+    // #when — attempt to save
+    const result = await saveEncryptedData(MOCK_PLAINTEXT, MOCK_PASSWORD);
+
+    // #then — Result failure with reason 'write_failed'
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      const err = result.error as StorageError;
+      expect(err.context.reason).toBe('write_failed');
+      expect(err.context.operation).toBe('write');
+    }
+  });
+
+  it('loadEncryptedData returns read_failed error for generic storage failure', async () => {
+    // #given — browser.storage.local.get rejects with generic Error
+    vi.spyOn(browser.storage.local, 'get').mockRejectedValueOnce(
+      new Error('storage unavailable'),
+    );
+
+    // #when — attempt to load
+    const result = await loadEncryptedData(MOCK_PASSWORD);
+
+    // #then — Result failure with reason 'read_failed'
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      const err = result.error as StorageError;
+      expect(err.context.reason).toBe('read_failed');
+      expect(err.context.operation).toBe('read');
+    }
+  });
+
+  it('loadEncryptedData returns corrupted error when DecryptionError thrown by decrypt', async () => {
+    // #given — valid EncryptedStore in storage, decrypt throws DecryptionError
+    await browser.storage.local.set({ [STORAGE_KEY]: MOCK_STORE });
+    vi.mocked(decrypt).mockRejectedValueOnce(
+      new DecryptionError('Invalid base64 in encrypted store'),
+    );
+
+    // #when — attempt to load
+    const result = await loadEncryptedData(MOCK_PASSWORD);
+
+    // #then — Result failure with StorageError wrapping DecryptionError as 'corrupted'
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      const err = result.error as StorageError;
+      expect(err.context.reason).toBe('corrupted');
+      expect(err.cause).toBeInstanceOf(DecryptionError);
+    }
+  });
+
+  it('loadEncryptedData returns read_failed for unexpected non-typed error from decrypt', async () => {
+    // #given — valid EncryptedStore, decrypt throws a plain Error (e.g., empty password)
+    await browser.storage.local.set({ [STORAGE_KEY]: MOCK_STORE });
+    vi.mocked(decrypt).mockRejectedValueOnce(new Error('Password cannot be empty'));
+
+    // #when — attempt to load
+    const result = await loadEncryptedData(MOCK_PASSWORD);
+
+    // #then — wrapped as StorageError with reason 'read_failed' (unknown error type)
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      const err = result.error as StorageError;
+      expect(err.context.reason).toBe('read_failed');
+      expect(err.cause).toBeInstanceOf(Error);
+    }
+  });
+
+  it('saveEncryptedData wraps non-Error thrown values safely', async () => {
+    // #given — browser.storage.local.set rejects with a string (not an Error instance)
+    vi.spyOn(browser.storage.local, 'set').mockRejectedValueOnce('raw string error');
+
+    // #when — attempt to save
+    const result = await saveEncryptedData(MOCK_PLAINTEXT, MOCK_PASSWORD);
+
+    // #then — wrapped in StorageError with cause as new Error(String(...))
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      const err = result.error as StorageError;
+      expect(err.context.reason).toBe('write_failed');
+      expect(err.cause).toBeInstanceOf(Error);
     }
   });
 });

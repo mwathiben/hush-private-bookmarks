@@ -100,8 +100,8 @@
             ],
             "verification": "npx vitest run tests/unit/lib/storage.test.ts && npx tsc --noEmit",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": []
         },
         {
@@ -141,8 +141,8 @@
             ],
             "verification": "npx vitest run tests/unit/lib/storage.test.ts && npx tsc --noEmit",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "STORAGE-001"
             ]
@@ -451,7 +451,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 0,
+        "passing_stories": 2,
         "build_plan_day": "Day 2 (first third)",
         "estimated_test_count": "~30 tests across 6 stories",
         "session_protocol": "One Claude Code session. Extend errors.ts first (add reason field). Then generate storage.ts + storage.test.ts. Mock browser.storage.local. Run tsc + eslint + vitest. Commit.",

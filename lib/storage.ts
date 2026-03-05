@@ -29,17 +29,12 @@ import { decrypt, encrypt } from '@/lib/crypto';
 /** Holy PB backward-compatible key for the single encrypted blob. */
 export const STORAGE_KEY = 'holyPrivateData';
 
-/**
- * Type guard validating that unknown data conforms to EncryptedStore shape.
- * Used by loadEncryptedData and Module 5 backup import.
- */
+/** Type guard: validates unknown data conforms to EncryptedStore shape. */
 export function validateEncryptedStore(data: unknown): data is EncryptedStore {
   if (data === null || typeof data !== 'object') {
     return false;
   }
-
   const record = data as Record<string, unknown>;
-
   return (
     typeof record['salt'] === 'string' &&
     record['salt'] !== '' &&
@@ -63,11 +58,24 @@ export async function saveEncryptedData(
     await browser.storage.local.set({ [STORAGE_KEY]: store });
     return { success: true, data: undefined };
   } catch (error) {
+    const isQuotaError =
+      error instanceof Error &&
+      (error.name === 'QuotaExceededError' ||
+        error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+        (typeof DOMException !== 'undefined' &&
+          error instanceof DOMException &&
+          error.code === 22));
     return {
       success: false,
       error: new StorageError(
-        'Failed to save encrypted data',
-        { key: STORAGE_KEY, operation: 'write', reason: 'write_failed' },
+        isQuotaError
+          ? 'Storage quota exceeded'
+          : 'Failed to save encrypted data',
+        {
+          key: STORAGE_KEY,
+          operation: 'write',
+          reason: isQuotaError ? 'quota_exceeded' : 'write_failed',
+        },
         { cause: error instanceof Error ? error : new Error(String(error)) },
       ),
     };
@@ -79,7 +87,6 @@ export async function loadEncryptedData(
   password: string,
 ): Promise<Result<string, StorageError | InvalidPasswordError>> {
   let raw: Record<string, unknown>;
-
   try {
     raw = await browser.storage.local.get(STORAGE_KEY);
   } catch (error) {
@@ -94,8 +101,7 @@ export async function loadEncryptedData(
   }
 
   const stored = raw[STORAGE_KEY];
-
-  if (stored === undefined || stored === null) {
+  if (stored == null) {
     return {
       success: false,
       error: new StorageError(
