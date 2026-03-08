@@ -71,6 +71,9 @@ import {
   renameFolder,
   moveItem,
   normalizeTree,
+  collectAllUrls,
+  countBookmarks,
+  flattenTree,
 } from '@/lib/data-model';
 
 const ROOT = resolve(process.cwd());
@@ -158,6 +161,9 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof renameFolder).toBe('function');
     expect(typeof moveItem).toBe('function');
     expect(typeof normalizeTree).toBe('function');
+    expect(typeof collectAllUrls).toBe('function');
+    expect(typeof countBookmarks).toBe('function');
+    expect(typeof flattenTree).toBe('function');
   });
 
   it('cn utility merges classes', () => {

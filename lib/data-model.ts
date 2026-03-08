@@ -27,11 +27,9 @@ function fail(
 export function isBookmark(node: BookmarkNode): node is Bookmark {
   return node.type === 'bookmark';
 }
-
 export function isFolder(node: BookmarkNode): node is Folder {
   return node.type === 'folder';
 }
-
 export function generateId(): string {
   return crypto.randomUUID();
 }
@@ -56,7 +54,7 @@ function walkPath(
   let current: BookmarkNode = tree;
   for (let i = 0; i < path.length; i++) {
     const index = path[i]!;
-    if (index < 0) return fail(`Invalid path index at depth ${i}`, 'invalid_path', path);
+    if (!Number.isInteger(index) || index < 0) return fail(`Invalid path index at depth ${i}`, 'invalid_path', path);
     if (!isFolder(current)) return fail(`Expected folder at depth ${i}, found bookmark`, 'type_mismatch', path);
     if (index >= current.children.length) return fail(`Index out of bounds at depth ${i}`, 'path_not_found', path);
     current = current.children[index]!;
@@ -135,7 +133,6 @@ export function addBookmark(
   const fullBookmark: Bookmark = { ...bookmark, id: generateId() };
   return withReplacedChildren(tree, parentPath, (children) => [...children, fullBookmark]);
 }
-
 export function addFolder(
   tree: BookmarkTree,
   parentPath: readonly number[],
@@ -219,10 +216,6 @@ function isDescendantOrSelf(
   return true;
 }
 
-function pathsEqual(a: readonly number[], b: readonly number[]): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i]);
-}
-
 export function moveItem(
   tree: BookmarkTree,
   fromPath: readonly number[],
@@ -237,10 +230,10 @@ export function moveItem(
   const destResult = walkPath(tree, toPath);
   if (!destResult.success) return destResult;
   if (!isFolder(destResult.data)) return fail('Destination is not a folder', 'type_mismatch', toPath);
-  if (toIndex < 0 || toIndex > destResult.data.children.length) return fail('toIndex out of bounds', 'invalid_path', toPath);
+  if (!Number.isInteger(toIndex) || toIndex < 0 || toIndex > destResult.data.children.length) return fail('toIndex out of bounds', 'invalid_path', toPath);
   const fromParent = fromPath.slice(0, -1);
   const fromIndex = fromPath[fromPath.length - 1]!;
-  if (pathsEqual(fromParent, toPath)) {
+  if (fromParent.length === toPath.length && fromParent.every((v, i) => v === toPath[i])) {
     const adjusted = fromIndex < toIndex ? toIndex - 1 : toIndex;
     return withReplacedChildren(tree, toPath, (children) => {
       const without = children.filter((_, i) => i !== fromIndex);
@@ -279,17 +272,29 @@ export function findItemPath(
   return fail('Item not found in tree', 'path_not_found');
 }
 
-function hasValidId(node: { id?: unknown }): node is { id: string } {
-  return typeof node.id === 'string' && node.id !== '';
+function walkNodes(folder: Folder, visit: (node: BookmarkNode) => void): void {
+  for (const c of folder.children) { visit(c); if (isFolder(c)) walkNodes(c, visit); }
+}
+
+export function flattenTree(tree: BookmarkTree): BookmarkNode[] {
+  const nodes: BookmarkNode[] = [tree];
+  walkNodes(tree, (n) => nodes.push(n));
+  return nodes;
+}
+export function collectAllUrls(tree: BookmarkTree): string[] {
+  return flattenTree(tree).filter(isBookmark).map((n) => n.url);
+}
+export function countBookmarks(tree: BookmarkTree): { bookmarks: number; folders: number } {
+  const nodes = flattenTree(tree).slice(1);
+  return { bookmarks: nodes.filter(isBookmark).length, folders: nodes.filter(isFolder).length };
 }
 
 function normalizeNode(node: BookmarkNode): BookmarkNode {
-  const id = hasValidId(node) ? node.id : generateId();
+  const id = typeof node.id === 'string' && node.id !== '' ? node.id : generateId();
   if (isFolder(node)) return { ...node, id, children: node.children.map(normalizeNode) };
   return { ...node, id };
 }
-
 export function normalizeTree(tree: BookmarkTree): BookmarkTree {
-  const id = hasValidId(tree) ? tree.id : generateId();
+  const id = typeof tree.id === 'string' && tree.id !== '' ? tree.id : generateId();
   return { ...tree, id, children: tree.children.map(normalizeNode) };
 }

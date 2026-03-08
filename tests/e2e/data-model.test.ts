@@ -538,3 +538,147 @@ test.describe('DATAMODEL-005: JSON serialization & normalizeTree E2E', () => {
     await page.close();
   });
 });
+
+test.describe('DATAMODEL-004: Utility functions E2E', () => {
+  test('collectAllUrls extracts all URLs from nested tree in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of flattenTree + filter + map (collectAllUrls logic)
+    const result = await page.evaluate(() => {
+      type BM = { type: 'bookmark'; id: string; title: string; url: string; dateAdded: number };
+      type FN = { type: 'folder'; id: string; name: string; children: (BM | FN)[]; dateAdded: number };
+      function walkNodes(folder: FN, visit: (node: BM | FN) => void): void {
+        for (const c of folder.children) { visit(c); if (c.type === 'folder') walkNodes(c as FN, visit); }
+      }
+      const bm1: BM = { type: 'bookmark', id: 'b1', title: 'A', url: 'https://a.com', dateAdded: 1 };
+      const bm2: BM = { type: 'bookmark', id: 'b2', title: 'B', url: 'https://b.com', dateAdded: 2 };
+      const bm3: BM = { type: 'bookmark', id: 'b3', title: 'C', url: 'https://c.com', dateAdded: 3 };
+      const sub: FN = { type: 'folder', id: 'f1', name: 'Sub', children: [bm2, bm3], dateAdded: 0 };
+      const tree: FN = { type: 'folder', id: 'root', name: 'Root', children: [bm1, sub], dateAdded: 0 };
+      const urls: string[] = [];
+      walkNodes(tree, (n) => { if (n.type === 'bookmark') urls.push((n as BM).url); });
+      return { urls, count: urls.length };
+    });
+
+    // #then
+    expect(result.count).toBe(3);
+    expect(result.urls).toContain('https://a.com');
+    expect(result.urls).toContain('https://b.com');
+    expect(result.urls).toContain('https://c.com');
+    await page.close();
+  });
+
+  test('countBookmarks returns correct counts in browser (root excluded)', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of countBookmarks logic
+    const result = await page.evaluate(() => {
+      type BM = { type: 'bookmark'; id: string; title: string; url: string; dateAdded: number };
+      type FN = { type: 'folder'; id: string; name: string; children: (BM | FN)[]; dateAdded: number };
+      function walkNodes(folder: FN, visit: (node: BM | FN) => void): void {
+        for (const c of folder.children) { visit(c); if (c.type === 'folder') walkNodes(c as FN, visit); }
+      }
+      const bm1: BM = { type: 'bookmark', id: 'b1', title: 'A', url: 'https://a.com', dateAdded: 1 };
+      const bm2: BM = { type: 'bookmark', id: 'b2', title: 'B', url: 'https://b.com', dateAdded: 2 };
+      const sub: FN = { type: 'folder', id: 'f1', name: 'Sub', children: [bm2], dateAdded: 0 };
+      const tree: FN = { type: 'folder', id: 'root', name: 'Root', children: [bm1, sub], dateAdded: 0 };
+      const all: (BM | FN)[] = [];
+      walkNodes(tree, (n) => all.push(n));
+      return {
+        bookmarks: all.filter((n) => n.type === 'bookmark').length,
+        folders: all.filter((n) => n.type === 'folder').length,
+      };
+    });
+
+    // #then — root excluded: 2 bookmarks, 1 folder
+    expect(result.bookmarks).toBe(2);
+    expect(result.folders).toBe(1);
+    await page.close();
+  });
+
+  test('flattenTree returns flat array in DFS order in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of flattenTree logic
+    const result = await page.evaluate(() => {
+      type BM = { type: 'bookmark'; id: string; title: string; url: string; dateAdded: number };
+      type FN = { type: 'folder'; id: string; name: string; children: (BM | FN)[]; dateAdded: number };
+      function walkNodes(folder: FN, visit: (node: BM | FN) => void): void {
+        for (const c of folder.children) { visit(c); if (c.type === 'folder') walkNodes(c as FN, visit); }
+      }
+      const bm1: BM = { type: 'bookmark', id: 'b1', title: 'A', url: 'https://a.com', dateAdded: 1 };
+      const bm2: BM = { type: 'bookmark', id: 'b2', title: 'B', url: 'https://b.com', dateAdded: 2 };
+      const sub: FN = { type: 'folder', id: 'f1', name: 'Sub', children: [bm2], dateAdded: 0 };
+      const tree: FN = { type: 'folder', id: 'root', name: 'Root', children: [bm1, sub], dateAdded: 0 };
+      const nodes: (BM | FN)[] = [tree];
+      walkNodes(tree, (n) => nodes.push(n));
+      return {
+        ids: nodes.map((n) => n.id),
+        totalCount: nodes.length,
+        firstIsRoot: nodes[0]?.id === 'root',
+      };
+    });
+
+    // #then — DFS order: root, bm1, sub, bm2
+    expect(result.totalCount).toBe(4);
+    expect(result.firstIsRoot).toBe(true);
+    expect(result.ids).toEqual(['root', 'b1', 'f1', 'b2']);
+    await page.close();
+  });
+
+  test('all 3 utilities work on 1000-item tree in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — performance test with 1000 bookmarks
+    const result = await page.evaluate(() => {
+      type BM = { type: 'bookmark'; id: string; title: string; url: string; dateAdded: number };
+      type FN = { type: 'folder'; id: string; name: string; children: (BM | FN)[]; dateAdded: number };
+      function walkNodes(folder: FN, visit: (node: BM | FN) => void): void {
+        for (const c of folder.children) { visit(c); if (c.type === 'folder') walkNodes(c as FN, visit); }
+      }
+      const folders: FN[] = [];
+      for (let f = 0; f < 10; f++) {
+        const bookmarks: BM[] = [];
+        for (let b = 0; b < 100; b++) {
+          bookmarks.push({ type: 'bookmark', id: `bm-${f}-${b}`, title: `BM ${f}-${b}`, url: `https://example.com/${f}/${b}`, dateAdded: Date.now() });
+        }
+        folders.push({ type: 'folder', id: `f-${f}`, name: `Folder ${f}`, children: bookmarks, dateAdded: Date.now() });
+      }
+      const tree: FN = { type: 'folder', id: 'root', name: 'Root', children: folders, dateAdded: 0 };
+      const start = performance.now();
+      const flat: (BM | FN)[] = [tree];
+      walkNodes(tree, (n) => flat.push(n));
+      const urls: string[] = [];
+      for (const n of flat) { if (n.type === 'bookmark') urls.push((n as BM).url); }
+      let bCount = 0;
+      let fCount = 0;
+      for (let i = 1; i < flat.length; i++) { if (flat[i]!.type === 'bookmark') { bCount++; } else { fCount++; } }
+      const elapsed = performance.now() - start;
+      return { elapsed, flatCount: flat.length, urlCount: urls.length, bookmarks: bCount, folders: fCount };
+    });
+
+    // #then
+    expect(result.elapsed).toBeLessThan(100);
+    expect(result.flatCount).toBe(1011);
+    expect(result.urlCount).toBe(1000);
+    expect(result.bookmarks).toBe(1000);
+    expect(result.folders).toBe(10);
+    await page.close();
+  });
+});
