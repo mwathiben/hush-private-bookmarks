@@ -165,15 +165,24 @@ describe('DATAMODEL-004: flattenTree', () => {
     expect(types.filter((t) => t === 'bookmark')).toHaveLength(5);
   });
 
-  it('preserves node references (same objects)', () => {
+  it('returns only root for empty tree', () => {
     // #given
+    const emptyTree = createEmptyTree();
+    // #when
+    const flat = flattenTree(emptyTree);
+    // #then
+    expect(flat).toHaveLength(1);
+    expect(flat[0]).toBe(emptyTree);
+  });
+
+  it('preserves node references in full DFS order', () => {
+    // #given — expected DFS pre-order: root, TOP_FOLDER, bm-a, SUB_FOLDER, bm-c, bm-d, bm-e, bm-b
     // #when
     const flat = flattenTree(POPULATED_TREE);
-    // #then — first child in flat array should be the same reference as tree.children[0]
+    // #then
+    const ids = flat.map((n: BookmarkNode) => n.id);
+    expect(ids).toEqual(['root', 'f-top', 'bm-a', 'f-sub', 'bm-c', 'bm-d', 'bm-e', 'bm-b']);
     expect(flat[0]).toBe(POPULATED_TREE);
     expect(flat[1]).toBe(TOP_FOLDER);
-    expect(flat[2]).toBe(BOOKMARK_A);
-    const lastBookmark = flat[flat.length - 1];
-    expect(lastBookmark).toBe(BOOKMARK_B);
   });
 });
