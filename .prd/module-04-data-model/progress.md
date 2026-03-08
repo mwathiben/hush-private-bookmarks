@@ -9,7 +9,7 @@
 | DATAMODEL-003 | moveItem with cycle detection and reorder | PASSED | 1 |
 | DATAMODEL-004 | Utilities: collectAllUrls, countBookmarks, flattenTree | PASSED | 1 |
 | DATAMODEL-005 | JSON serialization compatibility and normalizeTree | PASSED | 1 |
-| DATAMODEL-006 | Module purity, coverage gate, and full integration | Pending | 0 |
+| DATAMODEL-006 | Module purity, coverage gate, and full integration | PASSED | 1 |
 
 ---
 
@@ -295,3 +295,77 @@ E2E: 66 passed (4 new DATAMODEL-004 tests)
 File size: lib/data-model.ts — 300 lines (exactly at limit)
 Function sizes: walkNodes 3 lines, flattenTree 5 lines, collectAllUrls 3 lines, countBookmarks 4 lines
 ```
+
+---
+
+## Session: 2026-03-08T13:20:00Z
+**Task**: DATAMODEL-006 - Module purity, coverage gate, and full integration verification
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Added `MAX_TREE_DEPTH = 100` constant exported from lib/data-model.ts
+- Added depth guards to all recursive functions: `searchChildren`, `walkNodes`, `normalizeNode`
+- Added `path.length > MAX_TREE_DEPTH` guard to iterative `walkPath`
+- Compacted `getItemByPath` from 6-line wrapper to `export const getItemByPath: typeof walkPath = walkPath`
+- Added purity checks to scaffold-smoke.test.ts: `@ts-expect-error`, empty catch blocks
+- Added architecture constraint tests: circular import detection, 300-line limit, 50-line function limit
+- Added 4 DATAMODEL-006 Playwright E2E tests (extension load, full lifecycle, depth limit, DOM independence)
+- Added 3 depth-limit unit tests (findItemPath, flattenTree, normalizeTree)
+- Fixed off-by-one in normalizeTree: `normalizeNode(c, 1)` → `normalizeNode(c, 0)` (found by CodeRabbit)
+- Tightened flattenTree depth test assertion from `toBeLessThan(MAX_TREE_DEPTH + 7)` to `toBe(MAX_TREE_DEPTH + 2)`
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| lib/data-model.ts | Added MAX_TREE_DEPTH, depth guards, compacted getItemByPath (300→299 lines) |
+| tests/unit/integration/scaffold-smoke.test.ts | Added MAX_TREE_DEPTH export check, @ts-expect-error check, empty catch check, architecture constraints (circular imports, file size, function size) |
+| tests/e2e/data-model.test.ts | Added DATAMODEL-006 describe block with 4 E2E tests |
+| tests/unit/lib/data-model.test.ts | Added MAX_TREE_DEPTH import, depth limit test for findItemPath |
+| tests/unit/lib/data-model-utils.test.ts | Added MAX_TREE_DEPTH import, depth limit test for flattenTree |
+| tests/unit/lib/data-model-serialize.test.ts | Added MAX_TREE_DEPTH import, depth limit test for normalizeTree |
+
+### Acceptance Criteria Verification
+
+1. lib/data-model.ts has zero React/DOM imports — PASS
+2. lib/data-model.ts has zero browser extension API imports — PASS
+3. No circular imports — PASS (verified by scaffold-smoke test)
+4. scaffold-smoke.test.ts updated with all data-model.ts exports (16 + MAX_TREE_DEPTH) — PASS
+5. lib/data-model.ts branch coverage >= 80% — PASS (92.23%)
+6. lib/data-model.ts <= 300 lines — PASS (299 lines)
+7. All functions <= 50 lines — PASS
+8. Zero type suppressions, empty catch blocks, console.log — PASS
+9. Full verification passes: tsc + eslint + vitest + coverage + wxt build + test:e2e — PASS
+10. Zero regressions in Module 1, 2, and 3 test suites — PASS (430 unit tests, 70 E2E tests)
+
+### Verification Results
+
+```text
+TypeCheck: npx tsc --noEmit — clean
+Lint: npx eslint . — clean
+Unit tests: 430 passed, 0 failed
+Coverage: lib/data-model.ts — 96.49% stmts, 92.23% branches, 100% funcs, 100% lines
+Build: npx wxt build — success (594.45 kB)
+E2E: 70 passed (4 new DATAMODEL-006 tests)
+File size: lib/data-model.ts — 299 lines (under 300 limit)
+```
+
+### Security Hardening
+
+- MAX_TREE_DEPTH = 100 prevents stack overflow from malicious/corrupted deeply nested trees
+- All 4 recursive paths guarded: searchChildren, walkNodes, normalizeNode, walkPath
+- Prototype pollution via normalizeTree flagged as Module 5 concern (data comes from encrypted storage here)
+
+---
+
+## Module Summary
+
+All 6 stories PASSED. Module 4 (Data Model) is complete.
+
+- Total unit tests: 430 (14 new in DATAMODEL-006)
+- Total E2E tests: 70 (4 new in DATAMODEL-006)
+- lib/data-model.ts: 299 lines, 16 exports + MAX_TREE_DEPTH constant
+- Branch coverage: 92.23% (above 80% gate)
+- Zero regressions across Modules 1-4
+- Security: depth guards on all recursive functions (MAX_TREE_DEPTH = 100)

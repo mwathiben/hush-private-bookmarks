@@ -18,6 +18,7 @@ import {
   getItemByPath,
   isBookmark,
   isFolder,
+  MAX_TREE_DEPTH,
 } from '@/lib/data-model';
 
 const MOCK_BOOKMARK: Bookmark = {
@@ -184,6 +185,26 @@ describe('DATAMODEL-001: Core reads', () => {
         expect(result.error).toBeInstanceOf(DataModelError);
         expect(result.error.context.kind).toBe('path_not_found');
       }
+    });
+
+    it('returns path_not_found for items beyond MAX_TREE_DEPTH', () => {
+      // #given — build tree deeper than MAX_TREE_DEPTH
+      type MutableFolder = { type: 'folder'; id: string; name: string; children: MutableFolder[]; dateAdded: number };
+      const root: MutableFolder = { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 };
+      let current = root;
+      for (let i = 0; i < MAX_TREE_DEPTH + 5; i++) {
+        const child: MutableFolder = { type: 'folder', id: `f-${i}`, name: `F${i}`, children: [], dateAdded: 0 };
+        current.children = [child];
+        current = child;
+      }
+      current.children = [{ type: 'folder', id: 'deep-target', name: 'Deep', children: [], dateAdded: 0 }];
+
+      // #when
+      const result = findItemPath(root as BookmarkTree, 'deep-target');
+
+      // #then — item beyond depth limit is unreachable
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.context.kind).toBe('path_not_found');
     });
   });
 

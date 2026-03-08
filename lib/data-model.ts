@@ -16,6 +16,8 @@ import type { Bookmark, BookmarkNode, BookmarkTree, Folder, Result } from '@/lib
 import type { DataModelErrorContext } from '@/lib/errors';
 import { DataModelError } from '@/lib/errors';
 
+export const MAX_TREE_DEPTH = 100;
+
 function fail(
   message: string,
   kind: DataModelErrorContext['kind'],
@@ -51,6 +53,7 @@ function walkPath(
   if (path.length === 0) {
     return { success: true, data: tree };
   }
+  if (path.length > MAX_TREE_DEPTH) return fail('Path exceeds maximum tree depth', 'invalid_path', path);
   let current: BookmarkNode = tree;
   for (let i = 0; i < path.length; i++) {
     const index = path[i]!;
@@ -62,24 +65,19 @@ function walkPath(
   return { success: true, data: current };
 }
 
-export function getItemByPath(
-  tree: BookmarkTree,
-  path: readonly number[],
-): Result<BookmarkNode, DataModelError> {
-  return walkPath(tree, path);
-}
+export const getItemByPath: typeof walkPath = walkPath;
 
 function searchChildren(
-  children: readonly BookmarkNode[],
-  id: string,
+  children: readonly BookmarkNode[], id: string, depth = 0,
 ): readonly number[] | undefined {
+  if (depth > MAX_TREE_DEPTH) return undefined;
   for (let i = 0; i < children.length; i++) {
     const child = children[i]!;
     if (child.id === id) {
       return [i];
     }
     if (isFolder(child)) {
-      const found = searchChildren(child.children, id);
+      const found = searchChildren(child.children, id, depth + 1);
       if (found !== undefined) {
         return [i, ...found];
       }
@@ -147,7 +145,6 @@ export function addFolder(
   };
   return withReplacedChildren(tree, parentPath, (children) => [...children, newFolder]);
 }
-
 export function removeItem(
   tree: BookmarkTree,
   path: readonly number[],
@@ -272,8 +269,9 @@ export function findItemPath(
   return fail('Item not found in tree', 'path_not_found');
 }
 
-function walkNodes(folder: Folder, visit: (node: BookmarkNode) => void): void {
-  for (const c of folder.children) { visit(c); if (isFolder(c)) walkNodes(c, visit); }
+function walkNodes(folder: Folder, visit: (node: BookmarkNode) => void, depth = 0): void {
+  if (depth > MAX_TREE_DEPTH) return;
+  for (const c of folder.children) { visit(c); if (isFolder(c)) walkNodes(c, visit, depth + 1); }
 }
 
 export function flattenTree(tree: BookmarkTree): BookmarkNode[] {
@@ -289,12 +287,13 @@ export function countBookmarks(tree: BookmarkTree): { bookmarks: number; folders
   return { bookmarks: nodes.filter(isBookmark).length, folders: nodes.filter(isFolder).length };
 }
 
-function normalizeNode(node: BookmarkNode): BookmarkNode {
+function normalizeNode(node: BookmarkNode, depth = 0): BookmarkNode {
+  if (depth > MAX_TREE_DEPTH) return node;
   const id = typeof node.id === 'string' && node.id !== '' ? node.id : generateId();
-  if (isFolder(node)) return { ...node, id, children: node.children.map(normalizeNode) };
+  if (isFolder(node)) return { ...node, id, children: node.children.map((c) => normalizeNode(c, depth + 1)) };
   return { ...node, id };
 }
 export function normalizeTree(tree: BookmarkTree): BookmarkTree {
   const id = typeof tree.id === 'string' && tree.id !== '' ? tree.id : generateId();
-  return { ...tree, id, children: tree.children.map(normalizeNode) };
+  return { ...tree, id, children: tree.children.map((c) => normalizeNode(c, 0)) };
 }

@@ -357,8 +357,8 @@
             ],
             "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
             "estimated_effort": "small",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "DATAMODEL-001",
                 "DATAMODEL-002",
@@ -508,7 +508,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 5,
+        "passing_stories": 6,
         "build_plan_day": "Day 2 (middle third)",
         "estimated_test_count": "~55 tests across 6 stories",
         "session_protocol": "One Claude Code session. Add DataModelError (with DataModelErrorContext) to errors.ts first. Then generate data-model.ts + data-model.test.ts. Run tsc + eslint + vitest. Commit.",

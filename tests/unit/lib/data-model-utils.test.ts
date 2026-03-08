@@ -15,6 +15,7 @@ import {
   countBookmarks,
   createEmptyTree,
   flattenTree,
+  MAX_TREE_DEPTH,
 } from '@/lib/data-model';
 
 const BOOKMARK_A: Bookmark = {
@@ -184,5 +185,23 @@ describe('DATAMODEL-004: flattenTree', () => {
     expect(ids).toEqual(['root', 'f-top', 'bm-a', 'f-sub', 'bm-c', 'bm-d', 'bm-e', 'bm-b']);
     expect(flat[0]).toBe(POPULATED_TREE);
     expect(flat[1]).toBe(TOP_FOLDER);
+  });
+
+  it('stops traversal at MAX_TREE_DEPTH to prevent stack overflow', () => {
+    // #given — build tree deeper than MAX_TREE_DEPTH
+    type MutableFolder = { type: 'folder'; id: string; name: string; children: MutableFolder[]; dateAdded: number };
+    const root: MutableFolder = { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 };
+    let current = root;
+    for (let i = 0; i < MAX_TREE_DEPTH + 5; i++) {
+      const child: MutableFolder = { type: 'folder', id: `f-${i}`, name: `F${i}`, children: [], dateAdded: 0 };
+      current.children = [child];
+      current = child;
+    }
+
+    // #when
+    const flat = flattenTree(root as BookmarkTree);
+
+    // #then — root + depth 0..100 = 102 nodes; levels 101-104 excluded
+    expect(flat.length).toBe(MAX_TREE_DEPTH + 2);
   });
 });

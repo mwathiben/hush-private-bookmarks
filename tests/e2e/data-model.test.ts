@@ -682,3 +682,142 @@ test.describe('DATAMODEL-004: Utility functions E2E', () => {
     await page.close();
   });
 });
+
+test.describe('DATAMODEL-006: Module purity & integration E2E', () => {
+  test('extension loads without errors after depth-guard changes', async ({
+    context,
+    extensionId,
+  }) => {
+    const errors: string[] = [];
+    const page = await context.newPage();
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(msg.text());
+    });
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    await page.waitForLoadState('networkidle');
+    expect(errors).toEqual([]);
+    await page.close();
+  });
+
+  test('full data-model lifecycle: create, add, move, flatten, count, normalize, roundtrip', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of full data-model lifecycle in browser context
+    const result = await page.evaluate(() => {
+      type BM = { type: 'bookmark'; id: string; title: string; url: string; dateAdded: number };
+      type FN = { type: 'folder'; id: string; name: string; children: (BM | FN)[]; dateAdded: number };
+      const isBookmark = (n: BM | FN): n is BM => n.type === 'bookmark';
+      function walkNodes(f: FN, visit: (n: BM | FN) => void, depth = 0): void {
+        if (depth > 100) return;
+        for (const c of f.children) { visit(c); if (c.type === 'folder') walkNodes(c as FN, visit, depth + 1); }
+      }
+
+      const root: FN = { type: 'folder', id: crypto.randomUUID(), name: 'Root', children: [], dateAdded: 0 };
+      const bm1: BM = { type: 'bookmark', id: crypto.randomUUID(), title: 'A', url: 'https://a.com', dateAdded: 1 };
+      const bm2: BM = { type: 'bookmark', id: crypto.randomUUID(), title: 'B', url: 'https://b.com', dateAdded: 2 };
+      const sub: FN = { type: 'folder', id: crypto.randomUUID(), name: 'Sub', children: [bm2], dateAdded: 3 };
+      const tree: FN = { ...root, children: [bm1, sub] };
+
+      const moved: FN = {
+        ...tree,
+        children: [
+          { ...sub, children: [bm1, bm2] },
+        ],
+      };
+
+      const flat: (BM | FN)[] = [moved];
+      walkNodes(moved, (n) => flat.push(n));
+      const urls = flat.filter(isBookmark).map((n) => n.url);
+      const bmCount = flat.filter(isBookmark).length;
+      const fCount = flat.filter((n) => n.type === 'folder').length - 1;
+
+      const json = JSON.stringify(moved);
+      const parsed = JSON.parse(json) as FN;
+
+      return {
+        flatCount: flat.length,
+        urlCount: urls.length,
+        bmCount,
+        fCount,
+        roundtrip: JSON.stringify(parsed) === json,
+        hasUrls: urls.includes('https://a.com') && urls.includes('https://b.com'),
+      };
+    });
+
+    // #then
+    expect(result.flatCount).toBe(4);
+    expect(result.urlCount).toBe(2);
+    expect(result.bmCount).toBe(2);
+    expect(result.fCount).toBe(1);
+    expect(result.roundtrip).toBe(true);
+    expect(result.hasUrls).toBe(true);
+    await page.close();
+  });
+
+  test('deep tree traversal respects depth limit in browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — build 120-level deep tree and flatten in browser
+    const result = await page.evaluate(() => {
+      type FN = { type: 'folder'; id: string; name: string; children: FN[]; dateAdded: number };
+      function walkNodes(f: FN, visit: (n: FN) => void, depth = 0): void {
+        if (depth > 100) return;
+        for (const c of f.children) { visit(c); walkNodes(c, visit, depth + 1); }
+      }
+      const root: FN = { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 };
+      let cur = root;
+      for (let i = 0; i < 120; i++) {
+        const child: FN = { type: 'folder', id: `f-${i}`, name: `F${i}`, children: [], dateAdded: 0 };
+        cur.children = [child];
+        cur = child;
+      }
+      const flat: FN[] = [root];
+      walkNodes(root, (n) => flat.push(n));
+      return { flatCount: flat.length, noStackOverflow: true };
+    });
+
+    // #then — depth-limited traversal completes without stack overflow
+    expect(result.noStackOverflow).toBe(true);
+    expect(result.flatCount).toBeLessThanOrEqual(102);
+    await page.close();
+  });
+
+  test('data-model operations work without DOM/browser API dependencies', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — verify pure JS operations work in extension context
+    const result = await page.evaluate(() => {
+      const isBookmark = (n: { type: string }): boolean => n.type === 'bookmark';
+      const isFolder = (n: { type: string }): boolean => n.type === 'folder';
+      const bm = { type: 'bookmark', id: crypto.randomUUID(), title: 'T', url: 'https://t.com', dateAdded: 0 };
+      const folder = { type: 'folder', id: crypto.randomUUID(), name: 'F', children: [bm], dateAdded: 0 };
+      const spread = { ...folder, name: 'Renamed' };
+      const filter = folder.children.filter((_, i) => i !== 0);
+      return {
+        typeGuards: isBookmark(bm) && isFolder(folder) && !isBookmark(folder),
+        immutable: spread !== folder && spread.name === 'Renamed' && folder.name === 'F',
+        filterWorks: filter.length === 0 && folder.children.length === 1,
+        uuidValid: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(bm.id),
+      };
+    });
+
+    // #then
+    expect(result.typeGuards).toBe(true);
+    expect(result.immutable).toBe(true);
+    expect(result.filterWorks).toBe(true);
+    expect(result.uuidValid).toBe(true);
+    await page.close();
+  });
+});

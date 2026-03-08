@@ -16,6 +16,7 @@ import {
   addFolder,
   isFolder,
   normalizeTree,
+  MAX_TREE_DEPTH,
 } from '@/lib/data-model';
 
 function deepFreeze<T>(obj: T): T {
@@ -283,6 +284,30 @@ describe('DATAMODEL-005: JSON serialization & normalizeTree', () => {
       expect(normalized.children.length).toBe(10);
       expect(typeof normalized.id).toBe('string');
       expect(normalized.id.length).toBeGreaterThan(0);
+    });
+
+    it('preserves nodes beyond MAX_TREE_DEPTH without assigning IDs', () => {
+      // #given — build tree deeper than MAX_TREE_DEPTH with missing IDs
+      type N = { type: 'folder'; name: string; children: N[]; dateAdded: number; id?: string };
+      const root: N = { type: 'folder', name: 'Root', children: [], dateAdded: 0 };
+      let cur = root;
+      for (let i = 0; i < MAX_TREE_DEPTH + 3; i++) {
+        const child: N = { type: 'folder', name: `F${i}`, children: [], dateAdded: 0 };
+        cur.children = [child];
+        cur = child;
+      }
+      // #when
+      const normalized = normalizeTree(root as unknown as BookmarkTree);
+      // #then — walk the normalized tree to find the deepest node
+      let node = normalized;
+      let depth = 0;
+      while (node.children.length > 0 && depth < MAX_TREE_DEPTH + 5) {
+        const child = node.children[0]!;
+        if (child.type !== 'folder') break;
+        node = child;
+        depth++;
+      }
+      expect(depth).toBe(MAX_TREE_DEPTH + 3);
     });
   });
 });

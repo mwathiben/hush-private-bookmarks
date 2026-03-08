@@ -74,6 +74,7 @@ import {
   collectAllUrls,
   countBookmarks,
   flattenTree,
+  MAX_TREE_DEPTH,
 } from '@/lib/data-model';
 
 const ROOT = resolve(process.cwd());
@@ -164,6 +165,8 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof collectAllUrls).toBe('function');
     expect(typeof countBookmarks).toBe('function');
     expect(typeof flattenTree).toBe('function');
+    expect(typeof MAX_TREE_DEPTH).toBe('number');
+    expect(MAX_TREE_DEPTH).toBe(100);
   });
 
   it('cn utility merges classes', () => {
@@ -193,10 +196,15 @@ describe('scaffold integration: lib/ module purity', () => {
       it('has zero type suppressions', () => {
         expect(content).not.toContain('as any');
         expect(content).not.toContain('@ts-ignore');
+        expect(content).not.toContain('@ts-expect-error');
       });
 
       it('has zero console.log', () => {
         expect(content).not.toMatch(/console\.log/);
+      });
+
+      it('has zero empty catch blocks', () => {
+        expect(content).not.toMatch(/catch\s*\([^)]*\)\s*\{\s*\}/);
       });
     });
   }
@@ -329,5 +337,51 @@ describe('scaffold integration: package.json scripts', () => {
 
   it('has test:e2e script', () => {
     expect(pkg.scripts['test:e2e']).toBe('playwright test');
+  });
+});
+
+describe('scaffold integration: architecture constraints', () => {
+  it('lib/ modules have no circular imports', () => {
+    const edges = new Map<string, Set<string>>();
+    for (const mod of LIB_MODULES) {
+      const content = readFileSync(resolve(ROOT, 'lib', mod), 'utf-8');
+      const imports = new Set<string>();
+      const importRegex = /from\s+['"]@\/lib\/([^'"]+)['"]/g;
+      let match;
+      while ((match = importRegex.exec(content)) !== null) {
+        const target = match[1]!.endsWith('.ts') ? match[1]! : `${match[1]!}.ts`;
+        if (target !== mod) imports.add(target);
+      }
+      edges.set(mod, imports);
+    }
+    for (const [modA, depsA] of edges) {
+      for (const depB of depsA) {
+        const depsB = edges.get(depB);
+        if (depsB) {
+          expect(depsB.has(modA)).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('data-model.ts is within 300-line limit', () => {
+    const lines = readFileSync(resolve(ROOT, 'lib', 'data-model.ts'), 'utf-8').split('\n').length;
+    expect(lines).toBeLessThanOrEqual(300);
+  });
+
+  it('data-model.ts functions are within 50-line limit', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'data-model.ts'), 'utf-8');
+    const lines = content.split('\n');
+    const funcStarts: Array<{ name: string; line: number }> = [];
+    for (let i = 0; i < lines.length; i++) {
+      const funcMatch = lines[i]!.match(/^(?:export\s+)?function\s+(\w+)/);
+      if (funcMatch) funcStarts.push({ name: funcMatch[1]!, line: i });
+    }
+    for (let f = 0; f < funcStarts.length; f++) {
+      const start = funcStarts[f]!.line;
+      const end = f + 1 < funcStarts.length ? funcStarts[f + 1]!.line : lines.length;
+      const funcLines = end - start;
+      expect(funcLines).toBeLessThanOrEqual(50);
+    }
   });
 });
