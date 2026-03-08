@@ -9,8 +9,8 @@
 | 03 | Storage Layer | 1 | ⬜ Not Started | 0/6 | 0/25 |
 | 04 | Data Model | 1 | ⬜ Not Started | 0/6 | 0/32 |
 | 05 | Bookmark Import | 1 | ⬜ Not Started | 0/4 | 0/23 |
-| 06 | Password Sets | - | ⬜ Not Started | - | - |
-| 07 | BIP39 Recovery | - | ⬜ Not Started | - | - |
+| 06 | Password Sets | 1 | ⬜ Not Started | 0/4 | 0/19 |
+| 07 | BIP39 Recovery | 1 | ⬜ Not Started | 0/3 | 0/16 |
 | 08 | Incognito Mode | - | ⬜ Not Started | - | - |
 | 09 | Background Service Worker | - | ⬜ Not Started | - | - |
 | 10 | Popup UI — Auth Screens | - | ⬜ Not Started | - | - |

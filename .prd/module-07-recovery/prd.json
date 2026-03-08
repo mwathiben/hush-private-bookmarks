@@ -1,0 +1,176 @@
+{
+    "project": {
+        "name": "Module 7: BIP39 Recovery",
+        "description": "Create lib/recovery.ts — BIP39 mnemonic phrase generation, validation, and recovery key derivation. Users generate a 12-word recovery phrase during setup, write it down, and can use it to recover data if they forget their password. The recovery module stores a 'recovery blob' (the BookmarkTree encrypted with the mnemonic-derived key) alongside the password-encrypted data. Uses @scure/bip39 (audited library, NOT custom mnemonic generation). Target: ≤150 lines.",
+        "version": "1.0.0",
+        "created": "2026-03-08",
+        "parent_plan": "Hush Consolidated Build Plan — Day 3 (second third)"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": ["Nothing — Holy PB has no recovery mechanism. Every competitor warns 'no password recovery.' This is entirely new."],
+        "falls_short": [
+            { "id": 1, "deficiency": "Holy PB offers zero password recovery. If user forgets password, data is permanently lost.", "hush_requires": "BIP39 mnemonic phrase that can recover encrypted data. User generates phrase on setup, writes it down, uses it to recover if password forgotten." }
+        ],
+        "do_not_incorporate": ["Any custom mnemonic generation — must use @scure/bip39 audited library.", "Storing mnemonic in browser storage (user must write it down physically)."],
+        "build_from_scratch": [
+            "generateMnemonic(): string — 12-word BIP39 mnemonic via @scure/bip39",
+            "validateMnemonic(phrase: string): boolean — checksum verification",
+            "deriveRecoveryPassword(phrase: string): Promise<string> — deterministic password from mnemonic (via mnemonicToSeed → hex string)",
+            "createRecoveryBlob(plaintext: string, phrase: string): Promise<EncryptedStore> — encrypt data with mnemonic-derived password",
+            "recoverFromBlob(blob: EncryptedStore, phrase: string): Promise<Result<string, RecoveryError | InvalidPasswordError>> — decrypt recovery blob",
+            "RECOVERY_KEY_PREFIX = 'hush_recovery_' constant — storage key prefix for recovery blobs",
+            "recoveryStorageKey(setId: string): string — computes recovery blob storage key",
+            "RecoveryError added to lib/errors.ts (or reuse ImportError pattern)",
+            "Repurpose RecoveryPhrase → RecoveryMetadata in lib/types.ts (remove words field, keep derivedKeyHash only)"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "RECOVERY-001", "category": "core", "priority": "CRITICAL",
+            "title": "BIP39 mnemonic generation and validation",
+            "description": "Verify @scure/bip39 dependency and implement generateMnemonic and validateMnemonic. Must use the English wordlist from @scure/bip39/wordlists/english. The mnemonic is 12 words (128-bit entropy). Also repurpose the existing RecoveryPhrase type in lib/types.ts to RecoveryMetadata (remove words field, keep derivedKeyHash).",
+            "story_points": 5,
+            "steps": [
+                "PREREQUISITE: Verify @scure/bip39 is in package.json dependencies (not devDependencies). It is already installed — do NOT re-install.",
+                "RED: Write tests/unit/lib/recovery.test.ts. Test: 'generateMnemonic returns 12 words separated by spaces'",
+                "RED: Test: 'generateMnemonic returns valid BIP39 mnemonic' (validateMnemonic returns true)",
+                "RED: Test: 'generateMnemonic produces unique phrases' (generate 50, all different)",
+                "RED: Test: 'validateMnemonic returns true for valid mnemonic'",
+                "RED: Test: 'validateMnemonic returns false for random words'",
+                "RED: Test: 'validateMnemonic returns false for empty string'",
+                "RED: Test: 'validateMnemonic returns false for 11 words (too few)'",
+                "RED: Test: 'validateMnemonic returns false for wrong checksum (swap last word)'",
+                "GREEN: Create lib/recovery.ts. Import generateMnemonic as _generateMnemonic and validateMnemonic as _validateMnemonic from @scure/bip39. Import { wordlist } from '@scure/bip39/wordlists/english'. Wrap with typed exports.",
+                "GREEN: Repurpose RecoveryPhrase → RecoveryMetadata in lib/types.ts. Remove 'words: readonly string[]' field (mnemonic must never be stored). Keep 'derivedKeyHash: string' (proof that recovery was set up). Update the JSDoc to explain the type's purpose.",
+                "REFACTOR: Add JSDoc explaining BIP39 standard and 128-bit entropy"
+            ],
+            "files": ["lib/recovery.ts", "lib/types.ts", "tests/unit/lib/recovery.test.ts"],
+            "acceptance_criteria": [
+                "@scure/bip39 in package.json dependencies (already present)",
+                "generateMnemonic(): string — returns 12 words, space-separated, from English BIP39 wordlist",
+                "validateMnemonic(phrase: string): boolean — checksum verification via @scure/bip39",
+                "128-bit entropy (12 words, NOT 24)",
+                "Uses English wordlist only",
+                "No custom mnemonic generation — delegates to @scure/bip39",
+                "RecoveryPhrase type renamed to RecoveryMetadata with words field removed"
+            ],
+            "definition_of_done": ["All 8 mnemonic tests pass", "tsc clean", "@scure/bip39 verified in dependencies", "RecoveryMetadata type updated"],
+            "verification": "npx vitest run tests/unit/lib/recovery.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": []
+        },
+        {
+            "id": "RECOVERY-002", "category": "core", "priority": "CRITICAL",
+            "title": "Recovery key derivation and blob encryption/decryption",
+            "description": "Derive a deterministic password from the mnemonic phrase, then use it to encrypt/decrypt recovery blobs. The derived password is a hex string from the BIP39 seed. Recovery blobs use the same EncryptedStore format as regular encrypted data. Note: this intentionally runs PBKDF2 twice (once in mnemonicToSeed, once in encrypt) — acceptable because recovery is a rare operation, and reusing crypto.ts encrypt/decrypt keeps the module simple and the EncryptedStore format consistent.",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'deriveRecoveryPassword returns consistent result for same phrase' (call twice, assert equal)",
+                "RED: Test: 'deriveRecoveryPassword returns different results for different phrases'",
+                "RED: Test: 'deriveRecoveryPassword returns non-empty string'",
+                "RED: Test: 'createRecoveryBlob produces valid EncryptedStore'",
+                "RED: Test: 'recoverFromBlob decrypts data encrypted by createRecoveryBlob' (roundtrip)",
+                "RED: Test: 'recoverFromBlob fails with wrong mnemonic phrase' (InvalidPasswordError)",
+                "RED: Test: 'recoverFromBlob fails with invalid blob data' (RecoveryError)",
+                "RED: Test: 'recovery blob is independent of user password' — encrypt with password A, create recovery with phrase B, recover with phrase B succeeds (data matches original)",
+                "RED: Test: 'recoveryStorageKey returns hush_recovery_{setId}' for set IDs",
+                "RED: Test: 'RECOVERY_KEY_PREFIX constant is hush_recovery_'",
+                "GREEN: Implement deriveRecoveryPassword (mnemonicToSeed → hex), createRecoveryBlob (encrypt with derived password), recoverFromBlob (decrypt with derived password). Import encrypt/decrypt from crypto.ts. Use async mnemonicToSeed (not sync — avoids blocking main thread in browser extension).",
+                "REFACTOR: Extract RecoveryError to errors.ts or decide to reuse existing error types"
+            ],
+            "files": ["lib/recovery.ts", "lib/errors.ts", "tests/unit/lib/recovery.test.ts"],
+            "acceptance_criteria": [
+                "deriveRecoveryPassword(phrase: string): Promise<string> — deterministic, uses async mnemonicToSeed from @scure/bip39",
+                "createRecoveryBlob(plaintext: string, phrase: string): Promise<EncryptedStore>",
+                "recoverFromBlob(blob: EncryptedStore, phrase: string): Promise<Result<string, RecoveryError | InvalidPasswordError>>",
+                "recoveryStorageKey(setId: string): string — returns 'hush_recovery_{setId}'",
+                "RECOVERY_KEY_PREFIX exported constant",
+                "Recovery blob is EncryptedStore format (reuses crypto.ts encrypt/decrypt)",
+                "Wrong mnemonic returns InvalidPasswordError in Result",
+                "Invalid blob returns RecoveryError (or typed error) in Result",
+                "Recovery is independent of user password — different encryption paths"
+            ],
+            "definition_of_done": ["All 10 recovery tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/lib/recovery.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["RECOVERY-001"]
+        },
+        {
+            "id": "RECOVERY-003", "category": "quality", "priority": "MEDIUM",
+            "title": "Module purity, coverage, and integration verification",
+            "description": "Purity checks, scaffold-smoke update, full verification. Note: E2E skipped for this module — @scure/bip39 is pure JS with no browser API dependencies, so unit tests provide full coverage.",
+            "story_points": 3,
+            "steps": [
+                "Purity tests: zero React/DOM imports, zero console.log, zero type suppressions, zero empty catches",
+                "Verify @scure/bip39 is the ONLY external crypto dependency (no sjcl, no crypto-js)",
+                "scaffold-smoke.test.ts: add recovery.ts to LIB_MODULES (10 total — currently 9 modules + recovery.ts), exports callable test",
+                "Full verification: tsc + eslint + vitest + coverage + wxt build",
+                "Verify lib/recovery.ts ≤ 150 lines, coverage >= 80%"
+            ],
+            "files": ["lib/recovery.ts", "tests/unit/lib/recovery.test.ts", "tests/unit/integration/scaffold-smoke.test.ts"],
+            "acceptance_criteria": ["LIB_MODULES = 10", "Coverage >= 80%", "≤ 150 lines", "Only @scure/bip39 external dep", "Zero regressions"],
+            "definition_of_done": ["Full verification passes", "Zero regressions"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build",
+            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": ["RECOVERY-001", "RECOVERY-002"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "modules_1_6": "Modules 1-5 complete (implemented). Module 6 has PRD but not yet implemented. lib/crypto.ts (encrypt/decrypt), lib/storage.ts (263 lines, STORAGE_KEY), lib/data-model.ts (299 lines, generateId), lib/bookmark-import.ts (191 lines), lib/bookmark-backup.ts (~130 lines). LIB_MODULES = 9 in scaffold-smoke.",
+            "errors": "StorageError, InvalidPasswordError, DecryptionError, DataModelError, ImportError in lib/errors.ts.",
+            "types": "RecoveryPhrase type exists in lib/types.ts with 'words: readonly string[]' and 'derivedKeyHash: string'. RECOVERY-001 repurposes this to RecoveryMetadata (remove words, keep derivedKeyHash).",
+            "dependency": "@scure/bip39 already installed in package.json dependencies.",
+            "test_infrastructure": "happy-dom environment. scaffold-smoke tracks 9 LIB_MODULES. Build: ~594 kB."
+        },
+        "what_does_not_exist": {
+            "recovery": "lib/recovery.ts does not exist. No mnemonic generation. No recovery mechanism.",
+            "recovery_tests": "tests/unit/lib/recovery.test.ts does not exist.",
+            "password_sets": "lib/password-sets.ts does not exist yet (Module 6 not implemented). recoveryStorageKey(setId) takes a plain string — no hard dependency on Module 6."
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "runtime": "Node.js 20 LTS",
+            "external_dependency": "@scure/bip39 — audited BIP39 implementation by @paulmillr. Lightweight (~12KB). API: generateMnemonic(wordlist, strength?), validateMnemonic(mnemonic, wordlist), mnemonicToSeed(mnemonic, passphrase?), mnemonicToSeedSync(mnemonic, passphrase?). Import wordlist from '@scure/bip39/wordlists/english'.",
+            "testing": "Vitest with happy-dom. @scure/bip39 works in Node.js (no browser APIs needed for mnemonic generation).",
+            "forbidden_patterns": ["Custom mnemonic generation", "Storing mnemonic in browser storage", "React/DOM imports", "console.log, as any, @ts-ignore", "Non-audited crypto libraries"]
+        },
+        "recovery_flow": {
+            "setup": "1. User creates password → 2. generateMnemonic() → 3. User writes down 12 words → 4. createRecoveryBlob(serializedTree, phrase) → 5. Store blob under recoveryStorageKey(setId)",
+            "password_change": "When password changes, recovery blob must be re-created with current data.",
+            "recovery": "1. User enters 12 words → 2. validateMnemonic(phrase) → 3. recoverFromBlob(blob, phrase) → 4. User gets data back, must set new password → 5. New recovery blob created with new phrase or same phrase",
+            "per_set": "Each password set has its own recovery blob stored under 'hush_recovery_{setId}'. Recovery phrases can differ per set, or user can reuse same phrase (their choice, managed at UI level). Note: Module 6 (Password Sets) is a conceptual dependency — recoveryStorageKey(setId) takes a string, no code dependency."
+        },
+        "design_decisions": {
+            "double_pbkdf2": "deriveRecoveryPassword converts mnemonic seed to hex string, then encrypt() runs PBKDF2 on that string. This is intentional: reusing crypto.ts encrypt/decrypt keeps the EncryptedStore format consistent and the module simple. Recovery is rare, so the performance cost is acceptable.",
+            "async_seed_derivation": "Use async mnemonicToSeed (not mnemonicToSeedSync) to avoid blocking the main thread in a browser extension context.",
+            "no_mnemonic_storage": "The mnemonic is NEVER stored in browser.storage. User writes it down physically. RecoveryMetadata stores only derivedKeyHash as proof recovery was set up."
+        },
+        "licensing": { "extension_license": "GPL-3.0", "feature_tier": "Free" },
+        "read_first": ["CLAUDE.md", "lib/types.ts (EncryptedStore, Result, RecoveryPhrase → RecoveryMetadata)", "lib/errors.ts", "lib/crypto.ts (encrypt, decrypt)", "This PRD"],
+        "inputs": [
+            { "file": "lib/types.ts", "from_module": "Module 1", "what_it_provides": "EncryptedStore, Result<T,E>, RecoveryPhrase (to be repurposed as RecoveryMetadata)" },
+            { "file": "lib/errors.ts", "from_module": "Modules 1/3", "what_it_provides": "InvalidPasswordError. May need RecoveryError added.", "modification_needed": "If adding RecoveryError: follows DataModelError context-object pattern." },
+            { "file": "lib/crypto.ts", "from_module": "Module 2", "what_it_provides": "encrypt, decrypt" }
+        ],
+        "outputs": [
+            { "file": "lib/recovery.ts", "consumed_by": "Module 9 (Background — recovery flow orchestration), Module 10 (Popup — setup/recovery UI), Module 12 (Settings — view recovery phrase)", "description": "≤150 lines. Exports: generateMnemonic, validateMnemonic, deriveRecoveryPassword, createRecoveryBlob, recoverFromBlob, recoveryStorageKey, RECOVERY_KEY_PREFIX." }
+        ]
+    },
+    "known_risks": [
+        { "issue": "@scure/bip39 bundle size impact", "severity": "LOW", "action": "~12KB. Tree-shakeable. Check wxt build size delta." },
+        { "issue": "Double PBKDF2 in recovery path (mnemonicToSeed + encrypt)", "severity": "LOW", "action": "Intentional tradeoff — simplicity and format consistency over performance. Recovery is rare. Documented in design_decisions." },
+        { "issue": "Recovery blob must be updated on every password change or data save", "severity": "MEDIUM", "action": "Document this requirement for Module 9/10 (UI layer responsibility). lib/recovery.ts just provides the primitives." },
+        { "issue": "User losing both password AND mnemonic = permanent data loss", "severity": "HIGH", "action": "This is by design. Document clearly in UI. Cannot fix without weakening security model." }
+    ],
+    "critical_path": "001 -> 002 -> 003",
+    "total_story_points": 16, "total_stories": 3,
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-07-recovery/",
+            "format": "Append-only. Each entry: ## RECOVERY-XXX — <title>\n- Status: PASS | FAIL (attempt N)\n- Tests: N passing, N failing\n- Coverage: N% branches\n- Notes: <any issues encountered>\n- Timestamp: ISO 8601",
+            "update_trigger": "After each story completion or failure",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": { "passing_stories": 0, "build_plan_day": "Day 3 (second third)", "estimated_test_count": "~20 tests", "session_protocol": "One Claude Code session. Verify @scure/bip39 present. Generate recovery.ts + tests. Commit per story.", "quality_gate": "All tests pass. tsc clean. Only @scure/bip39 external dep. Coverage >= 80%. ≤ 150 lines.", "human_review_required": "Verify @scure/bip39 used (not custom). Verify mnemonic never stored in browser storage. Review deriveRecoveryPassword determinism." },
+    "execution_rules": { "execution_order": "RECOVERY-001 → 002 → 003", "clarifying_questions": "Encouraged. Key: RecoveryError vs reusing ImportError.", "prd_scope": "Module 7 of 18.", "progress_logging": "Update prd.json + progress.md.", "commit_protocol": "feat(recovery): RECOVERY-XXX — <title>", "failure_protocol": "Max 3 attempts." }
+}

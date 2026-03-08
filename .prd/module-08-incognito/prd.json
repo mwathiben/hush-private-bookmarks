@@ -1,0 +1,126 @@
+{
+    "project": {
+        "name": "Module 8: Incognito Mode",
+        "description": "Create lib/incognito.ts — pure logic module for Hush's core differentiator: incognito-native bookmark access. Contains types and decision functions that determine extension behavior based on incognito context. The actual browser API calls (chrome.extension.isAllowedIncognitoAccess, chrome.windows.getCurrent) happen in the background worker (Module 9) and popup (Module 10), NOT in lib/. This module exports pure functions that take incognito state as input and return behavior decisions. Target: ≤80 lines.",
+        "version": "1.0.0",
+        "created": "2026-03-08",
+        "parent_plan": "Hush Consolidated Build Plan — Day 3 (final third)"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": ["Nothing — Holy PB has no incognito awareness. It works identically in normal and incognito windows."],
+        "falls_short": [
+            { "id": 1, "deficiency": "Holy PB has zero incognito awareness. The extension behaves identically in normal and incognito windows, missing the privacy opportunity.", "hush_requires": "Context-aware behavior: auto-surface private bookmarks in incognito, password-protected access in normal mode, clear guidance when extension not enabled for incognito." }
+        ],
+        "do_not_incorporate": ["Any pattern that assumes extension always runs in a single context."],
+        "build_from_scratch": [
+            "IncognitoState type: { isIncognitoContext: boolean; isAllowedIncognito: boolean }",
+            "IncognitoMode union: 'incognito_active' | 'normal_mode' | 'incognito_not_allowed'",
+            "determineMode(state: IncognitoState): IncognitoMode — pure function",
+            "shouldAutoUnlock(mode: IncognitoMode): boolean — true only in incognito_active (auto-surface bookmarks)",
+            "getIncognitoMessage(mode: IncognitoMode): string | null — user-facing message for each mode",
+            "INCOGNITO_MESSAGES constant object with messages for each mode",
+            "IncognitoConfig type for future settings: { autoUnlockInIncognito: boolean; showInNormalMode: boolean }"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "INCOGNITO-001", "category": "core", "priority": "CRITICAL",
+            "title": "Incognito state types and mode determination",
+            "description": "Create lib/incognito.ts with IncognitoState type, IncognitoMode union, and determineMode() pure function. The module takes browser state as input (no browser API calls) and returns behavior decisions.",
+            "story_points": 5,
+            "steps": [
+                "RED: Write tests/unit/lib/incognito.test.ts. Test: 'determineMode returns incognito_active when in incognito context and allowed'",
+                "RED: Test: 'determineMode returns incognito_not_allowed when in incognito but extension not allowed'",
+                "RED: Test: 'determineMode returns normal_mode when not in incognito context'",
+                "RED: Test: 'shouldAutoUnlock returns true only for incognito_active'",
+                "RED: Test: 'shouldAutoUnlock returns false for normal_mode'",
+                "RED: Test: 'shouldAutoUnlock returns false for incognito_not_allowed'",
+                "RED: Test: 'getIncognitoMessage returns null for incognito_active' (no message needed, just works)",
+                "RED: Test: 'getIncognitoMessage returns guidance string for incognito_not_allowed'",
+                "RED: Test: 'getIncognitoMessage returns null for normal_mode' (normal behavior, no special message)",
+                "RED: Test: 'INCOGNITO_MESSAGES has entries for all modes'",
+                "GREEN: Create lib/incognito.ts. Define IncognitoState, IncognitoMode, IncognitoConfig types. Implement determineMode, shouldAutoUnlock, getIncognitoMessage. Define INCOGNITO_MESSAGES constant.",
+                "REFACTOR: Ensure all types are exported for use by Modules 9/10"
+            ],
+            "files": ["lib/incognito.ts", "tests/unit/lib/incognito.test.ts"],
+            "acceptance_criteria": [
+                "IncognitoState type exported: { isIncognitoContext: boolean; isAllowedIncognito: boolean }",
+                "IncognitoMode type exported: 'incognito_active' | 'normal_mode' | 'incognito_not_allowed'",
+                "determineMode(state): IncognitoMode — pure function, no browser API calls",
+                "shouldAutoUnlock(mode): boolean — true only for incognito_active",
+                "getIncognitoMessage(mode): string | null — guidance messages",
+                "INCOGNITO_MESSAGES exported constant",
+                "IncognitoConfig type exported for future settings",
+                "Zero browser API imports — all state passed as parameters"
+            ],
+            "definition_of_done": ["All 10 tests pass", "tsc clean", "eslint clean", "Zero browser imports"],
+            "verification": "npx vitest run tests/unit/lib/incognito.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": []
+        },
+        {
+            "id": "INCOGNITO-002", "category": "quality", "priority": "MEDIUM",
+            "title": "Module purity, coverage, and integration verification",
+            "description": "Purity checks, scaffold-smoke update, full verification.",
+            "story_points": 3,
+            "steps": [
+                "Purity tests: zero React/DOM imports, zero browser.*/chrome.* imports (this is CRITICAL for this module), zero console.log",
+                "scaffold-smoke.test.ts: add incognito.ts to LIB_MODULES (10 total), exports callable test",
+                "Full verification: tsc + eslint + vitest + coverage + wxt build",
+                "Verify lib/incognito.ts ≤ 80 lines, coverage >= 90% (small module, should be high)"
+            ],
+            "files": ["lib/incognito.ts", "tests/unit/lib/incognito.test.ts", "tests/unit/integration/scaffold-smoke.test.ts"],
+            "acceptance_criteria": ["LIB_MODULES = 10", "Coverage >= 90%", "≤ 80 lines", "ZERO browser API imports", "Zero regressions"],
+            "definition_of_done": ["Full verification passes", "Zero regressions"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build",
+            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": ["INCOGNITO-001"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "modules_1_5": "Modules 1-5 complete. lib/ contains 9 files: types.ts, errors.ts, sentry.ts, utils.ts, crypto.ts, storage.ts, data-model.ts, bookmark-import.ts, bookmark-backup.ts.",
+            "modules_6_7": "Modules 6 (Password Sets) and 7 (BIP39 Recovery) have PRDs but zero completed stories. lib/password-sets.ts and lib/recovery.ts do not exist yet. Module 8 has NO dependency on either — can proceed independently.",
+            "errors": "StorageError, InvalidPasswordError, DecryptionError, DataModelError, ImportError in lib/errors.ts.",
+            "test_infrastructure": "scaffold-smoke tracks 9 LIB_MODULES. happy-dom environment for browser tests, but incognito.ts needs no browser environment (pure logic)."
+        },
+        "what_does_not_exist": {
+            "incognito": "lib/incognito.ts does not exist. No incognito awareness in the extension.",
+            "incognito_tests": "tests/unit/lib/incognito.test.ts does not exist.",
+            "manifest_incognito": "wxt.config.ts does NOT yet have 'incognito': 'spanning' in the manifest. This is a prerequisite for Module 9 (Background Service Worker) which wires up actual incognito detection — not needed for Module 8's pure logic."
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "runtime": "Node.js 20 LTS",
+            "testing": "Vitest. No happy-dom needed — this module has zero browser API dependencies. Pure TypeScript logic.",
+            "forbidden_patterns": ["browser.* or chrome.* imports — THIS IS THE KEY CONSTRAINT. All browser state passed as parameters.", "React/DOM imports", "console.log, as any, @ts-ignore"]
+        },
+        "incognito_behavior": {
+            "description": "Hush's core differentiator is context-aware behavior based on whether the browser window is incognito.",
+            "modes": {
+                "incognito_active": "Window is incognito AND extension is allowed in incognito. Auto-surface bookmarks. This is the privacy-first experience.",
+                "normal_mode": "Window is NOT incognito. Standard password-protected access. No special behavior.",
+                "incognito_not_allowed": "Window is incognito BUT extension is not enabled for incognito by user. Show guidance message explaining how to enable."
+            },
+            "browser_api_separation": "The browser APIs (chrome.extension.isAllowedIncognitoAccess, detecting current window incognito state) are called in Module 9 (background worker) and Module 10 (popup). They pass the results to lib/incognito.ts functions as parameters. This preserves the lib/ module purity rule.",
+            "manifest_config": "'incognito': 'spanning' in manifest means the extension runs in both normal and incognito contexts with shared storage. This is correct for Hush — we want the same encrypted data accessible from both contexts. This setting must be added to wxt.config.ts before Module 9 implementation."
+        },
+        "licensing": { "extension_license": "GPL-3.0", "feature_tier": "Free — incognito-native is the core differentiator." },
+        "read_first": ["CLAUDE.md", "lib/types.ts", "This PRD"],
+        "inputs": [
+            { "file": "lib/types.ts", "from_module": "Module 1", "what_it_provides": "No direct type imports needed — incognito.ts defines its own types. But follow Result<T,E> pattern if returning errors." }
+        ],
+        "outputs": [
+            { "file": "lib/incognito.ts", "consumed_by": "Module 9 (Background — detect state, pass to incognito functions), Module 10 (Popup — conditional UI based on mode), Module 12 (Settings — incognito config)", "description": "≤80 lines. Pure logic, zero browser API imports. Exports: IncognitoState, IncognitoMode, IncognitoConfig, determineMode, shouldAutoUnlock, getIncognitoMessage, INCOGNITO_MESSAGES." }
+        ]
+    },
+    "known_risks": [
+        { "issue": "Module is very thin (~50-80 lines) — may feel like over-engineering", "severity": "LOW", "action": "The value is in the separation of concerns: pure logic in lib/, browser calls in entrypoints. This makes the logic trivially testable and the entrypoints thin." },
+        { "issue": "Incognito detection is unreliable in some Chromium-based browsers", "severity": "MEDIUM", "action": "Callers (Module 9/10) should handle API failures and fall back to normal_mode before calling determineMode(). The pure function receives already-resolved state." },
+        { "issue": "'incognito': 'spanning' vs 'split' mode in manifest", "severity": "LOW", "action": "'spanning' is correct — shared storage across contexts. 'split' would create separate storage, breaking the data model." }
+    ],
+    "critical_path": "001 -> 002",
+    "total_story_points": 8, "total_stories": 2,
+    "progress_log": { "format_rules": { "file": "progress.md in .prd/module-08-incognito/", "format": "Append-only. ## INCOGNITO-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
+    "metadata": { "passing_stories": 0, "build_plan_day": "Day 3 (final third)", "estimated_test_count": "~12 tests", "session_protocol": "One Claude Code session. Small module. Generate incognito.ts + tests. Commit.", "quality_gate": "All tests pass. tsc clean. ZERO browser imports. Coverage >= 90%. ≤ 80 lines.", "human_review_required": "Verify ZERO browser API imports in lib/incognito.ts. Verify 'spanning' mode added to manifest before Module 9." },
+    "execution_rules": { "execution_order": "INCOGNITO-001 → 002", "clarifying_questions": "Encouraged. This is a thin module — ask if the scope feels right.", "prd_scope": "Module 8 of 22.", "progress_logging": "Update prd.json + progress.md.", "commit_protocol": "feat(incognito): INCOGNITO-XXX — <title>", "failure_protocol": "Max 3 attempts." }
+}

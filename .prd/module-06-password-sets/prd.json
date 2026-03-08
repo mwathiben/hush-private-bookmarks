@@ -1,0 +1,183 @@
+{
+    "project": {
+        "name": "Module 6: Password Sets",
+        "description": "Create lib/password-sets.ts — multiple independent encrypted bookmark collections, each with its own password. A 'password set' is a named BookmarkTree encrypted under its own password and stored under its own storage key. A lightweight manifest (unencrypted JSON) tracks which sets exist. The default set uses STORAGE_KEY = 'holyPrivateData' for backward compat. Additional sets use 'hush_set_{id}' keys. All functions return Result<T, E>. Target: ≤250 lines.",
+        "version": "1.0.0",
+        "created": "2026-03-08",
+        "parent_plan": "Hush Consolidated Build Plan — Day 3 (first third)"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": ["Nothing — Holy PB has no concept of password sets."],
+        "falls_short": [
+            { "id": 1, "deficiency": "Holy PB supports only a single encrypted bookmark collection under one password.", "hush_requires": "Multiple named sets, each independently encrypted. Creating/deleting/renaming sets. Switching active set. Each set cryptographically independent." }
+        ],
+        "do_not_incorporate": [
+            "Holy PB's single-key storage as the ONLY pattern — preserve as default set, support N sets.",
+            "Any shared encryption key or master password across sets."
+        ],
+        "build_from_scratch": [
+            "PasswordSetManifest type: { sets: PasswordSetInfo[]; activeSetId: string; version: number } — add to lib/types.ts",
+            "PasswordSetInfo type: { id: string; name: string; createdAt: number; lastAccessedAt: number; isDefault: boolean } — add to lib/types.ts, REPLACING existing PasswordSet type",
+            "MANIFEST_KEY = 'hush_manifest', MANIFEST_VERSION = 1 constants",
+            "setStorageKey(id, isDefault): string — 'holyPrivateData' for default, 'hush_set_{id}' for others",
+            "loadManifest, saveManifest, createSet, deleteSet, renameSet, listSets",
+            "getActiveSetId, setActiveSetId",
+            "saveSetData, loadSetData, hasSetData — per-set encrypted data operations",
+            "validateManifest type guard"
+        ]
+    },
+    "type_migration": {
+        "action": "Replace existing PasswordSet in lib/types.ts with PasswordSetInfo + PasswordSetManifest",
+        "reason": "Existing PasswordSet bundles EncryptedStore into the type (all-in-one). PRD design separates metadata (manifest) from encrypted data (per-key storage). Manifest stays small, data stored independently under per-set keys.",
+        "existing_type_location": "lib/types.ts lines 47-53",
+        "no_existing_consumers": true
+    },
+    "user_stories": [
+        {
+            "id": "PWSET-001", "category": "core", "priority": "CRITICAL",
+            "title": "Manifest CRUD: create, list, rename, delete sets",
+            "description": "Create lib/password-sets.ts with manifest management. Manifest is unencrypted JSON under MANIFEST_KEY. On first access with no manifest, auto-create default manifest with one default set pointing to STORAGE_KEY. Replace PasswordSet type in lib/types.ts with PasswordSetInfo + PasswordSetManifest.",
+            "story_points": 8,
+            "steps": [
+                "Update lib/types.ts: replace PasswordSet (lines 47-53) with PasswordSetInfo and PasswordSetManifest interfaces",
+                "RED: Write tests/unit/lib/password-sets.test.ts (// @vitest-environment happy-dom). Test: 'loadManifest creates default manifest when none exists'",
+                "RED: Test: 'loadManifest returns existing manifest when present'",
+                "RED: Test: 'createSet adds new set to manifest with isDefault: false and generated id'",
+                "RED: Test: 'createSet generates unique IDs' (10 sets, all unique)",
+                "RED: Test: 'createSet rejects empty/whitespace-only name'",
+                "RED: Test: 'deleteSet removes set from manifest and storage key'",
+                "RED: Test: 'deleteSet cannot delete default set'",
+                "RED: Test: 'renameSet updates set name in manifest'",
+                "RED: Test: 'renameSet rejects empty/whitespace-only name'",
+                "RED: Test: 'listSets returns all sets'",
+                "RED: Test: 'setStorageKey returns holyPrivateData for default set'",
+                "RED: Test: 'setStorageKey returns hush_set_{id} for non-default'",
+                "GREEN: Create lib/password-sets.ts with types, constants, and manifest CRUD functions.",
+                "REFACTOR: Extract validateManifest type guard"
+            ],
+            "files": ["lib/types.ts", "lib/password-sets.ts", "tests/unit/lib/password-sets.test.ts"],
+            "acceptance_criteria": [
+                "PasswordSetInfo and PasswordSetManifest types exported from lib/types.ts (old PasswordSet removed)",
+                "MANIFEST_KEY, MANIFEST_VERSION exported from lib/password-sets.ts",
+                "loadManifest auto-creates default on first access",
+                "Default set isDefault: true, maps to STORAGE_KEY",
+                "createSet generates id via generateId(), isDefault: false",
+                "createSet and renameSet reject empty/whitespace-only names",
+                "deleteSet: data key first, then manifest. Cannot delete default.",
+                "setStorageKey backward compatible",
+                "All return Result<T, StorageError>"
+            ],
+            "definition_of_done": ["All 12 tests pass", "tsc clean", "eslint clean"],
+            "verification": "npx vitest run tests/unit/lib/password-sets.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": []
+        },
+        {
+            "id": "PWSET-002", "category": "core", "priority": "CRITICAL",
+            "title": "Per-set encrypted data: save, load, hasData",
+            "description": "Save/load encrypted data for individual sets. Each set stores EncryptedStore under its own key. Uses encrypt/decrypt from crypto.ts (NOTE: decrypt() THROWS InvalidPasswordError — must catch and wrap in Result). Reuses validateEncryptedStore from storage.ts.",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'saveSetData encrypts and stores under set-specific key'",
+                "RED: Test: 'loadSetData decrypts data from set-specific key' (roundtrip)",
+                "RED: Test: 'saveSetData for default set stores under holyPrivateData'",
+                "RED: Test: 'loadSetData returns not_found when set has no data'",
+                "RED: Test: 'loadSetData returns InvalidPasswordError for wrong password' (crypto.ts decrypt() throws — catch and wrap in Result)",
+                "RED: Test: 'hasSetData returns true/false correctly'",
+                "RED: Test: 'different sets cryptographically independent' (cross-decrypt fails)",
+                "GREEN: Implement saveSetData, loadSetData, hasSetData using crypto.ts encrypt/decrypt + browser.storage.local + validateEncryptedStore. IMPORTANT: decrypt() throws InvalidPasswordError — wrap in try/catch and return as Result error.",
+                "REFACTOR: DRY error handling"
+            ],
+            "files": ["lib/password-sets.ts", "tests/unit/lib/password-sets.test.ts"],
+            "acceptance_criteria": [
+                "saveSetData(id, plaintext, password): Promise<Result<void, StorageError>>",
+                "loadSetData(id, password): Promise<Result<string, StorageError | InvalidPasswordError>>",
+                "hasSetData(id): Promise<Result<boolean, StorageError>>",
+                "Default set under 'holyPrivateData', others under 'hush_set_{id}'",
+                "InvalidPasswordError caught from decrypt() and returned in Result (not re-thrown)",
+                "Cryptographic independence verified"
+            ],
+            "definition_of_done": ["All 7 tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/lib/password-sets.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["PWSET-001"]
+        },
+        {
+            "id": "PWSET-003", "category": "core", "priority": "HIGH",
+            "title": "Active set switching and lastAccessedAt tracking",
+            "description": "getActiveSetId/setActiveSetId for switching active set. Update lastAccessedAt on successful loadSetData.",
+            "story_points": 3,
+            "steps": [
+                "RED: Test: 'getActiveSetId returns default set id on fresh manifest'",
+                "RED: Test: 'setActiveSetId updates manifest'",
+                "RED: Test: 'setActiveSetId rejects non-existent set id'",
+                "RED: Test: 'loadSetData updates lastAccessedAt on success'",
+                "RED: Test: 'loadSetData does NOT update lastAccessedAt on failure'",
+                "GREEN: Implement getActiveSetId, setActiveSetId. Add lastAccessedAt update to loadSetData.",
+                "REFACTOR: Re-read manifest before update to minimize stale state"
+            ],
+            "files": ["lib/password-sets.ts", "tests/unit/lib/password-sets.test.ts"],
+            "acceptance_criteria": [
+                "getActiveSetId returns default on fresh manifest",
+                "setActiveSetId validates set exists",
+                "lastAccessedAt updated on success only"
+            ],
+            "definition_of_done": ["All 5 tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/lib/password-sets.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": ["PWSET-001", "PWSET-002"]
+        },
+        {
+            "id": "PWSET-004", "category": "quality", "priority": "MEDIUM",
+            "title": "Module purity, coverage, and integration verification",
+            "description": "Purity checks, scaffold-smoke update, storage integration tests, full verification. NOTE: Playwright E2E deferred to Module 10+ when UI exists to exercise password sets.",
+            "story_points": 3,
+            "steps": [
+                "Purity tests: zero React/DOM imports, console.log, type suppressions, empty catches",
+                "Storage integration tests: manifest persistence across save/load cycles, multi-set lifecycle with real browser.storage mock",
+                "scaffold-smoke.test.ts: add password-sets.ts (LIB_MODULES = 10), exports test",
+                "Full verification: tsc + eslint + vitest + coverage + wxt build",
+                "Verify ≤ 250 lines, all functions ≤ 50 lines, coverage >= 80%"
+            ],
+            "files": ["lib/password-sets.ts", "tests/unit/lib/password-sets.test.ts", "tests/unit/integration/scaffold-smoke.test.ts"],
+            "acceptance_criteria": ["LIB_MODULES = 10", "Coverage >= 80%", "≤ 250 lines", "Zero regressions"],
+            "definition_of_done": ["Full verification passes", "Zero regressions"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build",
+            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": ["PWSET-001", "PWSET-002", "PWSET-003"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "crypto": "lib/crypto.ts: encrypt, decrypt, deriveKey, generateSalt, verifyPassword, CRYPTO_CONFIG. Stateless. NOTE: decrypt() THROWS InvalidPasswordError (does not return Result).",
+            "storage": "lib/storage.ts (262 lines): saveEncryptedData, loadEncryptedData, hasData, clearAll, getStorageUsage, validateEncryptedStore, STORAGE_KEY='holyPrivateData', DEFAULT_STORAGE_QUOTA, RETRY_CONFIG={maxAttempts:3, delays:[100,200]}. NOTE: save/load HARDCODED to STORAGE_KEY.",
+            "data_model": "lib/data-model.ts (299 lines): createEmptyTree, getItemByPath, findItemPath, addBookmark, addFolder, removeItem, moveItem, updateBookmark, renameFolder, collectAllUrls, countBookmarks, flattenTree, generateId, normalizeTree, isBookmark, isFolder, MAX_TREE_DEPTH=100.",
+            "bookmark_import": "lib/bookmark-import.ts (191 lines) + lib/bookmark-backup.ts (~130 lines, split during Module 5).",
+            "errors": "StorageError (reason?), InvalidPasswordError, DecryptionError, DataModelError (kind), ImportError (source?, format?)",
+            "types": "lib/types.ts: EncryptedStore, Result<T,E>, BookmarkTree, PasswordSet (TO BE REPLACED with PasswordSetInfo + PasswordSetManifest)",
+            "tests": "489 unit (27 files), 85 E2E. scaffold-smoke: 9 LIB_MODULES. Build: 594.45 kB. happy-dom environment."
+        },
+        "what_does_not_exist": {
+            "password_sets": "lib/password-sets.ts does not exist. No manifest. No multi-set support."
+        }
+    },
+    "context": {
+        "tech_stack": { "runtime": "Node.js 20 LTS", "testing": "Vitest + happy-dom. // @vitest-environment happy-dom annotation.", "forbidden_patterns": ["React/DOM imports", "Shared master key", "Passwords in manifest", "Throwing for expected errors (except crypto.ts which already throws)", "console.log, as any, @ts-ignore, empty catches"] },
+        "licensing": { "extension_license": "GPL-3.0", "feature_tier": "Free" },
+        "read_first": ["CLAUDE.md", "lib/types.ts", "lib/errors.ts", "lib/crypto.ts", "lib/storage.ts", "lib/data-model.ts (generateId)", "This PRD"],
+        "inputs": [
+            { "file": "lib/types.ts", "from_module": "Module 1", "what_it_provides": "EncryptedStore, Result<T,E>, BookmarkTree" },
+            { "file": "lib/errors.ts", "from_module": "Modules 1/3", "what_it_provides": "StorageError, InvalidPasswordError" },
+            { "file": "lib/crypto.ts", "from_module": "Module 2", "what_it_provides": "encrypt, decrypt (throws InvalidPasswordError)" },
+            { "file": "lib/storage.ts", "from_module": "Module 3", "what_it_provides": "STORAGE_KEY, validateEncryptedStore" },
+            { "file": "lib/data-model.ts", "from_module": "Module 4", "what_it_provides": "generateId()" }
+        ],
+        "outputs": [{ "file": "lib/password-sets.ts", "consumed_by": "Modules 9, 10-12, 15a", "description": "≤250 lines. Manifest CRUD + per-set encrypted data." }]
+    },
+    "known_risks": [
+        { "issue": "Manifest corruption loses set metadata", "severity": "HIGH", "action": "validateManifest + fallback to default." },
+        { "issue": "deleteSet orphaned data if manifest update fails", "severity": "MEDIUM", "action": "Delete data first, then manifest." },
+        { "issue": "Concurrent manifest writes", "severity": "LOW", "action": "Acceptable for v1.0 single-threaded UI." }
+    ],
+    "critical_path": "001 -> 002 -> 003 -> 004",
+    "total_story_points": 19, "total_stories": 4,
+    "progress_log": { "format_rules": { "file": "progress.md in .prd/module-06-password-sets/", "format": "Append-only. ## PWSET-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
+    "metadata": { "passing_stories": 0, "build_plan_day": "Day 3 (first third)", "estimated_test_count": "~27 tests", "session_protocol": "One Claude Code session. Read lib/storage.ts first. Commit per story.", "quality_gate": "All tests pass. tsc clean. Coverage >= 80%. ≤ 250 lines.", "human_review_required": "Manifest never encrypted. Default set maps to holyPrivateData. deleteSet order. PasswordSet type replacement in types.ts." },
+    "execution_rules": { "execution_order": "PWSET-001 → 002 → 003 → 004", "clarifying_questions": "Encouraged. Key: modify storage.ts vs use crypto.ts directly.", "prd_scope": "Module 6 of 22.", "progress_logging": "Update prd.json + progress.md.", "commit_protocol": "feat(password-sets): PWSET-XXX — <title>", "failure_protocol": "Max 3 attempts." }
+}
