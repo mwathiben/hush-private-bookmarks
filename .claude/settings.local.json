@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/skill-gate.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Review the transcript. If code was modified (Write or Edit tools were used), check ALL of the following. Block completion if ANY are missing:\n\n1. RESEARCH: Were WebSearch, WebFetch, or context7 MCP tools used to look up best practices BEFORE implementation? (Not after, not as an afterthought)\n2. TESTS: Were ALL verification commands executed? Look for ALL FOUR: 'tsc --noEmit', 'vitest', 'eslint', AND 'playwright test' output in the transcript. Missing any one = block.\n3. PLAYWRIGHT: If the change affects UI, extension behavior, or browser APIs, were Playwright E2E tests written AND executed?\n4. SKILLS: Were skills invoked via the Skill tool? Look for skill invocations in the transcript. At minimum, the 'always' skills (verification-before-completion, module-boundaries, deslop) should have been invoked.\n5. SELF-REVIEW: Were CodeRabbit or deslop skills used for self-review AFTER implementation?\n6. BUNDLE: If production code (not just tests) was modified, was 'wxt build' or 'wxt build --analyze' executed?\n7. PROGRESS: If this is a PRD task (prd.json story), was progress.md updated with a session entry?\n\nIf code was NOT modified (research-only, planning, or conversation), approve the stop.\n\nReturn 'approve' only if all applicable checks pass. Otherwise return 'block' with a specific reason listing which checks failed and what needs to be done."
+          }
+        ]
+      }
+    ]
+  }
+}

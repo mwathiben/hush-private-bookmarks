@@ -1,0 +1,77 @@
+{
+  "rules": [
+    {
+      "match": "crypto|encrypt|decrypt|password|PBKDF|AES|key derivation|IV|salt|mnemonic|recovery phrase|bip39",
+      "skills": ["crypto-guardrails"]
+    },
+    {
+      "match": "storage|browser\\.storage|sync|local\\.set|local\\.get",
+      "skills": ["chrome-extension-wxt", "wxt-extension", "module-boundaries"]
+    },
+    {
+      "match": "component|hook|useState|popup|manager|UI|button|dialog|form|input|modal|sheet|dropdown",
+      "skills": ["react", "react-typescript", "shadcn", "shadcn-ui", "shadcn-tailwind", "tailwindcss", "frontend-design", "ui-freeze", "design-an-interface"]
+    },
+    {
+      "match": "import|export|lib/|module|circular|dependency",
+      "skills": ["module-boundaries", "strict-typescript-mode"]
+    },
+    {
+      "match": "sentry|error reporting|beforeSend|BrowserClient|DSN",
+      "skills": ["privacy-sentry"]
+    },
+    {
+      "match": "test|vitest|playwright|E2E|spec|coverage|assertion|mock|fixture",
+      "skills": ["tdd", "test-driven-development", "e2e-testing-patterns", "senior-qa", "playwright-dev", "coverage-analysis", "webapp-testing"]
+    },
+    {
+      "match": "security|audit|vulnerability|XSS|injection|OWASP|CVE|permission",
+      "skills": ["senior-security", "sast-configuration", "data-privacy-compliance", "differential-review", "insecure-defaults"]
+    },
+    {
+      "match": "review|PR|pull request|code review|feedback",
+      "skills": ["code-review", "code-review-excellence", "requesting-code-review", "receiving-code-review", "coderabbit:code-review"]
+    },
+    {
+      "match": "manifest|wxt\\.config|entrypoint|background|content.script|popup\\.html|browser\\.action",
+      "skills": ["chrome-extension-wxt", "wxt-extension"]
+    },
+    {
+      "match": "tailwind|theme|dark mode|color|style|OKLCH|css|animate",
+      "skills": ["tailwindcss", "tailwind-design-system", "tailwind-theme-builder"]
+    },
+    {
+      "match": "commit|push|branch|merge|CI|action|workflow|github|release|changelog",
+      "skills": ["commit", "git-guardrails-claude-code", "github-actions-templates", "safe-git-guard", "using-git-worktrees", "finishing-a-development-branch", "update-changelog"]
+    },
+    {
+      "match": "plan|design|architect|feature|PRD|story|requirement|spec",
+      "skills": ["brainstorming", "writing-plans", "executing-plans", "product-requirements", "kiro-skill", "ask-questions-if-underspecified"]
+    },
+    {
+      "match": "debug|error|fix|broken|failing|stack trace|exception|crash",
+      "skills": ["systematic-debugging", "debugging-strategies"]
+    },
+    {
+      "match": "refactor|simplify|clean|reduce|extract|deduplicate",
+      "skills": ["deslop", "request-refactor-plan", "code-simplifier:code-simplifier"]
+    },
+    {
+      "match": "feature|implement|build|add|create new",
+      "skills": ["feature-dev:feature-dev", "subagent-driven-development", "dispatching-parallel-agents"]
+    },
+    {
+      "match": "document|README|CLAUDE\\.md|docs",
+      "skills": ["claude-md-management:revise-claude-md"]
+    },
+    {
+      "match": "type|typescript|strict|noImplicit|tsconfig",
+      "skills": ["strict-typescript-mode"]
+    },
+    {
+      "match": "vite|bundle|build|wxt build|analyze|chunk",
+      "skills": ["vite", "chrome-extension-wxt"]
+    }
+  ],
+  "always": ["verification-before-completion", "module-boundaries", "deslop"]
+}
