@@ -186,3 +186,9 @@ Each module has a `prd.json` and a companion `progress.md` in `.prd/<module>/`.
 - All Pro-gated features keep business logic in `lib/` (not components) for Option B readiness.
 - The sync backend (hush-sync) is a SEPARATE proprietary repo. Never import hush-sync code into this extension.
 - `lib/sync-client.ts` talks to the backend via HTTPS API only — zero backend logic in the extension.
+
+## Tool Selection: LSP vs Grep/Glob
+
+- **LSP** (goToDefinition, findReferences, hover): Use for navigating to definitions, finding all references to a symbol, and getting type info. Gives exact results.
+- **Grep/Glob**: Use for discovery — finding files by pattern, searching for text across the codebase.
+- After locating a file with Grep/Glob, prefer LSP to navigate within it rather than reading the whole file.
