@@ -9,11 +9,12 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import type { Bookmark, BookmarkNode, Folder } from '@/lib/types';
 import type { ChromeBookmarkTreeNode } from '@/lib/bookmark-import';
-import { convertChromeBookmarks } from '@/lib/bookmark-import';
-import { ImportError } from '@/lib/errors';
+import { convertChromeBookmarks, parseHtmlBookmarks } from '@/lib/bookmark-import';
 import { MAX_TREE_DEPTH } from '@/lib/data-model';
+import { ImportError } from '@/lib/errors';
 
 function collectIds(node: BookmarkNode): string[] {
   const ids = [node.id];
@@ -525,6 +526,302 @@ describe('IMPORT-001: Convert Chrome bookmarks API tree', () => {
       expect(managed!.name).toBe('Managed Bookmarks');
       expect(managed!.children).toHaveLength(1);
       expect(result.data.stats.foldersImported).toBe(1);
+    });
+  });
+});
+
+const CHROME_HTML_EXPORT = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><H3 ADD_DATE="1609459200" LAST_MODIFIED="1609459200" PERSONAL_TOOLBAR_FOLDER="true">Dev</H3>
+    <DL><p>
+        <DT><A HREF="https://example.com" ADD_DATE="1609459200">Example</A>
+        <DT><A HREF="https://github.com" ADD_DATE="1609459201">GitHub</A>
+    </DL><p>
+    <DT><A HREF="https://google.com" ADD_DATE="1609459202">Google</A>
+</DL><p>`;
+
+const FIREFOX_HTML_EXPORT = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks Menu</H1>
+<DL><p>
+    <DT><H3 ADD_DATE="1609459200" PERSONAL_TOOLBAR_FOLDER="true">Bookmarks Toolbar</H3>
+    <DL><p>
+        <DT><A HREF="https://mozilla.org" ADD_DATE="1609459200" TAGS="browser,open-source">Mozilla</A>
+    </DL><p>
+    <DT><A HREF="https://firefox.com" ADD_DATE="1609459201">Firefox</A>
+</DL><p>`;
+
+const SPECIAL_CHARS_HTML = `<DL><p>
+    <DT><A HREF="https://example.com/search?q=hello&amp;world" ADD_DATE="1609459200">Rock &amp; Roll ♪</A>
+    <DT><A HREF="https://example.com/path?a=1&amp;b=2" ADD_DATE="1609459200">Quotes &quot;test&quot; &lt;html&gt;</A>
+</DL><p>`;
+
+describe('IMPORT-002: Parse HTML bookmark files', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('Chrome HTML export', () => {
+    it('parses Chrome HTML export with bookmarks and folders', () => {
+      // #when
+      const result = parseHtmlBookmarks(CHROME_HTML_EXPORT);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data.stats.bookmarksImported).toBe(3);
+      expect(result.data.stats.foldersImported).toBe(1);
+      expect(result.data.tree.children.length).toBeGreaterThan(0);
+    });
+
+    it('extracts bookmark URL from HREF attribute', () => {
+      // #when
+      const result = parseHtmlBookmarks(CHROME_HTML_EXPORT);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const bm = findFirstBookmark(result.data.tree);
+      expect(bm).toBeDefined();
+      expect(bm!.url).toBe('https://example.com');
+    });
+
+    it('extracts bookmark title from anchor text', () => {
+      // #when
+      const result = parseHtmlBookmarks(CHROME_HTML_EXPORT);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const bm = findFirstBookmark(result.data.tree);
+      expect(bm).toBeDefined();
+      expect(bm!.title).toBe('Example');
+    });
+
+    it('converts ADD_DATE seconds to milliseconds', () => {
+      // #given — ADD_DATE="1609459200" is seconds (Jan 1 2021 00:00:00 UTC)
+      const html = `<DL><p><DT><A HREF="https://x.com" ADD_DATE="1609459200">X</A></DL><p>`;
+
+      // #when
+      const result = parseHtmlBookmarks(html);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const bm = findFirstBookmark(result.data.tree);
+      expect(bm).toBeDefined();
+      expect(bm!.dateAdded).toBe(1609459200000);
+    });
+
+    it('does not double-convert millisecond ADD_DATE', () => {
+      // #given — ADD_DATE already in milliseconds (> 1e10 threshold)
+      const html = `<DL><p><DT><A HREF="https://x.com" ADD_DATE="1609459200000">X</A></DL><p>`;
+
+      // #when
+      const result = parseHtmlBookmarks(html);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const bm = findFirstBookmark(result.data.tree);
+      expect(bm).toBeDefined();
+      expect(bm!.dateAdded).toBe(1609459200000);
+    });
+  });
+
+  describe('folder hierarchy', () => {
+    it('preserves folder hierarchy from DL/DT nesting', () => {
+      // #when
+      const result = parseHtmlBookmarks(CHROME_HTML_EXPORT);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const folder = findFirstFolder(result.data.tree);
+      expect(folder).toBeDefined();
+      expect(folder!.name).toBe('Dev');
+      expect(folder!.children).toHaveLength(2);
+      expect(folder!.children[0]!.type).toBe('bookmark');
+    });
+  });
+
+  describe('Firefox HTML export', () => {
+    it('handles Firefox HTML export', () => {
+      // #when
+      const result = parseHtmlBookmarks(FIREFOX_HTML_EXPORT);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data.stats.bookmarksImported).toBe(2);
+      expect(result.data.stats.foldersImported).toBe(1);
+      const folder = findFirstFolder(result.data.tree);
+      expect(folder).toBeDefined();
+      expect(folder!.name).toBe('Bookmarks Toolbar');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('returns empty tree for empty string', () => {
+      // #when
+      const result = parseHtmlBookmarks('');
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data.tree.children).toHaveLength(0);
+      expect(result.data.stats.bookmarksImported).toBe(0);
+      expect(result.data.stats.foldersImported).toBe(0);
+    });
+
+    it('returns ImportError for HTML with no DL structure', () => {
+      // #given
+      const html = '<html><body><p>Not a bookmark file</p></body></html>';
+
+      // #when
+      const result = parseHtmlBookmarks(html);
+
+      // #then
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(result.error).toBeInstanceOf(ImportError);
+      expect(result.error.context.source).toBe('html');
+      expect(result.error.context.format).toBe('netscape-html');
+    });
+
+    it('handles bookmarks with special characters in title and URL', () => {
+      // #when
+      const result = parseHtmlBookmarks(SPECIAL_CHARS_HTML);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const bm = findFirstBookmark(result.data.tree);
+      expect(bm).toBeDefined();
+      expect(bm!.title).toBe('Rock & Roll ♪');
+      expect(bm!.url).toBe('https://example.com/search?q=hello&world');
+    });
+
+    it('rejects HTML exceeding 5MB with ImportError', () => {
+      // #given — string just over 5MB
+      const html = 'x'.repeat(5 * 1024 * 1024 + 1);
+
+      // #when
+      const result = parseHtmlBookmarks(html);
+
+      // #then
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(result.error).toBeInstanceOf(ImportError);
+      expect(result.error.context.source).toBe('html');
+      expect(result.error.context.format).toBe('netscape-html');
+    });
+
+    it('handles missing ADD_DATE — defaults to Date.now()', () => {
+      // #given
+      vi.spyOn(Date, 'now').mockReturnValue(99999);
+      const html = `<DL><p><DT><A HREF="https://x.com">No Date</A></DL><p>`;
+
+      // #when
+      const result = parseHtmlBookmarks(html);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const bm = findFirstBookmark(result.data.tree);
+      expect(bm).toBeDefined();
+      expect(bm!.dateAdded).toBe(99999);
+    });
+
+    it('handles bookmark with empty title — falls back to Untitled', () => {
+      // #given
+      const html = `<DL><p><DT><A HREF="https://x.com" ADD_DATE="1000"></A></DL><p>`;
+
+      // #when
+      const result = parseHtmlBookmarks(html);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const bm = findFirstBookmark(result.data.tree);
+      expect(bm).toBeDefined();
+      expect(bm!.title).toBe('Untitled');
+    });
+
+    it('handles folder with empty name — falls back to Unnamed Folder', () => {
+      // #given
+      const html = `<DL><p>
+        <DT><H3 ADD_DATE="1000"></H3>
+        <DL><p><DT><A HREF="https://x.com" ADD_DATE="1000">X</A></DL><p>
+      </DL><p>`;
+
+      // #when
+      const result = parseHtmlBookmarks(html);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const folder = findFirstFolder(result.data.tree);
+      expect(folder).toBeDefined();
+      expect(folder!.name).toBe('Unnamed Folder');
+    });
+
+    it('truncates children beyond MAX_TREE_DEPTH and records error', () => {
+      // #given — build nested DL/DT structure exceeding MAX_TREE_DEPTH
+      let html = '';
+      for (let i = 0; i <= MAX_TREE_DEPTH; i++) {
+        html += `<DL><p><DT><H3 ADD_DATE="1000">F${i}</H3>`;
+      }
+      html += `<DL><p><DT><A HREF="https://deep.com" ADD_DATE="1000">Deep</A></DL><p>`;
+      for (let i = 0; i <= MAX_TREE_DEPTH; i++) {
+        html += `</DL><p>`;
+      }
+
+      // #when
+      const result = parseHtmlBookmarks(html);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data.stats.errors.length).toBeGreaterThan(0);
+      expect(result.data.stats.errors[0]).toMatch(/children truncated/);
+    });
+  });
+
+  describe('ID generation', () => {
+    it('generates unique IDs for all imported items', () => {
+      // #when
+      const result = parseHtmlBookmarks(CHROME_HTML_EXPORT);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const ids = collectIds(result.data.tree);
+      expect(ids.length).toBe(5);
+      const uniqueIds = new Set(ids);
+      expect(uniqueIds.size).toBe(ids.length);
+      for (const id of ids) {
+        expect(typeof id).toBe('string');
+        expect(id.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('statistics', () => {
+    it('returns correct bookmark and folder counts', () => {
+      // #when
+      const result = parseHtmlBookmarks(CHROME_HTML_EXPORT);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data.stats.bookmarksImported).toBe(3);
+      expect(result.data.stats.foldersImported).toBe(1);
+      expect(result.data.stats.errors).toEqual([]);
     });
   });
 });

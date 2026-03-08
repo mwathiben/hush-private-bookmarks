@@ -77,7 +77,7 @@ import {
   MAX_TREE_DEPTH,
 } from '@/lib/data-model';
 
-import { convertChromeBookmarks } from '@/lib/bookmark-import';
+import { convertChromeBookmarks, parseHtmlBookmarks } from '@/lib/bookmark-import';
 import type { ChromeBookmarkTreeNode, ImportStats } from '@/lib/bookmark-import';
 
 const ROOT = resolve(process.cwd());
@@ -179,6 +179,7 @@ describe('scaffold integration: lib/ imports resolve', () => {
 
   it('bookmark-import exports are callable', () => {
     expect(typeof convertChromeBookmarks).toBe('function');
+    expect(typeof parseHtmlBookmarks).toBe('function');
     const node: ChromeBookmarkTreeNode = { id: '1', title: 'test' };
     expect(node.id).toBe('1');
     const stats: ImportStats = { bookmarksImported: 0, foldersImported: 0, errors: [] };

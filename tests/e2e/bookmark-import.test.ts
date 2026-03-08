@@ -169,3 +169,155 @@ test.describe('IMPORT-001: Chrome bookmark conversion E2E', () => {
     await page.close();
   });
 });
+
+test.describe('IMPORT-002: HTML bookmark parsing E2E', () => {
+  test('HTML parsing works via DOMParser in real browser context', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — parse Netscape HTML in real Chromium DOMParser
+    const result = await page.evaluate(() => {
+      const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><H3 ADD_DATE="1609459200">Dev</H3>
+    <DL><p>
+        <DT><A HREF="https://example.com" ADD_DATE="1609459200">Example</A>
+        <DT><A HREF="https://github.com" ADD_DATE="1609459201">GitHub</A>
+    </DL><p>
+    <DT><A HREF="https://google.com" ADD_DATE="1609459202">Google</A>
+</DL><p>`;
+
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const rootDl = doc.querySelector('dl');
+      if (!rootDl) return { found: false, bookmarks: 0, folders: 0 };
+
+      let bookmarks = 0;
+      let folders = 0;
+      const dts = rootDl.querySelectorAll('dt');
+      for (const dt of dts) {
+        if (dt.querySelector(':scope > a')) bookmarks++;
+        if (dt.querySelector(':scope > h3')) folders++;
+      }
+
+      const firstAnchor = rootDl.querySelector('a');
+      const addDate = firstAnchor?.getAttribute('add_date');
+
+      return { found: true, bookmarks, folders, addDate };
+    });
+
+    // #then — DOMParser in real Chromium produces expected DOM structure
+    expect(result.found).toBe(true);
+    expect(result.bookmarks).toBe(3);
+    expect(result.folders).toBe(1);
+    expect(result.addDate).toBe('1609459200');
+    await page.close();
+  });
+
+  test('HTML parsing produces correct folder hierarchy in real browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of walkDl logic to verify DOM structure in real Chromium
+    const result = await page.evaluate(() => {
+      const html = `<DL><p>
+        <DT><H3 ADD_DATE="1609459200">Folder</H3>
+        <DL><p>
+          <DT><A HREF="https://example.com" ADD_DATE="1609459200">Example</A>
+        </DL><p>
+        <DT><A HREF="https://google.com" ADD_DATE="1609459201">Google</A>
+      </DL><p>`;
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const rootDl = doc.querySelector('dl');
+      if (!rootDl) return { found: false, topLevel: 0, folderChildren: 0 };
+
+      let topLevel = 0;
+      let folderChildren = 0;
+      for (const child of rootDl.children) {
+        if (child.tagName !== 'DT') continue;
+        topLevel++;
+        const h3 = child.querySelector(':scope > h3');
+        if (h3) {
+          const subDl = child.querySelector(':scope > dl');
+          if (subDl) {
+            for (const sub of subDl.children) {
+              if (sub.tagName === 'DT') folderChildren++;
+            }
+          }
+        }
+      }
+      return { found: true, topLevel, folderChildren };
+    });
+
+    // #then — hierarchy preserved: 2 top-level items, 1 child in folder
+    expect(result.found).toBe(true);
+    expect(result.topLevel).toBe(2);
+    expect(result.folderChildren).toBe(1);
+    await page.close();
+  });
+
+  test('special characters survive DOMParser in real browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — entities and Unicode through real Chromium DOMParser
+    const result = await page.evaluate(() => {
+      const html = `<DL><p>
+        <DT><A HREF="https://example.com/search?q=hello&amp;world" ADD_DATE="1000">Rock &amp; Roll ♪</A>
+      </DL><p>`;
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const anchor = doc.querySelector('a');
+      return {
+        title: anchor?.textContent ?? '',
+        url: anchor?.getAttribute('href') ?? '',
+      };
+    });
+
+    // #then — entities decoded, Unicode preserved
+    expect(result.title).toBe('Rock & Roll ♪');
+    expect(result.url).toBe('https://example.com/search?q=hello&world');
+    await page.close();
+  });
+
+  test('large HTML (100KB+) parses without timeout in real browser', async ({
+    context,
+    extensionId,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — parse a large HTML in real Chromium DOMParser
+    const result = await page.evaluate(() => {
+      const lines = ['<DL><p>'];
+      for (let i = 0; i < 2000; i++) {
+        lines.push(`<DT><A HREF="https://example.com/${i}" ADD_DATE="1609459200">Bookmark ${i}</A>`);
+      }
+      lines.push('</DL><p>');
+      const html = lines.join('\n');
+
+      const start = performance.now();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const elapsed = performance.now() - start;
+
+      const rootDl = doc.querySelector('dl');
+      const bookmarkCount = rootDl ? rootDl.querySelectorAll(':scope > dt > a').length : 0;
+      return { elapsed, bookmarkCount };
+    });
+
+    // #then
+    expect(result.elapsed).toBeLessThan(1000);
+    expect(result.bookmarkCount).toBe(2000);
+    await page.close();
+  });
+});
