@@ -9,107 +9,79 @@
  */
 
 import { test, expect } from './fixtures/extension';
+import { convertChromeBookmarks } from '@/lib/bookmark-import';
+import type { ChromeBookmarkTreeNode } from '@/lib/bookmark-import';
 
 test.describe('IMPORT-001: Chrome bookmark conversion E2E', () => {
-  test('Chrome bookmark conversion produces correct tree structure in browser', async ({
-    context,
-    extensionId,
-  }) => {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  test('Chrome bookmark conversion produces correct tree structure', async () => {
+    const chromeTree: ChromeBookmarkTreeNode[] = [{
+      id: '0',
+      title: '',
+      children: [{
+        id: '1', title: 'Bookmarks Bar', parentId: '0',
+        children: [
+          { id: '10', title: 'Google', url: 'https://google.com', parentId: '1', dateAdded: 1000 },
+          { id: '20', title: 'Dev', parentId: '1', dateAdded: 2000, children: [
+            { id: '21', title: 'MDN', url: 'https://developer.mozilla.org', parentId: '20', dateAdded: 3000 },
+          ]},
+        ],
+      }],
+    }];
 
-    // #when — inline mirror of convertNode logic from lib/bookmark-import.ts
-    const result = await page.evaluate(() => {
-      type ChromeNode = { id: string; title: string; url?: string; children?: ChromeNode[]; dateAdded?: number; parentId?: string };
-      type BM = { type: 'bookmark'; id: string; title: string; url: string; dateAdded: number };
-      type FN = { type: 'folder'; id: string; name: string; children: (BM | FN)[]; dateAdded: number };
+    const result = convertChromeBookmarks(chromeTree);
 
-      function convertNode(node: ChromeNode): BM | FN {
-        const dateAdded = node.dateAdded ?? Date.now();
-        if (typeof node.url === 'string' && node.url !== '') {
-          return { type: 'bookmark', id: crypto.randomUUID(), title: node.title || 'Untitled', url: node.url, dateAdded };
-        }
-        return { type: 'folder', id: crypto.randomUUID(), name: node.title || 'Unnamed Folder', children: (node.children ?? []).map(convertNode), dateAdded };
-      }
+    expect(result.success).toBe(true);
+    if (!result.success) return;
 
-      const chromeNodes: ChromeNode[] = [
-        { id: '10', title: 'Google', url: 'https://google.com', parentId: '1', dateAdded: 1000 },
-        { id: '20', title: 'Dev', parentId: '1', dateAdded: 2000, children: [
-          { id: '21', title: 'MDN', url: 'https://developer.mozilla.org', parentId: '20', dateAdded: 3000 },
-        ]},
-      ];
-      const converted = chromeNodes.map(convertNode);
-      const bm = converted[0] as BM;
-      const folder = converted[1] as FN;
+    const { tree } = result.data;
+    const bm = tree.children[0];
+    expect(bm?.type).toBe('bookmark');
+    if (bm?.type === 'bookmark') {
+      expect(bm.title).toBe('Google');
+      expect(bm.url).toBe('https://google.com');
+    }
 
-      return {
-        bmType: bm.type,
-        bmTitle: bm.title,
-        bmUrl: bm.url,
-        folderType: folder.type,
-        folderName: folder.name,
-        folderChildCount: folder.children.length,
-        nestedType: folder.children[0]?.type,
-      };
-    });
-
-    // #then
-    expect(result.bmType).toBe('bookmark');
-    expect(result.bmTitle).toBe('Google');
-    expect(result.bmUrl).toBe('https://google.com');
-    expect(result.folderType).toBe('folder');
-    expect(result.folderName).toBe('Dev');
-    expect(result.folderChildCount).toBe(1);
-    expect(result.nestedType).toBe('bookmark');
-    await page.close();
+    const folder = tree.children[1];
+    expect(folder?.type).toBe('folder');
+    if (folder?.type === 'folder') {
+      expect(folder.name).toBe('Dev');
+      expect(folder.children).toHaveLength(1);
+      expect(folder.children[0]?.type).toBe('bookmark');
+    }
   });
 
-  test('root container skipping works in browser', async ({
-    context,
-    extensionId,
-  }) => {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  test('root container skipping works correctly', async () => {
+    const chromeTree: ChromeBookmarkTreeNode[] = [{
+      id: '0',
+      title: '',
+      children: [
+        { id: '1', title: 'Bookmarks Bar', parentId: '0', children: [
+          { id: '10', title: 'Google', url: 'https://google.com', parentId: '1', dateAdded: 1000 },
+        ]},
+        { id: '2', title: 'Other', parentId: '0', children: [
+          { id: '20', title: 'GitHub', url: 'https://github.com', parentId: '2', dateAdded: 2000 },
+        ]},
+        { id: '3', title: 'Mobile', parentId: '0', children: [] },
+      ],
+    }];
 
-    // #when — inline mirror of isRootContainer + flattening from lib/bookmark-import.ts
-    const result = await page.evaluate(() => {
-      type ChromeNode = { id: string; title: string; url?: string; children?: ChromeNode[]; dateAdded?: number; parentId?: string; folderType?: string };
+    const result = convertChromeBookmarks(chromeTree);
 
-      function isRootContainer(node: ChromeNode): boolean {
-        return node.folderType !== undefined || node.parentId === '0';
-      }
+    expect(result.success).toBe(true);
+    if (!result.success) return;
 
-      const chromeTree: ChromeNode[] = [{
-        id: '0', title: '',
-        children: [
-          { id: '1', title: 'Bookmarks Bar', parentId: '0', children: [
-            { id: '10', title: 'Google', url: 'https://google.com', parentId: '1', dateAdded: 1000 },
-          ]},
-          { id: '2', title: 'Other', parentId: '0', children: [
-            { id: '20', title: 'GitHub', url: 'https://github.com', parentId: '2', dateAdded: 2000 },
-          ]},
-          { id: '3', title: 'Mobile', parentId: '0', children: [] },
-        ],
-      }];
+    const { tree } = result.data;
+    const titles: string[] = [];
+    const folderNames: string[] = [];
+    for (const child of tree.children) {
+      if (child.type === 'bookmark') titles.push(child.title);
+      if (child.type === 'folder') folderNames.push(child.name);
+    }
 
-      const flattened: string[] = [];
-      for (const root of chromeTree) {
-        for (const container of root.children ?? []) {
-          if (isRootContainer(container)) {
-            for (const child of container.children ?? []) {
-              flattened.push(child.title);
-            }
-          }
-        }
-      }
-
-      return { flattened, containerSkipped: !flattened.includes('Bookmarks Bar') };
-    });
-
-    // #then
-    expect(result.flattened).toEqual(['Google', 'GitHub']);
-    expect(result.containerSkipped).toBe(true);
-    await page.close();
+    expect(titles).toEqual(['Google', 'GitHub']);
+    expect(folderNames).not.toContain('Bookmarks Bar');
+    expect(folderNames).not.toContain('Other');
+    expect(folderNames).not.toContain('Mobile');
   });
 
   test('ID generation via crypto.randomUUID() works for imported items', async ({
@@ -140,54 +112,44 @@ test.describe('IMPORT-001: Chrome bookmark conversion E2E', () => {
     await page.close();
   });
 
-  test('large tree (1000 bookmarks) conversion completes under 100ms in browser', async ({
-    context,
-    extensionId,
-  }) => {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
-
-    // #when — inline mirror of recursive conversion on 10 folders x 100 bookmarks
-    const result = await page.evaluate(() => {
-      type ChromeNode = { id: string; title: string; url?: string; children?: ChromeNode[]; dateAdded?: number };
-      type BM = { type: 'bookmark'; id: string; title: string; url: string; dateAdded: number };
-      type FN = { type: 'folder'; id: string; name: string; children: (BM | FN)[]; dateAdded: number };
-
-      function convertNode(node: ChromeNode): BM | FN {
-        const dateAdded = node.dateAdded ?? Date.now();
-        if (typeof node.url === 'string' && node.url !== '') {
-          return { type: 'bookmark', id: crypto.randomUUID(), title: node.title, url: node.url, dateAdded };
-        }
-        return { type: 'folder', id: crypto.randomUUID(), name: node.title, children: (node.children ?? []).map(convertNode), dateAdded };
+  test('large tree (1000 bookmarks) conversion completes under 100ms', async () => {
+    const folders: ChromeBookmarkTreeNode[] = [];
+    for (let f = 0; f < 10; f++) {
+      const bookmarks: ChromeBookmarkTreeNode[] = [];
+      for (let b = 0; b < 100; b++) {
+        bookmarks.push({
+          id: `bm-${f}-${b}`,
+          title: `BM ${f}-${b}`,
+          url: `https://example.com/${f}/${b}`,
+          dateAdded: Date.now(),
+        });
       }
+      folders.push({
+        id: `f-${f}`,
+        title: `Folder ${f}`,
+        children: bookmarks,
+        dateAdded: Date.now(),
+      });
+    }
 
-      const folders: ChromeNode[] = [];
-      for (let f = 0; f < 10; f++) {
-        const bookmarks: ChromeNode[] = [];
-        for (let b = 0; b < 100; b++) {
-          bookmarks.push({ id: `bm-${f}-${b}`, title: `BM ${f}-${b}`, url: `https://example.com/${f}/${b}`, dateAdded: Date.now() });
-        }
-        folders.push({ id: `f-${f}`, title: `Folder ${f}`, children: bookmarks, dateAdded: Date.now() });
-      }
+    const chromeTree: ChromeBookmarkTreeNode[] = [{
+      id: '0',
+      title: '',
+      children: [{
+        id: '1', title: 'Bookmarks Bar', parentId: '0',
+        children: folders,
+      }],
+    }];
 
-      const start = performance.now();
-      const converted = folders.map(convertNode);
-      const elapsed = performance.now() - start;
+    const start = performance.now();
+    const result = convertChromeBookmarks(chromeTree);
+    const elapsed = performance.now() - start;
 
-      let totalItems = 0;
-      function count(node: BM | FN): void {
-        totalItems++;
-        if (node.type === 'folder') node.children.forEach(count);
-      }
-      converted.forEach(count);
-
-      return { elapsed, totalItems };
-    });
-
-    // #then
-    expect(result.elapsed).toBeLessThan(100);
-    expect(result.totalItems).toBe(1010);
-    await page.close();
+    expect(elapsed).toBeLessThan(100);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.stats.bookmarksImported).toBe(1000);
+    expect(result.data.stats.foldersImported).toBe(10);
   });
 
   test('extension loads without console errors after bookmark-import module added', async ({
