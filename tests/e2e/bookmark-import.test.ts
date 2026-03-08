@@ -321,3 +321,196 @@ test.describe('IMPORT-002: HTML bookmark parsing E2E', () => {
     await page.close();
   });
 });
+
+// E2E backup tests use 1000 PBKDF2 iterations (not production 600K).
+// These verify the Web Crypto API encrypt/decrypt/JSON pipeline works in
+// a real Chromium extension context, not PBKDF2 key-stretching strength.
+test.describe('IMPORT-003: Encrypted backup E2E', () => {
+  test('backup roundtrip works in extension context', async ({
+    context,
+    extensionId,
+  }) => {
+    test.setTimeout(60_000);
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — inline mirror of exportEncryptedBackup + importEncryptedBackup logic
+    const result = await page.evaluate(async () => {
+      const iterations = 1000;
+      const password = 'e2e-backup-password';
+      const tree = {
+        type: 'folder' as const,
+        id: 'root',
+        name: 'Test Root',
+        dateAdded: 1609459200000,
+        children: [
+          { type: 'bookmark' as const, id: 'bm1', title: 'Example', url: 'https://example.com', dateAdded: 1609459200000 },
+        ],
+      };
+
+      function uint8ToBase64(bytes: Uint8Array): string {
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]!);
+        }
+        return btoa(binary);
+      }
+      function base64ToUint8(b64: string): Uint8Array<ArrayBuffer> {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      const encoder = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+      const key = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt'],
+      );
+
+      const plaintext = JSON.stringify(tree);
+      const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, encoder.encode(plaintext));
+
+      const store = {
+        salt: uint8ToBase64(salt),
+        iv: uint8ToBase64(iv),
+        encrypted: uint8ToBase64(new Uint8Array(encrypted)),
+        iterations,
+      };
+      const envelope = JSON.stringify({ version: 1, store });
+
+      const parsed = JSON.parse(envelope) as { version: number; store: typeof store };
+      const dSalt = base64ToUint8(parsed.store.salt);
+      const dIv = base64ToUint8(parsed.store.iv);
+      const dEncrypted = base64ToUint8(parsed.store.encrypted);
+      const dKeyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+      const dKey = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: dSalt, iterations: parsed.store.iterations, hash: 'SHA-256' },
+        dKeyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt'],
+      );
+      const decryptedBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: dIv, tagLength: 128 }, dKey, dEncrypted);
+      const decryptedJson = new TextDecoder().decode(decryptedBuffer);
+      const restored = JSON.parse(decryptedJson) as typeof tree;
+
+      return { name: restored.name, childCount: restored.children.length, childTitle: restored.children[0]?.title };
+    });
+
+    // #then
+    expect(result.name).toBe('Test Root');
+    expect(result.childCount).toBe(1);
+    expect(result.childTitle).toBe('Example');
+    await page.close();
+  });
+
+  test('wrong password rejected in extension context', async ({
+    context,
+    extensionId,
+  }) => {
+    test.setTimeout(60_000);
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #when — encrypt with one password, decrypt with another
+    const errorName = await page.evaluate(async () => {
+      const iterations = 1000;
+      const encoder = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+
+      const encKeyMaterial = await crypto.subtle.importKey('raw', encoder.encode('correct-password'), 'PBKDF2', false, ['deriveKey']);
+      const encKey = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+        encKeyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt'],
+      );
+      const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, encKey, encoder.encode('secret data'));
+
+      const wrongKeyMaterial = await crypto.subtle.importKey('raw', encoder.encode('wrong-password'), 'PBKDF2', false, ['deriveKey']);
+      const wrongKey = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+        wrongKeyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt'],
+      );
+
+      try {
+        await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, wrongKey, encrypted);
+        return 'no-error';
+      } catch (error) {
+        return (error as Error).name;
+      }
+    });
+
+    // #then — AES-GCM rejects wrong key with OperationError
+    expect(errorName).toBe('OperationError');
+    await page.close();
+  });
+
+  test('backup envelope format is valid', async ({
+    context,
+    extensionId,
+  }) => {
+    test.setTimeout(60_000);
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const RFC4648_BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+    // #when — create a backup envelope and inspect its format
+    const result = await page.evaluate(async () => {
+      const iterations = 1000;
+      const password = 'format-check-pwd';
+      const encoder = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+
+      const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+      const key = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt'],
+      );
+
+      function uint8ToBase64(bytes: Uint8Array): string {
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]!);
+        }
+        return btoa(binary);
+      }
+
+      const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, encoder.encode('{"type":"folder"}'));
+      const store = {
+        salt: uint8ToBase64(salt),
+        iv: uint8ToBase64(iv),
+        encrypted: uint8ToBase64(new Uint8Array(encrypted)),
+        iterations,
+      };
+      return { version: 1, salt: store.salt, iv: store.iv, encrypted: store.encrypted, iterations: store.iterations };
+    });
+
+    // #then — envelope fields have correct types and base64 format
+    expect(result.version).toBe(1);
+    expect(result.salt).toMatch(RFC4648_BASE64);
+    expect(result.iv).toMatch(RFC4648_BASE64);
+    expect(result.encrypted).toMatch(RFC4648_BASE64);
+    expect(result.iterations).toBe(1000);
+    await page.close();
+  });
+});

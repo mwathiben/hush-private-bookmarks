@@ -11,10 +11,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Bookmark, BookmarkNode, Folder } from '@/lib/types';
+import type { BookmarkTree } from '@/lib/types';
 import type { ChromeBookmarkTreeNode } from '@/lib/bookmark-import';
-import { convertChromeBookmarks, parseHtmlBookmarks } from '@/lib/bookmark-import';
+import {
+  BACKUP_VERSION,
+  convertChromeBookmarks,
+  exportEncryptedBackup,
+  importEncryptedBackup,
+  parseHtmlBookmarks,
+} from '@/lib/bookmark-import';
 import { MAX_TREE_DEPTH } from '@/lib/data-model';
-import { ImportError } from '@/lib/errors';
+import { ImportError, InvalidPasswordError } from '@/lib/errors';
 
 function collectIds(node: BookmarkNode): string[] {
   const ids = [node.id];
@@ -824,4 +831,195 @@ describe('IMPORT-002: Parse HTML bookmark files', () => {
       expect(result.data.stats.errors).toEqual([]);
     });
   });
+});
+
+const BACKUP_TEST_TREE: BookmarkTree = {
+  type: 'folder',
+  id: 'root-1',
+  name: 'Backup Root',
+  dateAdded: 1609459200000,
+  children: [
+    {
+      type: 'bookmark',
+      id: 'bm-1',
+      title: 'Example',
+      url: 'https://example.com',
+      dateAdded: 1609459200000,
+    },
+    {
+      type: 'folder',
+      id: 'folder-1',
+      name: 'Dev Resources',
+      dateAdded: 1609459200000,
+      children: [
+        {
+          type: 'bookmark',
+          id: 'bm-2',
+          title: 'GitHub',
+          url: 'https://github.com',
+          dateAdded: 1609459201000,
+        },
+        {
+          type: 'bookmark',
+          id: 'bm-3',
+          title: 'MDN',
+          url: 'https://developer.mozilla.org',
+          dateAdded: 1609459202000,
+        },
+      ],
+    },
+  ],
+};
+
+const BACKUP_PASSWORD = 'test-backup-password-2026';
+
+describe('IMPORT-003: Encrypted JSON backup export and import', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('exportEncryptedBackup produces JSON string containing EncryptedStore', async () => {
+    // #when
+    const blob = await exportEncryptedBackup(BACKUP_TEST_TREE, BACKUP_PASSWORD);
+
+    // #then
+    expect(typeof blob).toBe('string');
+    const parsed = JSON.parse(blob) as Record<string, unknown>;
+    expect(parsed).toHaveProperty('version');
+    expect(parsed).toHaveProperty('store');
+    const store = parsed.store as Record<string, unknown>;
+    expect(typeof store.salt).toBe('string');
+    expect(typeof store.iv).toBe('string');
+    expect(typeof store.encrypted).toBe('string');
+    expect(typeof store.iterations).toBe('number');
+  }, 120_000);
+
+  it('importEncryptedBackup decrypts and returns BookmarkTree', async () => {
+    // #given
+    const blob = await exportEncryptedBackup(BACKUP_TEST_TREE, BACKUP_PASSWORD);
+
+    // #when
+    const result = await importEncryptedBackup(blob, BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.type).toBe('folder');
+    expect(result.data.name).toBe('Backup Root');
+  }, 120_000);
+
+  it('importEncryptedBackup fails with wrong password — InvalidPasswordError', async () => {
+    // #given
+    const blob = await exportEncryptedBackup(BACKUP_TEST_TREE, BACKUP_PASSWORD);
+
+    // #when
+    const result = await importEncryptedBackup(blob, 'wrong-password-entirely');
+
+    // #then
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBeInstanceOf(InvalidPasswordError);
+  }, 120_000);
+
+  it('importEncryptedBackup fails with invalid JSON blob — ImportError', async () => {
+    // #when
+    const result = await importEncryptedBackup('not valid json {{', BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBeInstanceOf(ImportError);
+    expect((result.error as ImportError).context.format).toBe('hush-backup');
+  });
+
+  it('importEncryptedBackup fails with valid JSON but not EncryptedStore — ImportError', async () => {
+    // #when
+    const result = await importEncryptedBackup('{"foo":"bar"}', BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBeInstanceOf(ImportError);
+    expect((result.error as ImportError).context.source).toBe('backup');
+    expect((result.error as ImportError).context.format).toBe('hush-backup');
+  });
+
+  it('export/import roundtrip preserves bookmarks and folder structure', async () => {
+    // #given
+    const blob = await exportEncryptedBackup(BACKUP_TEST_TREE, BACKUP_PASSWORD);
+
+    // #when
+    const result = await importEncryptedBackup(blob, BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const tree = result.data;
+    expect(tree.name).toBe('Backup Root');
+    expect(tree.children).toHaveLength(2);
+    const bm1 = tree.children[0]!;
+    expect(bm1.type).toBe('bookmark');
+    if (bm1.type !== 'bookmark') return;
+    expect(bm1.title).toBe('Example');
+    expect(bm1.url).toBe('https://example.com');
+
+    const folder = tree.children[1]!;
+    expect(folder.type).toBe('folder');
+    if (folder.type !== 'folder') return;
+    expect(folder.name).toBe('Dev Resources');
+    expect(folder.children).toHaveLength(2);
+    const bm2 = folder.children[0]!;
+    expect(bm2.type).toBe('bookmark');
+    if (bm2.type !== 'bookmark') return;
+    expect(bm2.title).toBe('GitHub');
+    expect(bm2.url).toBe('https://github.com');
+  }, 120_000);
+
+  it('importEncryptedBackup fails with empty string input', async () => {
+    // #when
+    const result = await importEncryptedBackup('', BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBeInstanceOf(ImportError);
+    expect((result.error as ImportError).context.source).toBe('backup');
+  });
+
+  it('importEncryptedBackup fails with unsupported version', async () => {
+    // #given
+    const envelope = JSON.stringify({ version: 999, store: { salt: 'a', iv: 'b', encrypted: 'c', iterations: 600000 } });
+
+    // #when
+    const result = await importEncryptedBackup(envelope, BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBeInstanceOf(ImportError);
+    expect(result.error.message).toBe('Unsupported backup version');
+  });
+
+  it('importEncryptedBackup rejects envelope with empty store fields', async () => {
+    // #given
+    const envelope = JSON.stringify({ version: 1, store: { salt: '', iv: 'b', encrypted: 'c', iterations: 600000 } });
+
+    // #when
+    const result = await importEncryptedBackup(envelope, BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBeInstanceOf(ImportError);
+    expect(result.error.message).toBe('Invalid backup format');
+  });
+
+  it('exported blob includes version field', async () => {
+    // #when
+    const blob = await exportEncryptedBackup(BACKUP_TEST_TREE, BACKUP_PASSWORD);
+
+    // #then
+    const parsed = JSON.parse(blob) as Record<string, unknown>;
+    expect(parsed.version).toBe(BACKUP_VERSION);
+  }, 120_000);
 });

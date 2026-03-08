@@ -204,8 +204,8 @@
             ],
             "verification": "npx vitest run tests/unit/lib/bookmark-import.test.ts && npx tsc --noEmit",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "IMPORT-001"
             ]
@@ -430,7 +430,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 2,
+        "passing_stories": 3,
         "build_plan_day": "Day 2 (final third)",
         "estimated_test_count": "~38 tests across 4 stories (9 + 12 + 7 + 10)",
         "session_protocol": "One Claude Code session. Read lib/errors.ts first to confirm ImportErrorContext shape. Generate bookmark-import.ts + bookmark-import.test.ts. Run tsc + eslint + vitest. Commit.",

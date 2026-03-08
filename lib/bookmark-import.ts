@@ -12,8 +12,9 @@
  * (at your option) any later version.
  */
 
-import type { BookmarkNode, BookmarkTree, Result } from '@/lib/types';
-import { ImportError } from '@/lib/errors';
+import type { BookmarkNode, BookmarkTree, EncryptedStore, Result } from '@/lib/types';
+import { ImportError, InvalidPasswordError } from '@/lib/errors';
+import { encrypt, decrypt } from '@/lib/crypto';
 import { generateId, MAX_TREE_DEPTH } from '@/lib/data-model';
 
 export interface ChromeBookmarkTreeNode {
@@ -187,4 +188,89 @@ export function parseHtmlBookmarks(html: string): ImportResult {
 
   const errors: string[] = [];
   return importSuccess(walkDl(rootDl, 0, errors), errors);
+}
+
+export const BACKUP_VERSION = 1;
+
+const MAX_BACKUP_SIZE = 50 * 1024 * 1024;
+
+interface BackupEnvelope {
+  readonly version: number;
+  readonly store: EncryptedStore;
+}
+
+function isValidEnvelope(data: unknown): data is BackupEnvelope {
+  if (data === null || typeof data !== 'object') return false;
+  if (!('version' in data) || typeof data.version !== 'number') return false;
+  if (!('store' in data) || data.store === null || typeof data.store !== 'object') return false;
+  const s = data.store;
+  return (
+    'salt' in s && typeof s.salt === 'string' && s.salt !== '' &&
+    'iv' in s && typeof s.iv === 'string' && s.iv !== '' &&
+    'encrypted' in s && typeof s.encrypted === 'string' && s.encrypted !== '' &&
+    'iterations' in s && typeof s.iterations === 'number' && Number.isFinite(s.iterations) && s.iterations > 0
+  );
+}
+
+export async function exportEncryptedBackup(
+  tree: BookmarkTree,
+  password: string,
+): Promise<string> {
+  const store = await encrypt(JSON.stringify(tree), password);
+  return JSON.stringify({ version: BACKUP_VERSION, store });
+}
+
+type BackupResult = Result<BookmarkTree, ImportError | InvalidPasswordError>;
+
+function backupFail(message: string): BackupResult {
+  return { success: false, error: new ImportError(message, { source: 'backup', format: 'hush-backup' }) };
+}
+
+export async function importEncryptedBackup(
+  blob: string,
+  password: string,
+): Promise<BackupResult> {
+  if (typeof blob !== 'string' || blob.length === 0) {
+    return backupFail('Invalid backup: expected non-empty string');
+  }
+  if (blob.length > MAX_BACKUP_SIZE) {
+    return backupFail('Backup file exceeds 50MB size limit');
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(blob);
+  } catch {
+    return backupFail('Invalid backup: not valid JSON');
+  }
+
+  if (!isValidEnvelope(parsed)) {
+    return backupFail('Invalid backup format');
+  }
+  if (parsed.version !== BACKUP_VERSION) {
+    return backupFail('Unsupported backup version');
+  }
+
+  let plaintext: string;
+  try {
+    plaintext = await decrypt(parsed.store, password);
+  } catch (error: unknown) {
+    if (error instanceof InvalidPasswordError) {
+      return { success: false, error };
+    }
+    return backupFail('Backup decryption failed');
+  }
+
+  let tree: unknown;
+  try {
+    tree = JSON.parse(plaintext);
+  } catch {
+    return backupFail('Invalid backup: corrupted data');
+  }
+
+  if (tree === null || typeof tree !== 'object' || !('type' in tree) || tree.type !== 'folder') {
+    return backupFail('Invalid backup: corrupted data');
+  }
+
+  return { success: true, data: tree as BookmarkTree };
 }
