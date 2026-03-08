@@ -32,14 +32,19 @@ const promptLower = prompt.toLowerCase();
 const matched = new Set(rules.always ?? []);
 
 for (const rule of rules.rules ?? []) {
+  if (!Array.isArray(rule.skills)) continue;
+
+  let isMatch = false;
   try {
-    if (new RegExp(rule.match, "i").test(promptLower)) {
-      for (const skill of rule.skills) {
-        matched.add(skill);
-      }
-    }
+    isMatch = new RegExp(rule.match, "i").test(promptLower);
   } catch {
-    // skip malformed regex
+    continue;
+  }
+
+  if (isMatch) {
+    for (const skill of rule.skills) {
+      matched.add(skill);
+    }
   }
 }
 
