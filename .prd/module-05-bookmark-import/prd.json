@@ -257,8 +257,8 @@
             ],
             "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": [
                 "IMPORT-001",
                 "IMPORT-002",
@@ -430,7 +430,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 3,
+        "passing_stories": 4,
         "build_plan_day": "Day 2 (final third)",
         "estimated_test_count": "~38 tests across 4 stories (9 + 12 + 7 + 10)",
         "session_protocol": "One Claude Code session. Read lib/errors.ts first to confirm ImportErrorContext shape. Generate bookmark-import.ts + bookmark-import.test.ts. Run tsc + eslint + vitest. Commit.",

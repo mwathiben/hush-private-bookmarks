@@ -9,17 +9,19 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
-import type { Bookmark, BookmarkNode, Folder } from '@/lib/types';
-import type { BookmarkTree } from '@/lib/types';
+import type { Bookmark, BookmarkNode, BookmarkTree, Folder } from '@/lib/types';
 import type { ChromeBookmarkTreeNode } from '@/lib/bookmark-import';
 import {
-  BACKUP_VERSION,
   convertChromeBookmarks,
-  exportEncryptedBackup,
-  importEncryptedBackup,
   parseHtmlBookmarks,
 } from '@/lib/bookmark-import';
+import {
+  BACKUP_VERSION,
+  exportEncryptedBackup,
+  importEncryptedBackup,
+} from '@/lib/bookmark-backup';
 import { MAX_TREE_DEPTH } from '@/lib/data-model';
 import { ImportError, InvalidPasswordError } from '@/lib/errors';
 
@@ -929,7 +931,8 @@ describe('IMPORT-003: Encrypted JSON backup export and import', () => {
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.error).toBeInstanceOf(ImportError);
-    expect((result.error as ImportError).context.format).toBe('hush-backup');
+    if (!(result.error instanceof ImportError)) return;
+    expect(result.error.context.format).toBe('hush-backup');
   });
 
   it('importEncryptedBackup fails with valid JSON but not EncryptedStore — ImportError', async () => {
@@ -940,8 +943,9 @@ describe('IMPORT-003: Encrypted JSON backup export and import', () => {
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.error).toBeInstanceOf(ImportError);
-    expect((result.error as ImportError).context.source).toBe('backup');
-    expect((result.error as ImportError).context.format).toBe('hush-backup');
+    if (!(result.error instanceof ImportError)) return;
+    expect(result.error.context.source).toBe('backup');
+    expect(result.error.context.format).toBe('hush-backup');
   });
 
   it('export/import roundtrip preserves bookmarks and folder structure', async () => {
@@ -983,7 +987,8 @@ describe('IMPORT-003: Encrypted JSON backup export and import', () => {
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.error).toBeInstanceOf(ImportError);
-    expect((result.error as ImportError).context.source).toBe('backup');
+    if (!(result.error instanceof ImportError)) return;
+    expect(result.error.context.source).toBe('backup');
   });
 
   it('importEncryptedBackup fails with unsupported version', async () => {
@@ -1022,4 +1027,183 @@ describe('IMPORT-003: Encrypted JSON backup export and import', () => {
     const parsed = JSON.parse(blob) as Record<string, unknown>;
     expect(parsed.version).toBe(BACKUP_VERSION);
   }, 120_000);
+
+  it('rejects tree with unknown node type after decryption', async () => {
+    // #given — a backup whose decrypted payload has an unknown type value
+    const unknownTypeTree = {
+      type: 'folder', id: 'root', name: 'Root', dateAdded: 1,
+      children: [{ type: 'widget', id: 'w1', dateAdded: 1, title: 'X', url: 'https://x.com' }],
+    };
+    const blob = await exportEncryptedBackup(
+      unknownTypeTree as unknown as BookmarkTree,
+      BACKUP_PASSWORD,
+    );
+
+    // #when
+    const result = await importEncryptedBackup(blob, BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBeInstanceOf(ImportError);
+    expect(result.error.message).toBe('Invalid backup: corrupted data');
+  }, 120_000);
+
+  it('rejects tree with invalid structure after decryption', async () => {
+    // #given — a backup whose decrypted payload is valid JSON but not a BookmarkTree
+    const corruptedTree = { type: 'folder', id: 'x', name: 'Root', dateAdded: 1 };
+    const blob = await exportEncryptedBackup(
+      corruptedTree as unknown as BookmarkTree,
+      BACKUP_PASSWORD,
+    );
+
+    // #when
+    const result = await importEncryptedBackup(blob, BACKUP_PASSWORD);
+
+    // #then
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBeInstanceOf(ImportError);
+    expect(result.error.message).toBe('Invalid backup: corrupted data');
+  }, 120_000);
+});
+
+describe('IMPORT-004: Edge cases and integration', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('Chrome import: 1000 bookmarks in 50 folders', () => {
+    // #given
+    const folders: ChromeBookmarkTreeNode[] = [];
+    for (let f = 0; f < 50; f++) {
+      const children: ChromeBookmarkTreeNode[] = [];
+      for (let b = 0; b < 20; b++) {
+        children.push({ id: `b-${f}-${b}`, title: `Bookmark ${b}`, url: `https://example.com/${f}/${b}` });
+      }
+      folders.push({ id: `f-${f}`, title: `Folder ${f}`, children });
+    }
+    const root: ChromeBookmarkTreeNode = { id: '0', title: '', children: folders };
+
+    // #when
+    const result = convertChromeBookmarks([root]);
+
+    // #then
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.stats.bookmarksImported).toBe(1000);
+    expect(result.data.stats.foldersImported).toBe(50);
+  });
+
+  it('Chrome import: deeply nested folders (10 levels)', () => {
+    // #given
+    let current: ChromeBookmarkTreeNode = {
+      id: 'leaf',
+      title: 'Leaf Bookmark',
+      url: 'https://example.com/leaf',
+    };
+    for (let d = 9; d >= 0; d--) {
+      current = { id: `folder-${d}`, title: `Level ${d}`, children: [current] };
+    }
+    const root: ChromeBookmarkTreeNode = { id: '0', title: '', children: [current] };
+
+    // #when
+    const result = convertChromeBookmarks([root]);
+
+    // #then
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    let node = result.data.tree.children[0]!;
+    for (let d = 0; d < 10; d++) {
+      expect(node.type).toBe('folder');
+      if (node.type !== 'folder') return;
+      expect(node.name).toBe(`Level ${d}`);
+      node = node.children[0]!;
+    }
+    expect(node.type).toBe('bookmark');
+    if (node.type === 'bookmark') {
+      expect(node.url).toBe('https://example.com/leaf');
+    }
+  });
+
+  it('HTML import: handles data: URLs', () => {
+    // #given
+    const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<DL><p>
+  <DT><A HREF="data:text/html,<h1>Hello</h1>" ADD_DATE="1700000000">Data Link</A>
+</DL>`;
+
+    // #when
+    const result = parseHtmlBookmarks(html);
+
+    // #then
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const bk = result.data.tree.children[0]!;
+    expect(bk.type).toBe('bookmark');
+    if (bk.type === 'bookmark') {
+      expect(bk.url).toBe('data:text/html,<h1>Hello</h1>');
+      expect(bk.title).toBe('Data Link');
+    }
+  });
+
+  it('HTML import: handles javascript: URLs', () => {
+    // #given
+    const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+  <DT><A HREF="javascript:void(0)" ADD_DATE="1700000000">JS Link</A>
+</DL>`;
+
+    // #when
+    const result = parseHtmlBookmarks(html);
+
+    // #then
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const bk = result.data.tree.children[0]!;
+    expect(bk.type).toBe('bookmark');
+    if (bk.type === 'bookmark') {
+      expect(bk.url).toBe('javascript:void(0)');
+    }
+  });
+
+  it('HTML import: handles large file (100KB+) within limit', () => {
+    // #given — generate ~100KB HTML with 2000 bookmarks
+    const lines = ['<!DOCTYPE NETSCAPE-Bookmark-file-1>', '<DL><p>'];
+    for (let i = 0; i < 2000; i++) {
+      lines.push(`  <DT><A HREF="https://example.com/page/${i}" ADD_DATE="1700000000">Bookmark ${i}</A>`);
+    }
+    lines.push('</DL>');
+    const html = lines.join('\n');
+    expect(html.length).toBeGreaterThan(100 * 1024);
+
+    // #when
+    const result = parseHtmlBookmarks(html);
+
+    // #then
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.stats.bookmarksImported).toBe(2000);
+  });
+
+  it('bookmark-import.ts has zero chrome.bookmarks/chrome.tabs imports', () => {
+    // #given
+    const content = readFileSync('lib/bookmark-import.ts', 'utf-8');
+
+    // #then
+    expect(content).not.toMatch(/chrome\.(bookmarks|tabs|storage|runtime)/);
+    expect(content).not.toMatch(/import.*from\s+['"]react/);
+  });
+
+  it('bookmark-backup.ts has zero chrome/browser API imports', () => {
+    // #given
+    const content = readFileSync('lib/bookmark-backup.ts', 'utf-8');
+
+    // #then
+    expect(content).not.toMatch(/chrome\.(bookmarks|tabs|storage|runtime)/);
+    expect(content).not.toMatch(/import.*from\s+['"]react/);
+    expect(content).not.toMatch(/import.*from\s+['"]wxt\/browser/);
+  });
 });

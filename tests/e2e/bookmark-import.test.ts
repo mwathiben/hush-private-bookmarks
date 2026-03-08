@@ -514,3 +514,172 @@ test.describe('IMPORT-003: Encrypted backup E2E', () => {
     await page.close();
   });
 });
+
+test.describe('IMPORT-004: Edge cases E2E', () => {
+  test('data: and javascript: URLs preserved through real DOMParser', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #given — HTML with data: and javascript: URLs
+    const result = await page.evaluate(() => {
+      const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+  <DT><A HREF="data:text/html,<h1>Hello</h1>" ADD_DATE="1700000000">Data Link</A>
+  <DT><A HREF="javascript:void(0)" ADD_DATE="1700000000">JS Link</A>
+</DL>`;
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const anchors = doc.querySelectorAll('a');
+      return Array.from(anchors).map(a => ({
+        href: a.getAttribute('href'),
+        title: a.textContent?.trim(),
+      }));
+    });
+
+    // #then
+    expect(result).toHaveLength(2);
+    expect(result[0]?.href).toBe('data:text/html,<h1>Hello</h1>');
+    expect(result[0]?.title).toBe('Data Link');
+    expect(result[1]?.href).toBe('javascript:void(0)');
+    expect(result[1]?.title).toBe('JS Link');
+    await page.close();
+  });
+
+  test('deeply nested folders (10 levels) preserve hierarchy in real DOMParser', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #given — 10-level nested DL/DT structure
+    const result = await page.evaluate(() => {
+      let inner = '<DT><A HREF="https://example.com/leaf" ADD_DATE="1700000000">Leaf</A>';
+      for (let d = 9; d >= 0; d--) {
+        inner = `<DT><H3 ADD_DATE="1700000000">Level ${d}</H3>\n<DL><p>\n${inner}\n</DL>`;
+      }
+      const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<DL><p>\n${inner}\n</DL>`;
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      const names: string[] = [];
+      let dl: Element | null = doc.querySelector('dl');
+      for (let d = 0; d < 10; d++) {
+        if (!dl) break;
+        const dt = dl.querySelector(':scope > dt');
+        const h3 = dt?.querySelector(':scope > h3');
+        if (h3) names.push(h3.textContent?.trim() ?? '');
+        dl = dt?.querySelector(':scope > dl') ?? null;
+      }
+
+      const leafAnchor = dl?.querySelector(':scope > dt > a');
+      return { names, leafHref: leafAnchor?.getAttribute('href'), leafTitle: leafAnchor?.textContent?.trim() };
+    });
+
+    // #then
+    expect(result.names).toHaveLength(10);
+    for (let d = 0; d < 10; d++) {
+      expect(result.names[d]).toBe(`Level ${d}`);
+    }
+    expect(result.leafHref).toBe('https://example.com/leaf');
+    expect(result.leafTitle).toBe('Leaf');
+    await page.close();
+  });
+
+  test('backup roundtrip with complex tree preserves special characters', async ({ context, extensionId }) => {
+    test.setTimeout(60_000);
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    // #given — complex tree with Unicode, &amp;, data: URLs, 5-level nesting
+    const result = await page.evaluate(async () => {
+      const password = 'test-password-123';
+      const iterations = 1000;
+
+      async function deriveKey(pwd: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
+        const enc = new TextEncoder();
+        const baseKey = await crypto.subtle.importKey('raw', enc.encode(pwd), 'PBKDF2', false, ['deriveKey']);
+        return crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+          baseKey,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt'],
+        );
+      }
+
+      function uint8ToBase64(bytes: Uint8Array<ArrayBuffer>): string {
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]!);
+        }
+        return btoa(binary);
+      }
+      function base64ToUint8Array(b64: string): Uint8Array<ArrayBuffer> {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      const tree = {
+        type: 'folder', id: 'root', name: 'Root', dateAdded: 1,
+        children: [
+          { type: 'bookmark', id: 'b1', title: 'Ünïcödé & Spëcîäl <chars>', url: 'data:text/html,<h1>Hi</h1>', dateAdded: 1 },
+          {
+            type: 'folder', id: 'f1', name: '日本語フォルダ', dateAdded: 1,
+            children: [{
+              type: 'folder', id: 'f2', name: 'Level 2', dateAdded: 1,
+              children: [{
+                type: 'folder', id: 'f3', name: 'Level 3', dateAdded: 1,
+                children: [{
+                  type: 'folder', id: 'f4', name: 'Level 4', dateAdded: 1,
+                  children: [{
+                    type: 'bookmark', id: 'deep', title: 'Deep Link', url: 'https://example.com/deep?a=1&b=2', dateAdded: 1,
+                  }],
+                }],
+              }],
+            }],
+          },
+        ],
+      };
+
+      const plaintext = JSON.stringify(tree);
+      const encoder = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(password, salt);
+      const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, encoder.encode(plaintext));
+
+      const store = {
+        salt: uint8ToBase64(salt),
+        iv: uint8ToBase64(iv),
+        encrypted: uint8ToBase64(new Uint8Array(ciphertext)),
+        iterations,
+      };
+      const envelope = JSON.stringify({ version: 1, store });
+
+      const parsed = JSON.parse(envelope);
+      const s = parsed.store;
+      const decSalt = base64ToUint8Array(s.salt);
+      const decIv = base64ToUint8Array(s.iv);
+      const decEncrypted = base64ToUint8Array(s.encrypted);
+      const decKey = await deriveKey(password, decSalt);
+      const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decIv, tagLength: 128 }, decKey, decEncrypted);
+      const recovered = JSON.parse(new TextDecoder().decode(decrypted));
+
+      return {
+        unicodeTitle: recovered.children[0].title,
+        unicodeUrl: recovered.children[0].url,
+        japaneseName: recovered.children[1].name,
+        deepUrl: recovered.children[1].children[0].children[0].children[0].children[0].url,
+        deepTitle: recovered.children[1].children[0].children[0].children[0].children[0].title,
+      };
+    });
+
+    // #then
+    expect(result.unicodeTitle).toBe('Ünïcödé & Spëcîäl <chars>');
+    expect(result.unicodeUrl).toBe('data:text/html,<h1>Hi</h1>');
+    expect(result.japaneseName).toBe('日本語フォルダ');
+    expect(result.deepUrl).toBe('https://example.com/deep?a=1&b=2');
+    expect(result.deepTitle).toBe('Deep Link');
+    await page.close();
+  });
+});
