@@ -173,7 +173,7 @@ function walkDl(dl: Element, depth: number, errors: string[]): BookmarkNode[] {
 
 export function parseHtmlBookmarks(html: string): ImportResult {
   if (typeof html !== 'string' || html.length === 0) {
-    return importSuccess([], []);
+    return importFail('Invalid input: expected non-empty HTML string', 'html', 'netscape-html');
   }
   if (html.length > MAX_HTML_SIZE) {
     return importFail('HTML file exceeds 5MB size limit', 'html', 'netscape-html');

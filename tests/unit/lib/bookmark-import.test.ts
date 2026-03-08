@@ -666,16 +666,16 @@ describe('IMPORT-002: Parse HTML bookmark files', () => {
   });
 
   describe('edge cases', () => {
-    it('returns empty tree for empty string', () => {
+    it('returns ImportError for empty string', () => {
       // #when
       const result = parseHtmlBookmarks('');
 
       // #then
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-      expect(result.data.tree.children).toHaveLength(0);
-      expect(result.data.stats.bookmarksImported).toBe(0);
-      expect(result.data.stats.foldersImported).toBe(0);
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(result.error).toBeInstanceOf(ImportError);
+      expect(result.error.context.source).toBe('html');
+      expect(result.error.context.format).toBe('netscape-html');
     });
 
     it('returns ImportError for HTML with no DL structure', () => {
