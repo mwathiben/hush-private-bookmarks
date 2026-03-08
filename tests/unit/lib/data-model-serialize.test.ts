@@ -298,14 +298,19 @@ describe('DATAMODEL-005: JSON serialization & normalizeTree', () => {
       }
       // #when
       const normalized = normalizeTree(root as unknown as BookmarkTree);
-      // #then — walk the normalized tree to find the deepest node
+      // #then — walk the normalized tree; nodes beyond MAX_TREE_DEPTH keep no ID
+      // normalizeTree calls normalizeNode(child, 0) for root's children,
+      // so traversal depth is offset by 1 from normalizeNode's internal depth.
       let node = normalized;
       let depth = 0;
       while (node.children.length > 0 && depth < MAX_TREE_DEPTH + 5) {
         const child = node.children[0]!;
         if (child.type !== 'folder') break;
-        node = child;
         depth++;
+        node = child;
+        if (depth > MAX_TREE_DEPTH + 1) {
+          expect(node.id).toBeUndefined();
+        }
       }
       expect(depth).toBe(MAX_TREE_DEPTH + 3);
     });
