@@ -77,9 +77,12 @@ import {
   MAX_TREE_DEPTH,
 } from '@/lib/data-model';
 
+import { convertChromeBookmarks } from '@/lib/bookmark-import';
+import type { ChromeBookmarkTreeNode, ImportStats } from '@/lib/bookmark-import';
+
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -172,6 +175,14 @@ describe('scaffold integration: lib/ imports resolve', () => {
   it('cn utility merges classes', () => {
     expect(cn('px-2', 'px-4')).toBe('px-4');
     expect(cn('text-red-500', 'text-blue-500')).toBe('text-blue-500');
+  });
+
+  it('bookmark-import exports are callable', () => {
+    expect(typeof convertChromeBookmarks).toBe('function');
+    const node: ChromeBookmarkTreeNode = { id: '1', title: 'test' };
+    expect(node.id).toBe('1');
+    const stats: ImportStats = { bookmarksImported: 0, foldersImported: 0, errors: [] };
+    expect(stats.bookmarksImported).toBe(0);
   });
 });
 
@@ -311,7 +322,7 @@ describe('scaffold integration: error class properties', () => {
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(7);
+    expect(LIB_MODULES).toHaveLength(8);
   });
 });
 
