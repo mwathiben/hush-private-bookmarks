@@ -42,7 +42,9 @@ export function validateManifest(data: unknown): data is PasswordSetManifest {
   if (typeof o['version'] !== 'number' || !Number.isInteger(o['version'])) return false;
   if (typeof o['activeSetId'] !== 'string' || o['activeSetId'] === '') return false;
   if (!Array.isArray(o['sets']) || !o['sets'].every(isValidSetInfo)) return false;
-  return o['sets'].some((s: Record<string, unknown>) => s['id'] === o['activeSetId']);
+  const sets = o['sets'] as Record<string, unknown>[];
+  if (sets.filter(s => s['isDefault'] === true).length !== 1) return false;
+  return sets.some(s => s['id'] === o['activeSetId']);
 }
 
 function createDefaultManifest(): PasswordSetManifest {
@@ -109,7 +111,7 @@ export async function createSet(name: string): Promise<Result<PasswordSetInfo, S
   if (!r.success) return r;
   const now = Date.now();
   const newSet: PasswordSetInfo = {
-    id: generateId(), name, createdAt: now, lastAccessedAt: now, isDefault: false,
+    id: generateId(), name: name.trim(), createdAt: now, lastAccessedAt: now, isDefault: false,
   };
   const saveResult = await saveManifest({ ...r.data, sets: [...r.data.sets, newSet] });
   if (!saveResult.success) return saveResult;
@@ -130,7 +132,10 @@ export async function deleteSet(id: string): Promise<Result<void, StorageError>>
     return fail('Cannot delete the default set', { operation: 'delete', reason: 'write_failed' });
   }
   const defaultSet = manifest.sets.find(s => s.isDefault);
-  const activeSetId = manifest.activeSetId === id ? defaultSet!.id : manifest.activeSetId;
+  if (!defaultSet) {
+    return fail('Manifest missing default set', { operation: 'delete', reason: 'corrupted' });
+  }
+  const activeSetId = manifest.activeSetId === id ? defaultSet.id : manifest.activeSetId;
   const saveResult = await saveManifest({
     ...manifest, sets: manifest.sets.filter(s => s.id !== id), activeSetId,
   });
@@ -152,7 +157,7 @@ export async function renameSet(id: string, name: string): Promise<Result<void, 
   const r = await findSet(id);
   if (!r.success) return r;
   return saveManifest({
-    ...r.data.manifest, sets: r.data.manifest.sets.map(s => s.id === id ? { ...s, name } : s),
+    ...r.data.manifest, sets: r.data.manifest.sets.map(s => s.id === id ? { ...s, name: name.trim() } : s),
   });
 }
 
