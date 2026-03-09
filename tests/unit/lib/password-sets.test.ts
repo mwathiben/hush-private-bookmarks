@@ -169,14 +169,12 @@ describe('PWSET-001: deleteSet', () => {
     expect(created.success).toBe(true);
     if (!created.success) return;
 
-    // manually set activeSetId to the new set
     const defaultSet = manifest.data.sets[0]!;
+    // createSet already persisted the manifest; only flip activeSetId
+    const afterCreate = await loadManifest();
+    if (!afterCreate.success) return;
     await browser.storage.local.set({
-      hush_manifest: {
-        sets: [...manifest.data.sets, created.data],
-        activeSetId: created.data.id,
-        version: manifest.data.version,
-      },
+      hush_manifest: { ...afterCreate.data, activeSetId: created.data.id },
     });
 
     // #when — deleting the active non-default set
