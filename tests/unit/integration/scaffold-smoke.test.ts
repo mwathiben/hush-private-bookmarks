@@ -91,6 +91,11 @@ import {
   deleteSet,
   renameSet,
   listSets,
+  saveSetData,
+  loadSetData,
+  hasSetData,
+  getActiveSetId,
+  setActiveSetId,
 } from '@/lib/password-sets';
 
 const ROOT = resolve(process.cwd());
@@ -215,6 +220,11 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof deleteSet).toBe('function');
     expect(typeof renameSet).toBe('function');
     expect(typeof listSets).toBe('function');
+    expect(typeof saveSetData).toBe('function');
+    expect(typeof loadSetData).toBe('function');
+    expect(typeof hasSetData).toBe('function');
+    expect(typeof getActiveSetId).toBe('function');
+    expect(typeof setActiveSetId).toBe('function');
     expect(MANIFEST_VERSION).toBe(1);
   });
 });
@@ -428,6 +438,27 @@ describe('scaffold integration: architecture constraints', () => {
   it('data-model.ts is within 300-line limit', () => {
     const lines = readFileSync(resolve(ROOT, 'lib', 'data-model.ts'), 'utf-8').split('\n').length;
     expect(lines).toBeLessThanOrEqual(300);
+  });
+
+  it('password-sets.ts is within 250-line limit', () => {
+    const lines = readFileSync(resolve(ROOT, 'lib', 'password-sets.ts'), 'utf-8').split('\n').length;
+    expect(lines).toBeLessThanOrEqual(250);
+  });
+
+  it('password-sets.ts functions are within 50-line limit', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'password-sets.ts'), 'utf-8');
+    const lines = content.split('\n');
+    const funcStarts: Array<{ name: string; line: number }> = [];
+    for (let i = 0; i < lines.length; i++) {
+      const funcMatch = lines[i]!.match(/^(?:export\s+)?(?:async\s+)?function\s+(\w+)/);
+      if (funcMatch) funcStarts.push({ name: funcMatch[1]!, line: i });
+    }
+    for (let f = 0; f < funcStarts.length; f++) {
+      const start = funcStarts[f]!.line;
+      const end = f + 1 < funcStarts.length ? funcStarts[f + 1]!.line : lines.length;
+      const funcLines = end - start;
+      expect(funcLines).toBeLessThanOrEqual(50);
+    }
   });
 
   it('data-model.ts functions are within 50-line limit', () => {

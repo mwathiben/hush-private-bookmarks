@@ -528,3 +528,133 @@ describe('PWSET-003: lastAccessedAt tracking', { timeout: 120_000 }, () => {
     }
   });
 });
+
+describe('PWSET-004: manifest persistence', () => {
+  it('manifest survives save/load cycle', async () => {
+    // #given — fresh manifest with one created set
+    await loadManifest();
+    const created = await createSet('Persisted');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    // #when — reloading manifest
+    const reloaded = await loadManifest();
+
+    // #then — created set is still present
+    expect(reloaded.success).toBe(true);
+    if (!reloaded.success) return;
+    expect(reloaded.data.sets.find(s => s.id === created.data.id)).toBeDefined();
+    expect(reloaded.data.sets.find(s => s.id === created.data.id)!.name).toBe('Persisted');
+  });
+
+  it('multiple sets persist across reloads', async () => {
+    // #given — 3 sets created
+    await loadManifest();
+    const a = await createSet('Alpha');
+    const b = await createSet('Beta');
+    const c = await createSet('Gamma');
+    expect(a.success && b.success && c.success).toBe(true);
+
+    // #when — reloading manifest
+    const reloaded = await loadManifest();
+
+    // #then — all 3 present with correct names (+ default = 4 total)
+    expect(reloaded.success).toBe(true);
+    if (!reloaded.success) return;
+    expect(reloaded.data.sets).toHaveLength(4);
+    expect(reloaded.data.sets.map(s => s.name)).toContain('Alpha');
+    expect(reloaded.data.sets.map(s => s.name)).toContain('Beta');
+    expect(reloaded.data.sets.map(s => s.name)).toContain('Gamma');
+  });
+});
+
+describe('PWSET-004: multi-set lifecycle', { timeout: 120_000 }, () => {
+  it('create 3 sets, save data, delete middle, verify remaining', async () => {
+    // #given — 3 sets with encrypted data
+    await loadManifest();
+    const a = await createSet('SetA');
+    const b = await createSet('SetB');
+    const c = await createSet('SetC');
+    expect(a.success && b.success && c.success).toBe(true);
+    if (!a.success || !b.success || !c.success) return;
+
+    const pw = 'test-password-123';
+    await saveSetData(a.data.id, 'data-a', pw);
+    await saveSetData(b.data.id, 'data-b', pw);
+    await saveSetData(c.data.id, 'data-c', pw);
+
+    // #when — delete middle set
+    const delResult = await deleteSet(b.data.id);
+    expect(delResult.success).toBe(true);
+
+    // #then — A and C data intact, B gone
+    const loadA = await loadSetData(a.data.id, pw);
+    expect(loadA.success).toBe(true);
+    if (loadA.success) expect(loadA.data).toBe('data-a');
+
+    const loadC = await loadSetData(c.data.id, pw);
+    expect(loadC.success).toBe(true);
+    if (loadC.success) expect(loadC.data).toBe('data-c');
+
+    const hasB = await hasSetData(b.data.id);
+    expect(hasB.success).toBe(false);
+  });
+
+  it('rename set preserves encrypted data', async () => {
+    // #given — a set with encrypted data
+    await loadManifest();
+    const created = await createSet('Original');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    const pw = 'rename-pw-456';
+    await saveSetData(created.data.id, 'preserved-data', pw);
+
+    // #when — renaming the set
+    const renameResult = await renameSet(created.data.id, 'Renamed');
+    expect(renameResult.success).toBe(true);
+
+    // #then — data still decryptable with same password
+    const loaded = await loadSetData(created.data.id, pw);
+    expect(loaded.success).toBe(true);
+    if (loaded.success) expect(loaded.data).toBe('preserved-data');
+  });
+
+  it('deleteSet does not affect other sets data', async () => {
+    // #given — 2 sets with data
+    await loadManifest();
+    const a = await createSet('Keep');
+    const b = await createSet('Delete');
+    expect(a.success && b.success).toBe(true);
+    if (!a.success || !b.success) return;
+
+    const pw = 'isolation-test';
+    await saveSetData(a.data.id, 'keep-me', pw);
+    await saveSetData(b.data.id, 'delete-me', pw);
+
+    // #when — deleting B
+    await deleteSet(b.data.id);
+
+    // #then — A data intact
+    const loadA = await loadSetData(a.data.id, pw);
+    expect(loadA.success).toBe(true);
+    if (loadA.success) expect(loadA.data).toBe('keep-me');
+  });
+});
+
+describe('PWSET-004: edge cases', () => {
+  it('hasSetData returns not_found for non-existent set', async () => {
+    // #given — fresh manifest
+    await loadManifest();
+
+    // #when — checking data for bogus ID
+    const result = await hasSetData('non-existent-id');
+
+    // #then — StorageError with not_found
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(StorageError);
+      expect((result.error as StorageError).context.reason).toBe('not_found');
+    }
+  });
+});

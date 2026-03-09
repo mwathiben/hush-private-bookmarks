@@ -21,72 +21,46 @@ export const MANIFEST_KEY = 'hush_manifest';
 export const MANIFEST_VERSION = 1;
 
 export function setStorageKey(id: string, isDefault: boolean): string {
-  if (isDefault) return STORAGE_KEY;
-  return `hush_set_${id}`;
+  return isDefault ? STORAGE_KEY : `hush_set_${id}`;
 }
 
 function isValidSetInfo(data: unknown): boolean {
   if (data === null || typeof data !== 'object') return false;
-  const obj = data as Record<string, unknown>;
-  const id = obj['id'];
-  const name = obj['name'];
-  const createdAt = obj['createdAt'];
-  const lastAccessedAt = obj['lastAccessedAt'];
-  const isDefault = obj['isDefault'];
+  const o = data as Record<string, unknown>;
   return (
-    typeof id === 'string' && id !== '' &&
-    typeof name === 'string' && name !== '' &&
-    typeof createdAt === 'number' && Number.isInteger(createdAt) &&
-    typeof lastAccessedAt === 'number' && Number.isInteger(lastAccessedAt) &&
-    typeof isDefault === 'boolean'
+    typeof o['id'] === 'string' && o['id'] !== '' &&
+    typeof o['name'] === 'string' && o['name'] !== '' &&
+    typeof o['createdAt'] === 'number' && Number.isInteger(o['createdAt']) &&
+    typeof o['lastAccessedAt'] === 'number' && Number.isInteger(o['lastAccessedAt']) &&
+    typeof o['isDefault'] === 'boolean'
   );
 }
 
 export function validateManifest(data: unknown): data is PasswordSetManifest {
   if (data === null || typeof data !== 'object') return false;
-  const obj = data as Record<string, unknown>;
-  const version = obj['version'];
-  const activeSetId = obj['activeSetId'];
-  const sets = obj['sets'];
-  if (typeof version !== 'number' || !Number.isInteger(version)) return false;
-  if (typeof activeSetId !== 'string' || activeSetId === '') return false;
-  if (!Array.isArray(sets)) return false;
-  for (const set of sets) {
-    if (!isValidSetInfo(set)) return false;
-  }
-  const hasActiveSet = sets.some(
-    (s: Record<string, unknown>) => s['id'] === activeSetId,
-  );
-  return hasActiveSet;
+  const o = data as Record<string, unknown>;
+  if (typeof o['version'] !== 'number' || !Number.isInteger(o['version'])) return false;
+  if (typeof o['activeSetId'] !== 'string' || o['activeSetId'] === '') return false;
+  if (!Array.isArray(o['sets']) || !o['sets'].every(isValidSetInfo)) return false;
+  return o['sets'].some((s: Record<string, unknown>) => s['id'] === o['activeSetId']);
 }
 
 function createDefaultManifest(): PasswordSetManifest {
   const now = Date.now();
   const id = generateId();
-  const defaultSet: PasswordSetInfo = {
-    id,
-    name: 'Default',
-    createdAt: now,
-    lastAccessedAt: now,
-    isDefault: true,
+  return {
+    sets: [{ id, name: 'Default', createdAt: now, lastAccessedAt: now, isDefault: true }],
+    activeSetId: id, version: MANIFEST_VERSION,
   };
-  return { sets: [defaultSet], activeSetId: id, version: MANIFEST_VERSION };
 }
 
 function fail(
-  message: string,
-  context: StorageErrorContext,
-  options?: ErrorOptions,
+  message: string, context: StorageErrorContext, options?: ErrorOptions,
 ): Result<never, StorageError> {
-  return {
-    success: false,
-    error: new StorageError(message, { key: MANIFEST_KEY, ...context }, options),
-  };
+  return { success: false, error: new StorageError(message, { key: MANIFEST_KEY, ...context }, options) };
 }
 
-async function saveManifest(
-  manifest: PasswordSetManifest,
-): Promise<Result<void, StorageError>> {
+async function saveManifest(manifest: PasswordSetManifest): Promise<Result<void, StorageError>> {
   try {
     await browser.storage.local.set({ [MANIFEST_KEY]: manifest });
     return { success: true, data: undefined };
@@ -104,7 +78,6 @@ export async function loadManifest(): Promise<Result<PasswordSetManifest, Storag
     return fail('Failed to read manifest', { operation: 'read', reason: 'read_failed' },
       { cause: new Error('Storage read failed') });
   }
-
   const stored = raw[MANIFEST_KEY];
   if (stored == null) {
     const manifest = createDefaultManifest();
@@ -112,147 +85,97 @@ export async function loadManifest(): Promise<Result<PasswordSetManifest, Storag
     if (!saveResult.success) return saveResult;
     return { success: true, data: manifest };
   }
-
   if (!validateManifest(stored)) {
     return fail('Manifest data is corrupted', { operation: 'read', reason: 'corrupted' });
   }
-
   return { success: true, data: stored };
 }
 
-function isNameValid(name: string): boolean {
-  return name.trim() !== '';
+async function findSet(
+  id: string,
+): Promise<Result<{ manifest: PasswordSetManifest; set: PasswordSetInfo }, StorageError>> {
+  const r = await loadManifest();
+  if (!r.success) return r;
+  const set = r.data.sets.find(s => s.id === id);
+  if (!set) return fail('Set not found', { operation: 'read', reason: 'not_found' });
+  return { success: true, data: { manifest: r.data, set } };
 }
 
-export async function createSet(
-  name: string,
-): Promise<Result<PasswordSetInfo, StorageError>> {
-  if (!isNameValid(name)) {
+export async function createSet(name: string): Promise<Result<PasswordSetInfo, StorageError>> {
+  if (name.trim() === '') {
     return fail('Set name cannot be empty', { operation: 'write', reason: 'write_failed' });
   }
-
-  const manifestResult = await loadManifest();
-  if (!manifestResult.success) return manifestResult;
-
+  const r = await loadManifest();
+  if (!r.success) return r;
   const now = Date.now();
   const newSet: PasswordSetInfo = {
-    id: generateId(),
-    name,
-    createdAt: now,
-    lastAccessedAt: now,
-    isDefault: false,
+    id: generateId(), name, createdAt: now, lastAccessedAt: now, isDefault: false,
   };
-
-  const updated: PasswordSetManifest = {
-    ...manifestResult.data,
-    sets: [...manifestResult.data.sets, newSet],
-  };
-
-  const saveResult = await saveManifest(updated);
+  const saveResult = await saveManifest({ ...r.data, sets: [...r.data.sets, newSet] });
   if (!saveResult.success) return saveResult;
   return { success: true, data: newSet };
 }
 
 export async function listSets(): Promise<Result<readonly PasswordSetInfo[], StorageError>> {
-  const manifestResult = await loadManifest();
-  if (!manifestResult.success) return manifestResult;
-  return { success: true, data: manifestResult.data.sets };
+  const r = await loadManifest();
+  if (!r.success) return r;
+  return { success: true, data: r.data.sets };
 }
 
-export async function deleteSet(
-  id: string,
-): Promise<Result<void, StorageError>> {
-  const manifestResult = await loadManifest();
-  if (!manifestResult.success) return manifestResult;
-
-  const target = manifestResult.data.sets.find(s => s.id === id);
-  if (!target) {
-    return fail('Set not found', { operation: 'read', reason: 'not_found' });
-  }
-  if (target.isDefault) {
+export async function deleteSet(id: string): Promise<Result<void, StorageError>> {
+  const r = await findSet(id);
+  if (!r.success) return r;
+  const { manifest, set } = r.data;
+  if (set.isDefault) {
     return fail('Cannot delete the default set', { operation: 'delete', reason: 'write_failed' });
   }
-
-  const defaultSet = manifestResult.data.sets.find(s => s.isDefault);
-  const newActiveSetId = manifestResult.data.activeSetId === id
-    ? defaultSet!.id
-    : manifestResult.data.activeSetId;
-
-  const updated: PasswordSetManifest = {
-    ...manifestResult.data,
-    sets: manifestResult.data.sets.filter(s => s.id !== id),
-    activeSetId: newActiveSetId,
-  };
-
-  const saveResult = await saveManifest(updated);
+  const defaultSet = manifest.sets.find(s => s.isDefault);
+  const activeSetId = manifest.activeSetId === id ? defaultSet!.id : manifest.activeSetId;
+  const saveResult = await saveManifest({
+    ...manifest, sets: manifest.sets.filter(s => s.id !== id), activeSetId,
+  });
   if (!saveResult.success) return saveResult;
-
-  const storageKey = setStorageKey(id, false);
+  const key = setStorageKey(id, false);
   try {
-    await browser.storage.local.remove(storageKey);
+    await browser.storage.local.remove(key);
   } catch {
-    return fail('Failed to remove set data', { key: storageKey, operation: 'delete', reason: 'write_failed' },
+    return fail('Failed to remove set data', { key, operation: 'delete', reason: 'write_failed' },
       { cause: new Error('Storage delete failed') });
   }
-
   return { success: true, data: undefined };
 }
 
-export async function renameSet(
-  id: string,
-  name: string,
-): Promise<Result<void, StorageError>> {
-  if (!isNameValid(name)) {
+export async function renameSet(id: string, name: string): Promise<Result<void, StorageError>> {
+  if (name.trim() === '') {
     return fail('Set name cannot be empty', { operation: 'write', reason: 'write_failed' });
   }
-
-  const manifestResult = await loadManifest();
-  if (!manifestResult.success) return manifestResult;
-
-  const target = manifestResult.data.sets.find(s => s.id === id);
-  if (!target) {
-    return fail('Set not found', { operation: 'read', reason: 'not_found' });
-  }
-
-  const updated: PasswordSetManifest = {
-    ...manifestResult.data,
-    sets: manifestResult.data.sets.map(s =>
-      s.id === id ? { ...s, name } : s,
-    ),
-  };
-
-  return saveManifest(updated);
+  const r = await findSet(id);
+  if (!r.success) return r;
+  return saveManifest({
+    ...r.data.manifest, sets: r.data.manifest.sets.map(s => s.id === id ? { ...s, name } : s),
+  });
 }
 
 export async function getActiveSetId(): Promise<Result<string, StorageError>> {
-  const manifestResult = await loadManifest();
-  if (!manifestResult.success) return manifestResult;
-  return { success: true, data: manifestResult.data.activeSetId };
+  const r = await loadManifest();
+  if (!r.success) return r;
+  return { success: true, data: r.data.activeSetId };
 }
 
-export async function setActiveSetId(
-  id: string,
-): Promise<Result<void, StorageError>> {
-  const manifestResult = await loadManifest();
-  if (!manifestResult.success) return manifestResult;
-  if (!manifestResult.data.sets.some(s => s.id === id)) {
-    return fail('Set not found', { operation: 'read', reason: 'not_found' });
-  }
-  return saveManifest({ ...manifestResult.data, activeSetId: id });
+export async function setActiveSetId(id: string): Promise<Result<void, StorageError>> {
+  const r = await findSet(id);
+  if (!r.success) return r;
+  return saveManifest({ ...r.data.manifest, activeSetId: id });
 }
 
 async function resolveStorageKey(id: string): Promise<Result<string, StorageError>> {
-  const manifestResult = await loadManifest();
-  if (!manifestResult.success) return manifestResult;
-  const set = manifestResult.data.sets.find(s => s.id === id);
-  if (!set) return fail('Set not found', { operation: 'read', reason: 'not_found' });
-  return { success: true, data: setStorageKey(set.id, set.isDefault) };
+  const r = await findSet(id);
+  if (!r.success) return r;
+  return { success: true, data: setStorageKey(r.data.set.id, r.data.set.isDefault) };
 }
 
 export async function saveSetData(
-  id: string,
-  plaintext: string,
-  password: string,
+  id: string, plaintext: string, password: string,
 ): Promise<Result<void, StorageError>> {
   const keyResult = await resolveStorageKey(id);
   if (!keyResult.success) return keyResult;
@@ -268,52 +191,41 @@ export async function saveSetData(
 }
 
 export async function loadSetData(
-  id: string,
-  password: string,
+  id: string, password: string,
 ): Promise<Result<string, StorageError | InvalidPasswordError>> {
   const keyResult = await resolveStorageKey(id);
   if (!keyResult.success) return keyResult;
   const key = keyResult.data;
-
   let raw: Record<string, unknown>;
   try {
     raw = await browser.storage.local.get(key);
   } catch {
-    return fail('Failed to read set data',
-      { key, operation: 'read', reason: 'read_failed' });
+    return fail('Failed to read set data', { key, operation: 'read', reason: 'read_failed' });
   }
-
   const stored = raw[key];
-  if (stored == null) {
-    return fail('No data for set', { key, operation: 'read', reason: 'not_found' });
-  }
+  if (stored == null) return fail('No data for set', { key, operation: 'read', reason: 'not_found' });
   if (!validateEncryptedStore(stored)) {
     return fail('Set data is corrupted', { key, operation: 'read', reason: 'corrupted' });
   }
-
   try {
     const plaintext = await decrypt(stored, password);
     const freshManifest = await loadManifest();
     if (freshManifest.success) {
-      const updatedSets = freshManifest.data.sets.map(s =>
+      const sets = freshManifest.data.sets.map(s =>
         s.id === id ? { ...s, lastAccessedAt: Date.now() } : s,
       );
-      void await saveManifest({ ...freshManifest.data, sets: updatedSets });
+      void await saveManifest({ ...freshManifest.data, sets });
     }
     return { success: true, data: plaintext };
   } catch (error: unknown) {
-    if (error instanceof InvalidPasswordError) {
-      return { success: false, error };
-    }
+    if (error instanceof InvalidPasswordError) return { success: false, error };
     const reason = error instanceof DecryptionError ? 'corrupted' as const : 'read_failed' as const;
     return fail('Decryption failed', { key, operation: 'read', reason },
       { cause: error instanceof Error ? error : undefined });
   }
 }
 
-export async function hasSetData(
-  id: string,
-): Promise<Result<boolean, StorageError>> {
+export async function hasSetData(id: string): Promise<Result<boolean, StorageError>> {
   const keyResult = await resolveStorageKey(id);
   if (!keyResult.success) return keyResult;
   try {
