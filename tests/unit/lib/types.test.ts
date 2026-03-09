@@ -7,7 +7,8 @@ import type {
   BookmarkNode,
   BookmarkTree,
   EncryptedStore,
-  PasswordSet,
+  PasswordSetInfo,
+  PasswordSetManifest,
   RecoveryPhrase,
   CryptoConfig,
   Result,
@@ -198,18 +199,37 @@ describe('EncryptedStore', () => {
   });
 });
 
-describe('PasswordSet', () => {
-  it('accepts valid password set with EncryptedStore', () => {
-    const store: EncryptedStore = { salt: 's', encrypted: 'e', iv: 'i', iterations: 600_000 };
-    const ps: PasswordSet = {
+describe('PasswordSetInfo', () => {
+  it('accepts valid password set info', () => {
+    const info: PasswordSetInfo = {
       id: 'ps-1',
       name: 'Default',
-      store,
       createdAt: Date.now(),
+      lastAccessedAt: Date.now(),
+      isDefault: true,
     };
-    expect(ps.name).toBe('Default');
-    expect(ps.store).toBe(store);
-    expect(ps.store.iterations).toBe(600_000);
+    expect(info.name).toBe('Default');
+    expect(info.isDefault).toBe(true);
+  });
+});
+
+describe('PasswordSetManifest', () => {
+  it('accepts valid manifest with sets and activeSetId', () => {
+    const info: PasswordSetInfo = {
+      id: 'ps-1',
+      name: 'Default',
+      createdAt: Date.now(),
+      lastAccessedAt: Date.now(),
+      isDefault: true,
+    };
+    const manifest: PasswordSetManifest = {
+      sets: [info],
+      activeSetId: 'ps-1',
+      version: 1,
+    };
+    expect(manifest.sets).toHaveLength(1);
+    expect(manifest.activeSetId).toBe('ps-1');
+    expect(manifest.version).toBe(1);
   });
 });
 

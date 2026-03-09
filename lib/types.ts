@@ -44,12 +44,20 @@ export interface EncryptedStore {
   readonly iterations: number;
 }
 
-/** Named encrypted collection. Entirely new to Hush (Holy PB is single password/blob). */
-export interface PasswordSet {
+/** Metadata for one password set. Stored in the manifest, never encrypted. */
+export interface PasswordSetInfo {
   readonly id: string;
   readonly name: string;
-  readonly store: EncryptedStore;
   readonly createdAt: number;
+  readonly lastAccessedAt: number;
+  readonly isDefault: boolean;
+}
+
+/** Tracks which password sets exist and which is active. Stored unencrypted. */
+export interface PasswordSetManifest {
+  readonly sets: readonly PasswordSetInfo[];
+  readonly activeSetId: string;
+  readonly version: number;
 }
 
 /** BIP-39 mnemonic recovery data. Entirely new to Hush (Holy PB has no recovery). */

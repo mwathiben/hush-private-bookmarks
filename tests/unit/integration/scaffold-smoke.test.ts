@@ -9,8 +9,8 @@ import type {
   Folder,
   BookmarkNode,
   BookmarkTree,
-  EncryptedStore,
-  PasswordSet,
+  PasswordSetInfo,
+  PasswordSetManifest,
   RecoveryPhrase,
   CryptoConfig,
   Result,
@@ -81,9 +81,21 @@ import { convertChromeBookmarks, parseHtmlBookmarks } from '@/lib/bookmark-impor
 import type { ChromeBookmarkTreeNode, ImportStats } from '@/lib/bookmark-import';
 import { BACKUP_VERSION, exportEncryptedBackup, importEncryptedBackup } from '@/lib/bookmark-backup';
 
+import {
+  MANIFEST_KEY,
+  MANIFEST_VERSION,
+  setStorageKey,
+  validateManifest,
+  loadManifest,
+  createSet,
+  deleteSet,
+  renameSet,
+  listSets,
+} from '@/lib/password-sets';
+
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -192,9 +204,22 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof importEncryptedBackup).toBe('function');
     expect(BACKUP_VERSION).toBe(1);
   });
+
+  it('password-sets exports are callable', () => {
+    expect(typeof MANIFEST_KEY).toBe('string');
+    expect(typeof MANIFEST_VERSION).toBe('number');
+    expect(typeof setStorageKey).toBe('function');
+    expect(typeof validateManifest).toBe('function');
+    expect(typeof loadManifest).toBe('function');
+    expect(typeof createSet).toBe('function');
+    expect(typeof deleteSet).toBe('function');
+    expect(typeof renameSet).toBe('function');
+    expect(typeof listSets).toBe('function');
+    expect(MANIFEST_VERSION).toBe(1);
+  });
 });
 
-const BROWSER_STORAGE_ALLOWED = new Set(['storage.ts']);
+const BROWSER_STORAGE_ALLOWED = new Set(['storage.ts', 'password-sets.ts']);
 
 describe('scaffold integration: lib/ module purity', () => {
   for (const mod of LIB_MODULES) {
@@ -230,15 +255,32 @@ describe('scaffold integration: lib/ module purity', () => {
 });
 
 describe('scaffold integration: type composition', () => {
-  it('PasswordSet.store is EncryptedStore', () => {
-    const store: EncryptedStore = {
-      salt: 's',
-      encrypted: 'e',
-      iv: 'i',
-      iterations: 600_000,
+  it('PasswordSetInfo has required fields', () => {
+    const info: PasswordSetInfo = {
+      id: '1',
+      name: 'Default',
+      createdAt: 0,
+      lastAccessedAt: 0,
+      isDefault: true,
     };
-    const ps: PasswordSet = { id: '1', name: 'n', store, createdAt: 0 };
-    expect(ps.store.iterations).toBe(600_000);
+    expect(info.isDefault).toBe(true);
+  });
+
+  it('PasswordSetManifest contains sets and activeSetId', () => {
+    const info: PasswordSetInfo = {
+      id: '1',
+      name: 'Default',
+      createdAt: 0,
+      lastAccessedAt: 0,
+      isDefault: true,
+    };
+    const manifest: PasswordSetManifest = {
+      sets: [info],
+      activeSetId: '1',
+      version: 1,
+    };
+    expect(manifest.sets).toHaveLength(1);
+    expect(manifest.version).toBe(1);
   });
 
   it('Folder.children accepts BookmarkNode[]', () => {
@@ -330,7 +372,7 @@ describe('scaffold integration: error class properties', () => {
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(9);
+    expect(LIB_MODULES).toHaveLength(10);
   });
 });
 
