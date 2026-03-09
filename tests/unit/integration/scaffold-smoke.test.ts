@@ -109,9 +109,17 @@ import {
   RECOVERY_KEY_PREFIX,
 } from '@/lib/recovery';
 
+import {
+  determineMode,
+  shouldAutoUnlock,
+  getIncognitoMessage,
+  INCOGNITO_MESSAGES,
+} from '@/lib/incognito';
+import type { IncognitoState, IncognitoMode, IncognitoConfig } from '@/lib/incognito';
+
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -248,6 +256,19 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof recoveryStorageKey).toBe('function');
     expect(typeof RECOVERY_KEY_PREFIX).toBe('string');
     expect(RECOVERY_KEY_PREFIX).toBe('hush_recovery_');
+  });
+
+  it('incognito exports are callable', () => {
+    expect(typeof determineMode).toBe('function');
+    expect(typeof shouldAutoUnlock).toBe('function');
+    expect(typeof getIncognitoMessage).toBe('function');
+    expect(INCOGNITO_MESSAGES).toBeDefined();
+    const state: IncognitoState = { isIncognitoContext: true, isAllowedIncognito: true };
+    const mode: IncognitoMode = 'incognito_active';
+    const config: IncognitoConfig = { autoUnlockInIncognito: true, showInNormalMode: true };
+    expect(state).toBeDefined();
+    expect(mode).toBeDefined();
+    expect(config).toBeDefined();
   });
 });
 
@@ -410,7 +431,7 @@ describe('scaffold integration: error class properties', () => {
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(11);
+    expect(LIB_MODULES).toHaveLength(12);
   });
 });
 
@@ -537,5 +558,26 @@ describe('scaffold integration: architecture constraints', () => {
       const funcLines = end - start;
       expect(funcLines).toBeLessThanOrEqual(50);
     }
+  });
+
+  it('incognito.ts is within 80-line limit', () => {
+    const lines = readFileSync(resolve(ROOT, 'lib', 'incognito.ts'), 'utf-8').split('\n').length;
+    expect(lines).toBeLessThanOrEqual(80);
+  });
+
+  it('incognito.ts has zero external dependencies', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'incognito.ts'), 'utf-8');
+    const importRegex = /from\s+['"]([^@./][^'"]*)['"]/g;
+    let match;
+    while ((match = importRegex.exec(content)) !== null) {
+      throw new Error(`Unexpected external dependency: ${match[1]}`);
+    }
+  });
+
+  it('incognito.ts has zero browser/chrome API imports', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'incognito.ts'), 'utf-8');
+    expect(content).not.toMatch(/from\s+['"]wxt\/browser['"]/);
+    expect(content).not.toContain('chrome.');
+    expect(content).not.toContain('browser.');
   });
 });

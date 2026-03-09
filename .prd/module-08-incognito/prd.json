@@ -55,7 +55,7 @@
             ],
             "definition_of_done": ["All 10 tests pass", "tsc clean", "eslint clean", "Zero browser imports"],
             "verification": "npx vitest run tests/unit/lib/incognito.test.ts && npx tsc --noEmit",
-            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": []
+            "estimated_effort": "small", "passes": true, "attempt_count": 1, "depends_on": []
         },
         {
             "id": "INCOGNITO-002", "category": "quality", "priority": "MEDIUM",
@@ -72,7 +72,7 @@
             "acceptance_criteria": ["LIB_MODULES = 10", "Coverage >= 90%", "≤ 80 lines", "ZERO browser API imports", "Zero regressions"],
             "definition_of_done": ["Full verification passes", "Zero regressions"],
             "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build",
-            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": ["INCOGNITO-001"]
+            "estimated_effort": "small", "passes": true, "attempt_count": 1, "depends_on": ["INCOGNITO-001"]
         }
     ],
     "starting_state": {
@@ -121,6 +121,6 @@
     "critical_path": "001 -> 002",
     "total_story_points": 8, "total_stories": 2,
     "progress_log": { "format_rules": { "file": "progress.md in .prd/module-08-incognito/", "format": "Append-only. ## INCOGNITO-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
-    "metadata": { "passing_stories": 0, "build_plan_day": "Day 3 (final third)", "estimated_test_count": "~12 tests", "session_protocol": "One Claude Code session. Small module. Generate incognito.ts + tests. Commit.", "quality_gate": "All tests pass. tsc clean. ZERO browser imports. Coverage >= 90%. ≤ 80 lines.", "human_review_required": "Verify ZERO browser API imports in lib/incognito.ts. Verify 'spanning' mode added to manifest before Module 9." },
+    "metadata": { "passing_stories": 2, "build_plan_day": "Day 3 (final third)", "estimated_test_count": "~12 tests", "session_protocol": "One Claude Code session. Small module. Generate incognito.ts + tests. Commit.", "quality_gate": "All tests pass. tsc clean. ZERO browser imports. Coverage >= 90%. ≤ 80 lines.", "human_review_required": "Verify ZERO browser API imports in lib/incognito.ts. Verify 'spanning' mode added to manifest before Module 9." },
     "execution_rules": { "execution_order": "INCOGNITO-001 → 002", "clarifying_questions": "Encouraged. This is a thin module — ask if the scope feels right.", "prd_scope": "Module 8 of 22.", "progress_logging": "Update prd.json + progress.md.", "commit_protocol": "feat(incognito): INCOGNITO-XXX — <title>", "failure_protocol": "Max 3 attempts." }
 }
