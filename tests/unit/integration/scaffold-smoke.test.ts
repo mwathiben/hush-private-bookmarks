@@ -21,9 +21,10 @@ import {
   InvalidPasswordError,
   StorageError,
   ImportError,
+  RecoveryError,
 } from '@/lib/errors';
 
-import type { StorageErrorContext, ImportErrorContext } from '@/lib/errors';
+import type { StorageErrorContext, ImportErrorContext, RecoveryErrorContext } from '@/lib/errors';
 
 import {
   SENTRY_DSN,
@@ -98,9 +99,19 @@ import {
   setActiveSetId,
 } from '@/lib/password-sets';
 
+import {
+  generateMnemonic,
+  validateMnemonic,
+  deriveRecoveryPassword,
+  createRecoveryBlob,
+  recoverFromBlob,
+  recoveryStorageKey,
+  RECOVERY_KEY_PREFIX,
+} from '@/lib/recovery';
+
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -226,6 +237,17 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof getActiveSetId).toBe('function');
     expect(typeof setActiveSetId).toBe('function');
     expect(MANIFEST_VERSION).toBe(1);
+  });
+
+  it('recovery exports are callable', () => {
+    expect(typeof generateMnemonic).toBe('function');
+    expect(typeof validateMnemonic).toBe('function');
+    expect(typeof deriveRecoveryPassword).toBe('function');
+    expect(typeof createRecoveryBlob).toBe('function');
+    expect(typeof recoverFromBlob).toBe('function');
+    expect(typeof recoveryStorageKey).toBe('function');
+    expect(typeof RECOVERY_KEY_PREFIX).toBe('string');
+    expect(RECOVERY_KEY_PREFIX).toBe('hush_recovery_');
   });
 });
 
@@ -358,6 +380,7 @@ describe('scaffold integration: error class properties', () => {
     expect(new InvalidPasswordError('x').name).toBe('InvalidPasswordError');
     expect(new StorageError('x', {}).name).toBe('StorageError');
     expect(new ImportError('x', {}).name).toBe('ImportError');
+    expect(new RecoveryError('x', { reason: 'invalid_blob' }).name).toBe('RecoveryError');
   });
 
   it('error classes support cause chaining', () => {
@@ -366,6 +389,7 @@ describe('scaffold integration: error class properties', () => {
     expect(new InvalidPasswordError('x', { cause }).cause).toBe(cause);
     expect(new StorageError('x', {}, { cause }).cause).toBe(cause);
     expect(new ImportError('x', {}, { cause }).cause).toBe(cause);
+    expect(new RecoveryError('x', { reason: 'invalid_blob' }, { cause }).cause).toBe(cause);
   });
 
   it('StorageError exposes typed context', () => {
@@ -377,11 +401,16 @@ describe('scaffold integration: error class properties', () => {
     const ctx: ImportErrorContext = { source: 's', format: 'json' };
     expect(new ImportError('x', ctx).context).toEqual(ctx);
   });
+
+  it('RecoveryError exposes typed context', () => {
+    const ctx: RecoveryErrorContext = { reason: 'decryption_failed' };
+    expect(new RecoveryError('x', ctx).context).toEqual(ctx);
+  });
 });
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(10);
+    expect(LIB_MODULES).toHaveLength(11);
   });
 });
 
@@ -457,6 +486,40 @@ describe('scaffold integration: architecture constraints', () => {
       const end = f + 1 < funcStarts.length ? funcStarts[f + 1]!.line : lines.length;
       const funcLines = end - start;
       expect(funcLines).toBeLessThanOrEqual(50);
+    }
+  });
+
+  it('recovery.ts is within 150-line limit', () => {
+    const lines = readFileSync(resolve(ROOT, 'lib', 'recovery.ts'), 'utf-8').split('\n').length;
+    expect(lines).toBeLessThanOrEqual(150);
+  });
+
+  it('recovery.ts functions are within 50-line limit', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'recovery.ts'), 'utf-8');
+    const lines = content.split('\n');
+    const funcStarts: Array<{ name: string; line: number }> = [];
+    for (let i = 0; i < lines.length; i++) {
+      const funcMatch = lines[i]!.match(/^(?:export\s+)?(?:async\s+)?function\s+(\w+)/);
+      if (funcMatch) funcStarts.push({ name: funcMatch[1]!, line: i });
+    }
+    for (let f = 0; f < funcStarts.length; f++) {
+      const start = funcStarts[f]!.line;
+      const end = f + 1 < funcStarts.length ? funcStarts[f + 1]!.line : lines.length;
+      const funcLines = end - start;
+      expect(funcLines).toBeLessThanOrEqual(50);
+    }
+  });
+
+  it('recovery.ts uses only @scure/bip39 as external crypto dependency', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'recovery.ts'), 'utf-8');
+    const importRegex = /from\s+['"]([^@./][^'"]*)['"]/g;
+    let match;
+    const externalDeps = new Set<string>();
+    while ((match = importRegex.exec(content)) !== null) {
+      externalDeps.add(match[1]!);
+    }
+    for (const dep of externalDeps) {
+      expect(dep.startsWith('@scure/bip39')).toBe(true);
     }
   });
 
