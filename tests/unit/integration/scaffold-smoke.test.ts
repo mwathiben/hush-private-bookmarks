@@ -403,7 +403,7 @@ describe('scaffold integration: error class properties', () => {
   });
 
   it('RecoveryError exposes typed context', () => {
-    const ctx: RecoveryErrorContext = { reason: 'decryption_failed' };
+    const ctx: RecoveryErrorContext = { reason: 'invalid_blob' };
     expect(new RecoveryError('x', ctx).context).toEqual(ctx);
   });
 });

@@ -66,7 +66,7 @@ export class ImportError extends Error {
 
 /** Recovery operation metadata. Identifies failure reason, never mnemonic words or key material. */
 export interface RecoveryErrorContext {
-  readonly reason: 'invalid_blob' | 'decryption_failed';
+  readonly reason: 'invalid_blob';
 }
 
 /** Thrown when recovery blob operations fail. Context is structural, never PII. */
