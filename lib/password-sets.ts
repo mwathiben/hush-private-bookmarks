@@ -224,6 +224,23 @@ export async function renameSet(
   return saveManifest(updated);
 }
 
+export async function getActiveSetId(): Promise<Result<string, StorageError>> {
+  const manifestResult = await loadManifest();
+  if (!manifestResult.success) return manifestResult;
+  return { success: true, data: manifestResult.data.activeSetId };
+}
+
+export async function setActiveSetId(
+  id: string,
+): Promise<Result<void, StorageError>> {
+  const manifestResult = await loadManifest();
+  if (!manifestResult.success) return manifestResult;
+  if (!manifestResult.data.sets.some(s => s.id === id)) {
+    return fail('Set not found', { operation: 'read', reason: 'not_found' });
+  }
+  return saveManifest({ ...manifestResult.data, activeSetId: id });
+}
+
 async function resolveStorageKey(id: string): Promise<Result<string, StorageError>> {
   const manifestResult = await loadManifest();
   if (!manifestResult.success) return manifestResult;
@@ -276,6 +293,13 @@ export async function loadSetData(
 
   try {
     const plaintext = await decrypt(stored, password);
+    const freshManifest = await loadManifest();
+    if (freshManifest.success) {
+      const updatedSets = freshManifest.data.sets.map(s =>
+        s.id === id ? { ...s, lastAccessedAt: Date.now() } : s,
+      );
+      void await saveManifest({ ...freshManifest.data, sets: updatedSets });
+    }
     return { success: true, data: plaintext };
   } catch (error: unknown) {
     if (error instanceof InvalidPasswordError) {

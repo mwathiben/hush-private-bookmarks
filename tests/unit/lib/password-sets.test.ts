@@ -14,6 +14,8 @@ import {
   saveSetData,
   loadSetData,
   hasSetData,
+  getActiveSetId,
+  setActiveSetId,
 } from '@/lib/password-sets';
 import { validateEncryptedStore } from '@/lib/storage';
 
@@ -412,6 +414,117 @@ describe('PWSET-002: per-set encrypted data', { timeout: 120_000 }, () => {
     expect(crossResult.success).toBe(false);
     if (!crossResult.success) {
       expect(crossResult.error).toBeInstanceOf(InvalidPasswordError);
+    }
+  });
+});
+
+describe('PWSET-003: active set switching', () => {
+  it('getActiveSetId returns default set id on fresh manifest', async () => {
+    // #given — fresh manifest (auto-created)
+    const manifest = await loadManifest();
+    expect(manifest.success).toBe(true);
+    if (!manifest.success) return;
+
+    // #when — getting active set id
+    const result = await getActiveSetId();
+
+    // #then — matches default set's id
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBe(manifest.data.activeSetId);
+      expect(result.data).toBe(manifest.data.sets[0]!.id);
+    }
+  });
+
+  it('setActiveSetId updates manifest', async () => {
+    // #given — default manifest + a second set
+    await loadManifest();
+    const created = await createSet('Other');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    // #when — switching active set
+    const result = await setActiveSetId(created.data.id);
+
+    // #then — manifest reflects the change
+    expect(result.success).toBe(true);
+    const reloaded = await loadManifest();
+    expect(reloaded.success).toBe(true);
+    if (reloaded.success) {
+      expect(reloaded.data.activeSetId).toBe(created.data.id);
+    }
+  });
+
+  it('setActiveSetId rejects non-existent set id', async () => {
+    // #given — default manifest
+    await loadManifest();
+
+    // #when — switching to a bogus id
+    const result = await setActiveSetId('non-existent-id');
+
+    // #then — fails with not_found
+    expect(result.success).toBe(false);
+    if (!result.success && result.error instanceof StorageError) {
+      expect(result.error.context.reason).toBe('not_found');
+    }
+  });
+});
+
+describe('PWSET-003: lastAccessedAt tracking', { timeout: 120_000 }, () => {
+  it('loadSetData updates lastAccessedAt on success', async () => {
+    // #given — a set with saved data
+    const manifest = await loadManifest();
+    expect(manifest.success).toBe(true);
+    if (!manifest.success) return;
+
+    const created = await createSet('Tracked');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    await saveSetData(created.data.id, 'secret', 'pw');
+    const before = await loadManifest();
+    expect(before.success).toBe(true);
+    if (!before.success) return;
+    const originalTimestamp = before.data.sets.find(s => s.id === created.data.id)!.lastAccessedAt;
+
+    // #when — loading set data successfully (after a brief delay for timestamp difference)
+    await new Promise(resolve => setTimeout(resolve, 10));
+    const loadResult = await loadSetData(created.data.id, 'pw');
+    expect(loadResult.success).toBe(true);
+
+    // #then — lastAccessedAt is updated
+    const after = await loadManifest();
+    expect(after.success).toBe(true);
+    if (after.success) {
+      const updatedTimestamp = after.data.sets.find(s => s.id === created.data.id)!.lastAccessedAt;
+      expect(updatedTimestamp).toBeGreaterThan(originalTimestamp);
+    }
+  });
+
+  it('loadSetData does NOT update lastAccessedAt on failure', async () => {
+    // #given — a set with saved data
+    await loadManifest();
+    const created = await createSet('NoUpdate');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    await saveSetData(created.data.id, 'data', 'correct');
+    const before = await loadManifest();
+    expect(before.success).toBe(true);
+    if (!before.success) return;
+    const originalTimestamp = before.data.sets.find(s => s.id === created.data.id)!.lastAccessedAt;
+
+    // #when — loading with wrong password
+    await new Promise(resolve => setTimeout(resolve, 10));
+    const loadResult = await loadSetData(created.data.id, 'wrong');
+    expect(loadResult.success).toBe(false);
+
+    // #then — lastAccessedAt unchanged
+    const after = await loadManifest();
+    expect(after.success).toBe(true);
+    if (after.success) {
+      const unchangedTimestamp = after.data.sets.find(s => s.id === created.data.id)!.lastAccessedAt;
+      expect(unchangedTimestamp).toBe(originalTimestamp);
     }
   });
 });
