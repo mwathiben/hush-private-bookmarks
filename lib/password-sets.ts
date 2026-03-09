@@ -12,9 +12,10 @@ import { browser } from 'wxt/browser';
 
 import type { PasswordSetInfo, PasswordSetManifest, Result } from '@/lib/types';
 import type { StorageErrorContext } from '@/lib/errors';
-import { StorageError } from '@/lib/errors';
+import { DecryptionError, InvalidPasswordError, StorageError } from '@/lib/errors';
+import { encrypt, decrypt } from '@/lib/crypto';
 import { generateId } from '@/lib/data-model';
-import { STORAGE_KEY } from '@/lib/storage';
+import { STORAGE_KEY, validateEncryptedStore } from '@/lib/storage';
 
 export const MANIFEST_KEY = 'hush_manifest';
 export const MANIFEST_VERSION = 1;
@@ -221,4 +222,80 @@ export async function renameSet(
   };
 
   return saveManifest(updated);
+}
+
+async function resolveStorageKey(id: string): Promise<Result<string, StorageError>> {
+  const manifestResult = await loadManifest();
+  if (!manifestResult.success) return manifestResult;
+  const set = manifestResult.data.sets.find(s => s.id === id);
+  if (!set) return fail('Set not found', { operation: 'read', reason: 'not_found' });
+  return { success: true, data: setStorageKey(set.id, set.isDefault) };
+}
+
+export async function saveSetData(
+  id: string,
+  plaintext: string,
+  password: string,
+): Promise<Result<void, StorageError>> {
+  const keyResult = await resolveStorageKey(id);
+  if (!keyResult.success) return keyResult;
+  try {
+    const store = await encrypt(plaintext, password);
+    await browser.storage.local.set({ [keyResult.data]: store });
+    return { success: true, data: undefined };
+  } catch (error: unknown) {
+    return fail('Failed to save set data',
+      { key: keyResult.data, operation: 'write', reason: 'write_failed' },
+      { cause: error instanceof Error ? error : undefined });
+  }
+}
+
+export async function loadSetData(
+  id: string,
+  password: string,
+): Promise<Result<string, StorageError | InvalidPasswordError>> {
+  const keyResult = await resolveStorageKey(id);
+  if (!keyResult.success) return keyResult;
+  const key = keyResult.data;
+
+  let raw: Record<string, unknown>;
+  try {
+    raw = await browser.storage.local.get(key);
+  } catch {
+    return fail('Failed to read set data',
+      { key, operation: 'read', reason: 'read_failed' });
+  }
+
+  const stored = raw[key];
+  if (stored == null) {
+    return fail('No data for set', { key, operation: 'read', reason: 'not_found' });
+  }
+  if (!validateEncryptedStore(stored)) {
+    return fail('Set data is corrupted', { key, operation: 'read', reason: 'corrupted' });
+  }
+
+  try {
+    const plaintext = await decrypt(stored, password);
+    return { success: true, data: plaintext };
+  } catch (error: unknown) {
+    if (error instanceof InvalidPasswordError) {
+      return { success: false, error };
+    }
+    const reason = error instanceof DecryptionError ? 'corrupted' as const : 'read_failed' as const;
+    return fail('Decryption failed', { key, operation: 'read', reason });
+  }
+}
+
+export async function hasSetData(
+  id: string,
+): Promise<Result<boolean, StorageError>> {
+  const keyResult = await resolveStorageKey(id);
+  if (!keyResult.success) return keyResult;
+  try {
+    const raw = await browser.storage.local.get(keyResult.data);
+    return { success: true, data: raw[keyResult.data] != null };
+  } catch {
+    return fail('Failed to check set data',
+      { key: keyResult.data, operation: 'read', reason: 'read_failed' });
+  }
 }

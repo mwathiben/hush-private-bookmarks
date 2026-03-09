@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
+import { InvalidPasswordError, StorageError } from '@/lib/errors';
 import {
   setStorageKey,
   MANIFEST_VERSION,
@@ -10,7 +11,11 @@ import {
   deleteSet,
   renameSet,
   listSets,
+  saveSetData,
+  loadSetData,
+  hasSetData,
 } from '@/lib/password-sets';
+import { validateEncryptedStore } from '@/lib/storage';
 
 beforeEach(async () => {
   await browser.storage.local.clear();
@@ -241,5 +246,172 @@ describe('PWSET-001: renameSet', () => {
     // #then — both rejected
     expect(empty.success).toBe(false);
     expect(whitespace.success).toBe(false);
+  });
+});
+
+describe('PWSET-002: per-set encrypted data', { timeout: 120_000 }, () => {
+  it('saveSetData encrypts and stores under set-specific key', async () => {
+    // #given — a non-default set exists
+    await loadManifest();
+    const created = await createSet('Work');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    const storageKey = setStorageKey(created.data.id, false);
+
+    // #when — saving encrypted data
+    const result = await saveSetData(created.data.id, 'secret bookmarks', 'mypassword');
+
+    // #then — success and EncryptedStore shape stored under set-specific key
+    expect(result.success).toBe(true);
+    const raw = await browser.storage.local.get(storageKey);
+    expect(validateEncryptedStore(raw[storageKey])).toBe(true);
+  });
+
+  it('loadSetData decrypts data (roundtrip)', async () => {
+    // #given — a set with saved encrypted data
+    await loadManifest();
+    const created = await createSet('Roundtrip');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    const plaintext = 'my secret bookmarks JSON';
+    await saveSetData(created.data.id, plaintext, 'testpass');
+
+    // #when — loading with correct password
+    const result = await loadSetData(created.data.id, 'testpass');
+
+    // #then — original plaintext recovered
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBe(plaintext);
+    }
+  });
+
+  it('saveSetData for default set stores under holyPrivateData', async () => {
+    // #given — default manifest
+    const manifest = await loadManifest();
+    expect(manifest.success).toBe(true);
+    if (!manifest.success) return;
+
+    const defaultSet = manifest.data.sets[0]!;
+
+    // #when — saving data for default set
+    await saveSetData(defaultSet.id, 'default data', 'pw');
+
+    // #then — stored under holyPrivateData key
+    const raw = await browser.storage.local.get('holyPrivateData');
+    expect(validateEncryptedStore(raw['holyPrivateData'])).toBe(true);
+  });
+
+  it('loadSetData returns not_found when set has no data', async () => {
+    // #given — a set exists but no data saved
+    await loadManifest();
+    const created = await createSet('Empty');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    // #when — loading data
+    const result = await loadSetData(created.data.id, 'anypass');
+
+    // #then — not_found error
+    expect(result.success).toBe(false);
+    if (!result.success && result.error instanceof StorageError) {
+      expect(result.error.context.reason).toBe('not_found');
+    }
+  });
+
+  it('loadSetData returns InvalidPasswordError for wrong password', async () => {
+    // #given — set with data encrypted under 'correct'
+    await loadManifest();
+    const created = await createSet('Locked');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    await saveSetData(created.data.id, 'secret', 'correct');
+
+    // #when — loading with wrong password
+    const result = await loadSetData(created.data.id, 'wrong');
+
+    // #then — InvalidPasswordError
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(InvalidPasswordError);
+    }
+  });
+
+  it('hasSetData returns true/false correctly', async () => {
+    // #given — a set with no data
+    await loadManifest();
+    const created = await createSet('Check');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    // #when — checking before save
+    const before = await hasSetData(created.data.id);
+    expect(before.success).toBe(true);
+    if (before.success) expect(before.data).toBe(false);
+
+    // #when — checking after save
+    await saveSetData(created.data.id, 'data', 'pw');
+    const after = await hasSetData(created.data.id);
+    expect(after.success).toBe(true);
+    if (after.success) expect(after.data).toBe(true);
+  });
+
+  it('saveSetData returns not_found for non-existent set ID', async () => {
+    // #given — default manifest only
+    await loadManifest();
+
+    // #when — saving to a set that doesn't exist
+    const result = await saveSetData('non-existent-id', 'data', 'pw');
+
+    // #then — not_found error
+    expect(result.success).toBe(false);
+    if (!result.success && result.error instanceof StorageError) {
+      expect(result.error.context.reason).toBe('not_found');
+    }
+  });
+
+  it('loadSetData returns corrupted for malformed store data', async () => {
+    // #given — a set with malformed data in storage
+    await loadManifest();
+    const created = await createSet('Broken');
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    const storageKey = setStorageKey(created.data.id, false);
+    await browser.storage.local.set({ [storageKey]: { bad: 'shape' } });
+
+    // #when — loading the corrupted data
+    const result = await loadSetData(created.data.id, 'pw');
+
+    // #then — corrupted error
+    expect(result.success).toBe(false);
+    if (!result.success && result.error instanceof StorageError) {
+      expect(result.error.context.reason).toBe('corrupted');
+    }
+  });
+
+  it('different sets are cryptographically independent', async () => {
+    // #given — two sets with data under different passwords
+    await loadManifest();
+    const set1 = await createSet('Set A');
+    const set2 = await createSet('Set B');
+    expect(set1.success).toBe(true);
+    expect(set2.success).toBe(true);
+    if (!set1.success || !set2.success) return;
+
+    await saveSetData(set1.data.id, 'data-A', 'password-A');
+    await saveSetData(set2.data.id, 'data-B', 'password-B');
+
+    // #when — cross-decrypting set1's data with set2's password
+    const crossResult = await loadSetData(set1.data.id, 'password-B');
+
+    // #then — fails with InvalidPasswordError
+    expect(crossResult.success).toBe(false);
+    if (!crossResult.success) {
+      expect(crossResult.error).toBeInstanceOf(InvalidPasswordError);
+    }
   });
 });
