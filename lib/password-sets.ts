@@ -282,7 +282,8 @@ export async function loadSetData(
       return { success: false, error };
     }
     const reason = error instanceof DecryptionError ? 'corrupted' as const : 'read_failed' as const;
-    return fail('Decryption failed', { key, operation: 'read', reason });
+    return fail('Decryption failed', { key, operation: 'read', reason },
+      { cause: error instanceof Error ? error : undefined });
   }
 }
 
