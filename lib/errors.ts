@@ -64,6 +64,26 @@ export class ImportError extends Error {
   }
 }
 
+/** Recovery operation metadata. Identifies failure reason, never mnemonic words or key material. */
+export interface RecoveryErrorContext {
+  readonly reason: 'invalid_blob' | 'decryption_failed';
+}
+
+/** Thrown when recovery blob operations fail. Context is structural, never PII. */
+export class RecoveryError extends Error {
+  readonly name = 'RecoveryError' as const;
+  readonly context: RecoveryErrorContext;
+
+  constructor(
+    message: string,
+    context: RecoveryErrorContext,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.context = context;
+  }
+}
+
 /** Path and kind metadata for data model errors. Never contains bookmark content. */
 export interface DataModelErrorContext {
   readonly kind:
