@@ -11,7 +11,7 @@ import type {
   BookmarkTree,
   PasswordSetInfo,
   PasswordSetManifest,
-  RecoveryPhrase,
+  RecoveryMetadata,
   CryptoConfig,
   Result,
 } from '@/lib/types';
@@ -329,12 +329,11 @@ describe('scaffold integration: type composition', () => {
     if (!err.success) expect(err.error).toBeInstanceOf(DecryptionError);
   });
 
-  it('RecoveryPhrase holds BIP-39 word array', () => {
-    const rp: RecoveryPhrase = {
-      words: Array.from({ length: 12 }, () => 'word'),
+  it('RecoveryMetadata holds derivedKeyHash', () => {
+    const rm: RecoveryMetadata = {
       derivedKeyHash: 'hash',
     };
-    expect(rp.words).toHaveLength(12);
+    expect(typeof rm.derivedKeyHash).toBe('string');
   });
 
   it('CryptoConfig has correct field types', () => {

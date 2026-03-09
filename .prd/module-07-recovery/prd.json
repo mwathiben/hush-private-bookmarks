@@ -56,7 +56,7 @@
             ],
             "definition_of_done": ["All 8 mnemonic tests pass", "tsc clean", "@scure/bip39 verified in dependencies", "RecoveryMetadata type updated"],
             "verification": "npx vitest run tests/unit/lib/recovery.test.ts && npx tsc --noEmit",
-            "estimated_effort": "small", "passes": false, "attempt_count": 0, "depends_on": []
+            "estimated_effort": "small", "passes": true, "attempt_count": 1, "depends_on": []
         },
         {
             "id": "RECOVERY-002", "category": "core", "priority": "CRITICAL",
@@ -171,6 +171,6 @@
             "max_attempts_per_story": 3
         }
     },
-    "metadata": { "passing_stories": 0, "build_plan_day": "Day 3 (second third)", "estimated_test_count": "~20 tests", "session_protocol": "One Claude Code session. Verify @scure/bip39 present. Generate recovery.ts + tests. Commit per story.", "quality_gate": "All tests pass. tsc clean. Only @scure/bip39 external dep. Coverage >= 80%. ≤ 150 lines.", "human_review_required": "Verify @scure/bip39 used (not custom). Verify mnemonic never stored in browser storage. Review deriveRecoveryPassword determinism." },
+    "metadata": { "passing_stories": 1, "build_plan_day": "Day 3 (second third)", "estimated_test_count": "~20 tests", "session_protocol": "One Claude Code session. Verify @scure/bip39 present. Generate recovery.ts + tests. Commit per story.", "quality_gate": "All tests pass. tsc clean. Only @scure/bip39 external dep. Coverage >= 80%. ≤ 150 lines.", "human_review_required": "Verify @scure/bip39 used (not custom). Verify mnemonic never stored in browser storage. Review deriveRecoveryPassword determinism." },
     "execution_rules": { "execution_order": "RECOVERY-001 → 002 → 003", "clarifying_questions": "Encouraged. Key: RecoveryError vs reusing ImportError.", "prd_scope": "Module 7 of 18.", "progress_logging": "Update prd.json + progress.md.", "commit_protocol": "feat(recovery): RECOVERY-XXX — <title>", "failure_protocol": "Max 3 attempts." }
 }

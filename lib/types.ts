@@ -60,9 +60,12 @@ export interface PasswordSetManifest {
   readonly version: number;
 }
 
-/** BIP-39 mnemonic recovery data. Entirely new to Hush (Holy PB has no recovery). */
-export interface RecoveryPhrase {
-  readonly words: readonly string[];
+/**
+ * Proof that BIP-39 recovery was configured for a password set.
+ * The mnemonic phrase itself is NEVER stored — the user writes it down physically.
+ * Only derivedKeyHash is persisted as a checksum proving recovery was set up.
+ */
+export interface RecoveryMetadata {
   readonly derivedKeyHash: string;
 }
 

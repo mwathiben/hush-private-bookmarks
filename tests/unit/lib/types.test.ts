@@ -9,7 +9,7 @@ import type {
   EncryptedStore,
   PasswordSetInfo,
   PasswordSetManifest,
-  RecoveryPhrase,
+  RecoveryMetadata,
   CryptoConfig,
   Result,
 } from '@/lib/types';
@@ -233,15 +233,12 @@ describe('PasswordSetManifest', () => {
   });
 });
 
-describe('RecoveryPhrase', () => {
-  it('has string array words and string derivedKeyHash', () => {
-    const rp: RecoveryPhrase = {
-      words: ['abandon', 'ability', 'able', 'about', 'above', 'absent', 'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident'],
+describe('RecoveryMetadata', () => {
+  it('has string derivedKeyHash', () => {
+    const rm: RecoveryMetadata = {
       derivedKeyHash: 'sha256hash',
     };
-    expect(rp.words).toHaveLength(12);
-    expect(typeof rp.words[0]).toBe('string');
-    expect(typeof rp.derivedKeyHash).toBe('string');
+    expect(typeof rm.derivedKeyHash).toBe('string');
   });
 });
 
