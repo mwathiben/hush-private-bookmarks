@@ -119,7 +119,7 @@ Line count: lib/password-sets.ts = 301 lines (over 250 target, at 300 limit)
 
 - Added `getActiveSetId` export to lib/password-sets.ts — reads activeSetId from manifest
 - Added `setActiveSetId` export to lib/password-sets.ts — validates set exists, updates manifest
-- Modified `loadSetData` success path to update `lastAccessedAt` in manifest (re-reads manifest to minimize stale state, fire-and-forget with `void await`)
+- Modified `loadSetData` success path to update `lastAccessedAt` in manifest (re-reads manifest to minimize stale state, blocking save with discarded result via `void await`)
 - Added 5 tests in PWSET-003 describe blocks (3 active set switching, 2 lastAccessedAt tracking with 120s timeout)
 - Fixed CodeRabbit #1: Added `void` operator on discarded `saveManifest` result for explicit intent
 
