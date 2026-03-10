@@ -6,12 +6,12 @@
 | --- | --- | --- | --- | --- | --- |
 | 01 | Project Scaffold | 1 | ✅ Complete | 12/12 | 48/48 |
 | 02 | Crypto Engine | 1 | ✅ Complete | 8/8 | 25/25 |
-| 03 | Storage Layer | 1 | ⬜ Not Started | 0/6 | 0/25 |
-| 04 | Data Model | 1 | ⬜ Not Started | 0/6 | 0/32 |
-| 05 | Bookmark Import | 1 | ⬜ Not Started | 0/4 | 0/23 |
-| 06 | Password Sets | 1 | ⬜ Not Started | 0/4 | 0/19 |
-| 07 | BIP39 Recovery | 1 | ⬜ Not Started | 0/3 | 0/16 |
-| 08 | Incognito Mode | - | ⬜ Not Started | - | - |
+| 03 | Storage Layer | 1 | ✅ Complete | 6/6 | 25/25 |
+| 04 | Data Model | 1 | ✅ Complete | 6/6 | 32/32 |
+| 05 | Bookmark Import | 1 | ✅ Complete | 4/4 | 23/23 |
+| 06 | Password Sets | 1 | ✅ Complete | 4/4 | 19/19 |
+| 07 | BIP39 Recovery | 1 | ✅ Complete | 3/3 | 16/16 |
+| 08 | Incognito Mode | 1 | ✅ Complete | 2/2 | 8/8 |
 | 09 | Background Service Worker | - | ⬜ Not Started | - | - |
 | 10 | Popup UI — Auth Screens | - | ⬜ Not Started | - | - |
 | 11 | Popup UI — Bookmark Management | - | ⬜ Not Started | - | - |
