@@ -156,6 +156,17 @@ Skill references: `tdd`, `tdd-strict`, `test-driven-development`
 - Alert at 180KB. Audit unused shadcn components and Tailwind classes.
 - Check with: `wxt build --analyze`
 
+## shadcn/ui Workflow
+
+- The shadcn/ui skill provides project context automatically via `components.json`.
+- Before generating code for any shadcn component, use `shadcn docs <component>` for current API.
+- Use `shadcn add <component> --dry-run` before installing new components.
+- Never modify files in `components/ui/` directly — extend via wrapper components.
+- Use semantic color tokens (`bg-primary`, `text-destructive`) not raw OKLCH values.
+- Use `cn()` from `@/lib/utils` for conditional class merging.
+- Prefer `gap-*` over `space-y-*`, `size-*` over paired `w-*/h-*`.
+- Forms use FieldGroup composition pattern.
+
 ## Progress Logging Protocol
 
 Each module has a `prd.json` and a companion `progress.md` in `.prd/<module>/`.

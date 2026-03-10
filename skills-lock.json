@@ -662,9 +662,9 @@
       "computedHash": "f2ce8663857d919cf7e4146cd716b0aee1757b85123b758e6e7d98fcbaf14054"
     },
     "shadcn": {
-      "source": "blencorp/claude-code-kit",
+      "source": "shadcn/ui",
       "sourceType": "github",
-      "computedHash": "87bbd8ccee51384edbe07a18343487fecb5b782e53ec2d7456d4c853633992d4"
+      "computedHash": "b1cc1defe03f0e8f78652b7d20e4d4e6421babc2b45835d4f361afe684dc47a2"
     },
     "shadcn-tailwind": {
       "source": "tenequm/claude-plugins",

@@ -11,6 +11,8 @@ node_modules
 .env
 .env.*
 .output
+.agent
+.agents
 stats.html
 stats-*.json
 .wxt

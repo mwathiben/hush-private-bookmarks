@@ -7,6 +7,10 @@
     "sequential-thinking": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": ["--yes", "shadcn@latest", "mcp"]
     }
   }
 }
