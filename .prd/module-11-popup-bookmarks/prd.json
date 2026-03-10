@@ -1,0 +1,205 @@
+{
+    "project": {
+        "name": "Module 11: Popup UI — Bookmark Management",
+        "description": "Create the bookmark tree view, CRUD dialogs, and folder navigation for the popup. Populates TreeContext with live bookmark data. Enables add, edit, delete, move bookmarks and folders. Core daily-use UI. Components are shared with Module 13 (Manager). Mutation pattern: wait-for-response — disable control → send message → await response → update TreeContext on success / show error on failure. No optimistic rendering, no rollback logic. Target: each component ≤300 lines.",
+        "version": "1.2.0",
+        "created": "2026-03-10",
+        "parent_plan": "Hush Consolidated Build Plan — Day 4"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": ["Recursive folder/bookmark tree rendering with expand/collapse", "Click-to-open bookmark in new tab", "Context actions: edit, delete, move to folder"],
+        "falls_short": [
+            { "id": 1, "deficiency": "Holy PB tree rendering is DOM-manipulated spaghetti (~500 lines)", "hush_requires": "BookmarkTree React component with recursive rendering. shadcn Accordion for folders." },
+            { "id": 2, "deficiency": "Holy PB add/edit uses inline DOM forms", "hush_requires": "shadcn Dialog modals." },
+            { "id": 3, "deficiency": "Holy PB delete has no confirmation", "hush_requires": "ConfirmDialog for destructive actions." },
+            { "id": 4, "deficiency": "Holy PB drag-and-drop is fragile", "hush_requires": "Move-to-folder dialog for v1.0. Drag-and-drop deferred." }
+        ],
+        "do_not_incorporate": ["DOM manipulation tree rendering", "Inline forms (use Dialogs)", "Virtual scroll (defer)"],
+        "build_from_scratch": [
+            "components/screens/TreeScreen.tsx — main view after unlock: toolbar + tree + empty state",
+            "components/shared/BookmarkTree.tsx — recursive tree renderer",
+            "components/shared/BookmarkItem.tsx — single bookmark row with actions",
+            "components/shared/FolderItem.tsx — folder row with expand/collapse + children",
+            "components/shared/AddEditBookmarkDialog.tsx — shadcn Dialog for add/edit",
+            "components/shared/AddFolderDialog.tsx — shadcn Dialog for new folder",
+            "components/shared/ConfirmDialog.tsx — reusable confirmation modal",
+            "components/shared/FolderPicker.tsx — folder selection for move operations (selects target folder; item appended to end of target folder's children)",
+            "hooks/useTree.ts — manages TreeContext: load tree from GET_STATE, dispatch mutations via SAVE using useSendMessage, update context on confirmed response",
+            "Empty state component: 'No bookmarks yet' with add button"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "BOOKMARK-001", "category": "core", "priority": "CRITICAL",
+            "title": "TreeScreen, BookmarkTree, and TreeContext integration",
+            "description": "Create TreeScreen, BookmarkTree (recursive), BookmarkItem, FolderItem. Wire TreeContext with useTree hook that loads tree from background session state via useSendMessage (from Module 10). useTree internally uses the sendMessage pattern to dispatch GET_STATE and SAVE messages.",
+            "story_points": 10,
+            "steps": [
+                "RED: Test: 'TreeScreen renders toolbar and bookmark tree'",
+                "RED: Test: 'BookmarkTree renders flat list of bookmarks'",
+                "RED: Test: 'BookmarkTree renders nested folders with children'",
+                "RED: Test: 'FolderItem expands/collapses on click'",
+                "RED: Test: 'BookmarkItem shows title and URL'",
+                "RED: Test: 'BookmarkItem click opens URL in new tab' (mock chrome.tabs.create)",
+                "RED: Test: 'empty tree shows empty state component'",
+                "RED: Test: 'useTree loads tree from session state on mount'",
+                "GREEN: Create hooks/useTree.ts (reads tree from GET_STATE response via SessionContext, internally uses useSendMessage for SAVE dispatches, provides via TreeContext). Create BookmarkTree (recursive map over tree.children, type guards isBookmark/isFolder). Create BookmarkItem (title, truncated URL, click → new tab). Create FolderItem (shadcn Accordion, expand state, recursive children). Create TreeScreen (toolbar + tree + empty state).",
+                "REFACTOR: React.memo on BookmarkItem and FolderItem. Key by item.id."
+            ],
+            "files": ["components/screens/TreeScreen.tsx", "components/shared/BookmarkTree.tsx", "components/shared/BookmarkItem.tsx", "components/shared/FolderItem.tsx", "hooks/useTree.ts", "tests/unit/components/screens/TreeScreen.test.tsx", "tests/unit/components/shared/BookmarkTree.test.tsx"],
+            "acceptance_criteria": [
+                "TreeScreen renders after unlock with toolbar + tree",
+                "BookmarkTree recursively renders BookmarkNode[] using isBookmark/isFolder type guards",
+                "FolderItem uses shadcn Accordion for expand/collapse",
+                "BookmarkItem: title, truncated URL, click opens in new tab",
+                "Empty tree shows friendly empty state with add button",
+                "useTree provides tree + mutation dispatch functions via TreeContext",
+                "useTree internally uses useSendMessage from Module 10 for background communication",
+                "TreeContext updates only when tree changes (isolated from SessionContext changes)"
+            ],
+            "definition_of_done": ["All 8 tests pass", "tsc clean", "Tree renders in popup dimensions"],
+            "verification": "npx vitest run tests/unit/components/ tests/unit/hooks/ && npx tsc --noEmit",
+            "estimated_effort": "large", "passes": false, "attempt_count": 0, "depends_on": []
+        },
+        {
+            "id": "BOOKMARK-002", "category": "core", "priority": "CRITICAL",
+            "title": "Add/Edit bookmark and folder dialogs",
+            "description": "Dialogs for adding and editing bookmarks and folders. All mutations use wait-for-response: compute updated tree locally (immutable data-model.ts ops) → send SAVE with full tree to background → await confirmed response → update TreeContext with the tree from the response. No optimistic rendering — the dialog stays open with a loading state until SAVE succeeds. AddEditBookmarkDialog constructs the full bookmark object: { type: 'bookmark', title, url, dateAdded: Date.now() } — id is assigned by addBookmark(). AddFolderDialog passes only the name string to addFolder() — id, children, and dateAdded are assigned internally by addFolder().",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'AddEditBookmarkDialog renders title and URL inputs'",
+                "RED: Test: 'AddEditBookmarkDialog in add mode sends SAVE with updated tree'",
+                "RED: Test: 'AddEditBookmarkDialog in edit mode pre-fills existing values'",
+                "RED: Test: 'AddEditBookmarkDialog validates URL format'",
+                "RED: Test: 'AddFolderDialog renders name input'",
+                "RED: Test: 'AddFolderDialog creates folder at current path'",
+                "RED: Test: 'dialog shows loading state during SAVE and closes on success'",
+                "RED: Test: 'dialog shows error and stays open on SAVE failure'",
+                "GREEN: Create AddEditBookmarkDialog (shadcn Dialog + inputs). In add mode, construct full bookmark: addBookmark(tree, parentPath, { type: 'bookmark', title, url, dateAdded: Date.now() }). Create AddFolderDialog (name input only — addFolder(tree, parentPath, name) handles the rest internally). Mutation flow: compute new tree → send SAVE { tree: newTree } → await → on success close dialog + setTree(response.tree) → on failure show error inline. Add toolbar buttons to TreeScreen.",
+                "REFACTOR: Extract form validation to shared utility"
+            ],
+            "files": ["components/shared/AddEditBookmarkDialog.tsx", "components/shared/AddFolderDialog.tsx", "tests/unit/components/shared/AddEditBookmarkDialog.test.tsx", "tests/unit/components/shared/AddFolderDialog.test.tsx"],
+            "acceptance_criteria": [
+                "AddEditBookmarkDialog: add mode (empty) and edit mode (pre-filled)",
+                "Add mode constructs: { type: 'bookmark', title, url, dateAdded: Date.now() } — id assigned by addBookmark()",
+                "Title required, URL validated",
+                "AddFolderDialog: name required — addFolder(tree, parentPath, name) assigns id, children, dateAdded internally",
+                "MUTATION PATTERN: compute tree → SAVE → await → dialog loading state → close on success / error on failure",
+                "No optimistic rendering: TreeContext NOT updated until SAVE response confirms",
+                "Dialog stays open with error message on SAVE failure (user can retry)",
+                "Dialog closes and TreeContext updates on SAVE success"
+            ],
+            "definition_of_done": ["All 8 dialog tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/shared/ && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["BOOKMARK-001"]
+        },
+        {
+            "id": "BOOKMARK-003", "category": "core", "priority": "HIGH",
+            "title": "Context actions: delete, move, edit with confirmation dialogs",
+            "description": "Per-item context menus with edit/delete/move. Delete shows ConfirmDialog. Move shows FolderPicker — user selects target folder, item appended to end of target folder's children (toIndex = destFolder.children.length). All mutations wait-for-response.",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'BookmarkItem context menu shows edit, delete, move options'",
+                "RED: Test: 'FolderItem context menu shows rename, delete, move options'",
+                "RED: Test: 'delete shows ConfirmDialog, proceeds only on confirm'",
+                "RED: Test: 'delete sends SAVE with item removed, waits for response'",
+                "RED: Test: 'move opens FolderPicker and moves item on confirm'",
+                "RED: Test: 'move appends to end of target folder (toIndex = children.length)'",
+                "RED: Test: 'FolderPicker shows all folders in tree'",
+                "RED: Test: 'edit opens AddEditBookmarkDialog in edit mode'",
+                "GREEN: Add context menus (shadcn DropdownMenu) to BookmarkItem and FolderItem. Create ConfirmDialog (reusable). Create FolderPicker (folder-only tree, click to select target). Wire: delete (removeItem → SAVE → await → update TreeContext), move (moveItem(tree, fromPath, toFolderPath, destFolder.children.length) → SAVE → await — appends to end of target folder), edit (open dialog pre-filled).",
+                "REFACTOR: Extract action handlers to useTreeActions hook if complexity warrants"
+            ],
+            "files": ["components/shared/ConfirmDialog.tsx", "components/shared/FolderPicker.tsx", "components/shared/BookmarkItem.tsx", "components/shared/FolderItem.tsx", "tests/unit/components/shared/ConfirmDialog.test.tsx", "tests/unit/components/shared/FolderPicker.test.tsx", "tests/unit/components/shared/BookmarkItem.test.tsx", "tests/unit/components/shared/FolderItem.test.tsx"],
+            "acceptance_criteria": [
+                "Context menu (shadcn DropdownMenu) with edit/delete/move per item",
+                "Delete shows ConfirmDialog, SAVE only on confirm, wait-for-response",
+                "Move shows FolderPicker — user picks target folder",
+                "Move uses moveItem(tree, fromPath, toFolderPath, destFolder.children.length) — appends to end of target folder",
+                "Edit opens AddEditBookmarkDialog pre-filled",
+                "All mutations: compute new tree → SAVE → await → update TreeContext on confirmed response",
+                "ConfirmDialog and FolderPicker are reusable shared components"
+            ],
+            "definition_of_done": ["All 8 context action tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/shared/ && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["BOOKMARK-001", "BOOKMARK-002"]
+        },
+        {
+            "id": "BOOKMARK-004", "category": "quality", "priority": "MEDIUM",
+            "title": "E2E bookmark flows and integration verification",
+            "description": "Playwright E2E for complete bookmark CRUD flows. Full verification.",
+            "story_points": 5,
+            "steps": [
+                "Playwright E2E: unlock → empty state → add bookmark → see in tree → edit → delete → empty state",
+                "Playwright E2E: create folder → add bookmark to folder → expand/collapse",
+                "Playwright E2E: move bookmark between folders (verify appends to end)",
+                "Full verification: tsc + eslint + vitest + coverage + wxt build + test:e2e",
+                "Verify all components ≤ 300 lines, zero business logic"
+            ],
+            "files": ["tests/e2e/popup-bookmarks.test.ts"],
+            "acceptance_criteria": ["E2E CRUD flows pass", "Zero business logic in components", "All ≤ 300 lines", "Zero regressions"],
+            "definition_of_done": ["E2E passes", "Full verification passes"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["BOOKMARK-001", "BOOKMARK-002", "BOOKMARK-003"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "popup_shell": "Module 10 complete. App.tsx with state machine router, SessionContext, TreeContext (shell — tree: null). LoginScreen, SetupScreen functional. useSession, useSendMessage hooks (in hooks/ at project root). PasswordInput, SetPicker, MnemonicDisplay, ErrorBoundary. Dark mode.",
+            "background": "Module 9 complete. Background handles all 16 message types (6 core implemented, 10 stubs). UNLOCK returns decrypted tree in SessionState. SAVE persists. ADD_BOOKMARK adds to tree.",
+            "lib_modules": "All 12 lib/ modules complete. background-types.ts from Module 9 makes 13 total.",
+            "shadcn": "components/ui/ has shadcn primitives (button, input, dialog, alert, select, label, badge from Module 10). May need Accordion, DropdownMenu — check and add if missing."
+        },
+        "what_does_not_exist": {
+            "tree_ui": "No TreeScreen, BookmarkTree, BookmarkItem, FolderItem. TreeContext is shell (null tree).",
+            "dialogs": "No AddEditBookmarkDialog, AddFolderDialog, ConfirmDialog, FolderPicker.",
+            "useTree": "hooks/useTree.ts does not exist."
+        }
+    },
+    "context": {
+        "tech_stack": { "runtime": "Node.js 20 LTS", "ui": "React 19, shadcn/ui (Accordion, DropdownMenu, Dialog, Input, Button)", "testing": "@testing-library/react + Vitest. Playwright for E2E.", "forbidden_patterns": ["Business logic in components", "Direct chrome.* calls", "Components > 300 lines", "console.log, as any", "Optimistic updates / rollback logic", "Hooks in lib/ (use hooks/ at project root)"] },
+        "tree_rendering": {
+            "description": "BookmarkTree recursively renders tree.children. isBookmark → BookmarkItem, isFolder → FolderItem.",
+            "popup_constraints": "380px wide. Compact rows. Nested indent. Max visible depth ~5-6.",
+            "performance": "React.memo on items. Key by item.id. Typical <1000 items."
+        },
+        "mutation_flow": {
+            "pattern": "WAIT-FOR-RESPONSE. Never optimistic. Never rollback.",
+            "sequence": "User action → disable control + show inline spinner → compute updated tree via immutable data-model.ts functions → send SAVE { tree: updatedTree } to background → await BackgroundResponse → on success: update TreeContext with confirmed tree, close dialog, re-enable → on failure: show error inline, dialog stays open, re-enable control.",
+            "rationale": "AES-GCM + storage.local.set is ~5-20ms. No network latency. Optimistic updates add rollback complexity for zero perceived benefit. In a privacy extension, data must be persisted before UI confirms.",
+            "data_model_signatures": {
+                "addBookmark": "addBookmark(tree, parentPath: readonly number[], bookmark: Omit<Bookmark, 'id'>) — bookmark must include { type: 'bookmark', title, url, dateAdded }. id assigned internally.",
+                "addFolder": "addFolder(tree, parentPath: readonly number[], name: string) — name only. id, children, dateAdded assigned internally.",
+                "removeItem": "removeItem(tree, path: readonly number[]) — removes item at path.",
+                "moveItem": "moveItem(tree, fromPath: readonly number[], toPath: readonly number[], toIndex: number) — toIndex is insertion position. For append-to-end: destFolder.children.length.",
+                "updateBookmark": "updateBookmark(tree, path: readonly number[], updates: Partial<Pick<Bookmark, 'title' | 'url'>>) — partial update.",
+                "renameFolder": "renameFolder(tree, path: readonly number[], newName: string)"
+            }
+        },
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": ["CLAUDE.md", "entrypoints/popup/App.tsx", "hooks/useSession.ts", "hooks/useSendMessage.ts", "lib/background-types.ts (SAVE, ADD_BOOKMARK)", "lib/data-model.ts (all signatures above — especially moveItem toIndex parameter)", "components/ui/", "This PRD"],
+        "inputs": [
+            { "file": "entrypoints/popup/App.tsx", "from_module": "Module 10", "what_it_provides": "Router, SessionContext, TreeContext shell" },
+            { "file": "hooks/useSendMessage.ts", "from_module": "Module 10", "what_it_provides": "Typed message sender — useTree uses this internally for SAVE dispatches" },
+            { "file": "lib/data-model.ts", "from_module": "Module 4", "what_it_provides": "All tree CRUD functions + type guards. See data_model_signatures in mutation_flow." },
+            { "file": "lib/background-types.ts", "from_module": "Module 9", "what_it_provides": "SAVE, ADD_BOOKMARK message types" }
+        ],
+        "outputs": [
+            { "file": "components/shared/BookmarkTree.tsx + items", "consumed_by": "Module 13 (Manager reuses)", "description": "Shared tree components." },
+            { "file": "components/shared/*Dialog.tsx", "consumed_by": "Module 12, Module 13", "description": "Reusable dialogs." },
+            { "file": "hooks/useTree.ts", "consumed_by": "TreeScreen + ManagerApp", "description": "Tree state hook. In hooks/ at root." }
+        ]
+    },
+    "known_risks": [
+        { "issue": "shadcn Accordion may not be installed", "severity": "MEDIUM", "action": "Check components/ui/. Add if missing." },
+        { "issue": "DropdownMenu positioning in popup may overflow", "severity": "MEDIUM", "action": "Use portal. Test at popup edges." },
+        { "issue": "SAVE latency visible as loading state", "severity": "LOW", "action": "~5-20ms is imperceptible. Disable/re-enable may flash — acceptable." },
+        { "issue": "Recursive tree key warnings", "severity": "LOW", "action": "Key by item.id (unique from generateId)." },
+        { "issue": "moveItem toIndex parameter", "severity": "MEDIUM", "action": "FolderPicker selects target folder only. toIndex defaults to destFolder.children.length (append to end). Reorder within folder is a future enhancement." }
+    ],
+    "critical_path": "001 -> 002 -> 003 -> 004",
+    "total_story_points": 31, "total_stories": 4,
+    "progress_log": { "format_rules": { "file": "progress.md in .prd/module-11-popup-bookmarks/", "format": "Append-only. ## BOOKMARK-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
+    "metadata": { "passing_stories": 0, "build_plan_day": "Day 4", "estimated_test_count": "~32 tests", "session_protocol": "One Claude Code session. Check shadcn Accordion/DropdownMenu. Test in wxt dev.", "quality_gate": "Tree renders. CRUD works. Wait-for-response enforced. moveItem uses toIndex. Zero business logic. All ≤ 300 lines.", "human_review_required": "Walk through wxt dev: add bookmark, folder, edit, delete, move (verify appends to end of target). Verify wait-for-response." },
+    "execution_rules": { "execution_order": "BOOKMARK-001 → 002 → 003 → 004", "clarifying_questions": "Encouraged. Key: shadcn components, Accordion vs custom, DropdownMenu positioning, moveItem toIndex default.", "prd_scope": "Module 11 of 18.", "commit_protocol": "feat(popup-bookmarks): BOOKMARK-XXX — <title>", "failure_protocol": "Max 3 attempts." }
+}

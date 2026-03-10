@@ -1,0 +1,177 @@
+{
+    "project": {
+        "name": "Module 13: Full-Page Manager",
+        "description": "Create entrypoints/manager/ — a full-page bookmark manager in a browser tab. Reuses ALL shared components from Modules 10-12 (BookmarkTree, dialogs, settings) with a wider layout featuring sidebar folder navigation and main content panel. Eliminates the popup.js/manager.js duplication from Holy PB. Target: ManagerApp.tsx ≤200 lines, ManagerSidebar.tsx ≤150 lines.",
+        "version": "1.0.0",
+        "created": "2026-03-10",
+        "parent_plan": "Hush Consolidated Build Plan — Day 4"
+    },
+    "prerequisites": ["module-09-background", "module-10-popup-auth", "module-11-popup-bookmarks", "module-12-popup-settings"],
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": ["Full-page manager opens in a dedicated browser tab (chrome-extension://[id]/manager.html)", "Manager provides same functionality as popup with expanded layout"],
+        "falls_short": [
+            { "id": 1, "deficiency": "Holy PB manager.js is 2,107 lines duplicating ~50% of popup.js", "hush_requires": "Manager imports ALL shared components. Zero duplicated logic. ManagerApp.tsx is layout + routing only." },
+            { "id": 2, "deficiency": "No sidebar — same vertical layout as popup", "hush_requires": "Sidebar with folder tree navigation. Click folder → main panel shows contents." },
+            { "id": 3, "deficiency": "No search or filter", "hush_requires": "Search bar using flattenTree → filter(isBookmark) → filter by query for instant bookmark search." }
+        ],
+        "do_not_incorporate": ["Duplicated UI logic from popup", "manager.js monolith", "Virtual scroll (defer unless 1000+ items)"],
+        "build_from_scratch": [
+            "entrypoints/manager/index.html — full-page HTML shell. NO manifest.type meta tag (WXT registers as regular extension page, not browser_action).",
+            "entrypoints/manager/main.tsx — React root, calls initSentry() from @/lib/sentry (same pattern as popup/main.tsx)",
+            "entrypoints/manager/ManagerApp.tsx — sidebar + main content layout, own SessionContext + TreeContext (independent React root, same hooks)",
+            "components/manager/ManagerSidebar.tsx — folder tree (click to navigate), set picker, lock button. Manager-specific layout — not shared with popup.",
+            "components/manager/ManagerToolbar.tsx — search bar, add bookmark/folder buttons, settings link",
+            "components/manager/SearchResults.tsx — filtered bookmark list from search query (bookmarks only — folders excluded)",
+            "hooks/useSearch.ts — flattenTree → filter(isBookmark) → filter by query string → debounced 200ms → cleanup on unmount",
+            "Open manager via: chrome.tabs.create({ url: chrome.runtime.getURL('manager.html') })"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "MANAGER-001", "category": "core", "priority": "CRITICAL",
+            "title": "Manager entry point, layout, and shared component integration",
+            "description": "Create manager entry point (WXT auto-detects entrypoints/manager/). ManagerApp with sidebar layout. Reuse SessionContext/TreeContext pattern and all shared components. Auth screens shared with popup. Same HYBRID + wait-for-response pattern. REQUIRES Modules 9-12 complete.",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'ManagerApp renders sidebar and main content panel'",
+                "RED: Test: 'ManagerApp shows LoginScreen when locked' (reuses popup LoginScreen)",
+                "RED: Test: 'ManagerApp shows bookmark tree in main panel when unlocked'",
+                "RED: Test: 'ManagerSidebar shows folder tree'",
+                "RED: Test: 'clicking folder in sidebar filters main panel to that folder contents'",
+                "RED: Test: 'ManagerSidebar shows set picker and lock button'",
+                "RED: Test: 'lock button sends LOCK message and returns to login'",
+                "GREEN: Create entrypoints/manager/index.html (NO manifest.type meta tag — WXT registers as regular extension page). Create main.tsx (React root + initSentry() from @/lib/sentry — same as popup). Create ManagerApp.tsx with sidebar layout (CSS grid or flex: sidebar 250px, main fluid). Import LoginScreen, SetupScreen from components/screens/. Import BookmarkTree, all dialogs from components/shared/. Create ManagerSidebar with folder-only tree (filter isFolder), click sets selectedFolderPath. Main panel shows BookmarkTree filtered to selected folder. Own SessionContext + TreeContext providers (same hooks, independent React root).",
+                "REFACTOR: Verify shared components render correctly in full-page context (no popup-specific dimensions hardcoded in shared components)"
+            ],
+            "files": ["entrypoints/manager/index.html", "entrypoints/manager/main.tsx", "entrypoints/manager/ManagerApp.tsx", "components/manager/ManagerSidebar.tsx", "tests/unit/entrypoints/manager/ManagerApp.test.tsx"],
+            "acceptance_criteria": [
+                "Manager loads in browser tab via manager.html",
+                "manager index.html has NO manifest.type meta tag — WXT registers it as a regular extension page",
+                "manager main.tsx calls initSentry() from @/lib/sentry (same as popup/main.tsx — NOT constructing BrowserClient directly)",
+                "Sidebar (250px) + main panel (fluid) layout",
+                "Auth screens (LoginScreen, SetupScreen) reused — zero duplication",
+                "ManagerSidebar: folder tree, set picker, lock button",
+                "Clicking folder in sidebar shows that folder's contents in main panel",
+                "All shared components work in full-page manager context (no popup-specific dimension breakage)",
+                "Own SessionContext + TreeContext providers (same hooks, independent instances)",
+                "Same HYBRID + wait-for-response pattern as popup"
+            ],
+            "definition_of_done": ["All 7 tests pass", "tsc clean", "Manager loads in wxt dev"],
+            "verification": "npx vitest run tests/unit/entrypoints/manager/ && npx tsc --noEmit && npx wxt build",
+            "estimated_effort": "large", "passes": false, "attempt_count": 0,
+            "depends_on": ["EXT:SETTINGS-004"]
+        },
+        {
+            "id": "MANAGER-002", "category": "core", "priority": "HIGH",
+            "title": "Manager toolbar with search and action buttons",
+            "description": "Toolbar with search bar, add bookmark/folder buttons, settings navigation. Search uses flattenTree → filter(isBookmark) → filter by query for instant bookmark results. Folders excluded from search results. Debounced 200ms with cleanup on unmount.",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'ManagerToolbar renders search input and action buttons'",
+                "RED: Test: 'search filters bookmarks by title and URL'",
+                "RED: Test: 'useSearch excludes folders from results'",
+                "RED: Test: 'search clears folder selection (shows all results)'",
+                "RED: Test: 'empty search restores folder view'",
+                "RED: Test: 'useSearch returns filtered results with debounce'",
+                "RED: Test: 'useSearch cleans up debounce timer on unmount'",
+                "GREEN: Create ManagerToolbar (shadcn Input + buttons). Create hooks/useSearch.ts: flattenTree(tree) → filter(isBookmark) → filter by query (case-insensitive match on title + url) → debounce 200ms. Return cleanup function for unmount. Create SearchResults (flat bookmark list using BookmarkItem). When search active, main panel shows SearchResults instead of BookmarkTree.",
+                "REFACTOR: Extract debounce to shared utility or use existing"
+            ],
+            "files": ["components/manager/ManagerToolbar.tsx", "components/manager/SearchResults.tsx", "hooks/useSearch.ts", "tests/unit/components/manager/ManagerToolbar.test.tsx", "tests/unit/hooks/useSearch.test.ts"],
+            "acceptance_criteria": [
+                "Search bar with debounced input (200ms)",
+                "Search filters by title and URL (case-insensitive) — bookmarks ONLY, folders excluded via isBookmark() filter",
+                "Flat list of matching bookmarks in search results",
+                "Active search overrides folder navigation",
+                "Clearing search restores folder view",
+                "Add bookmark/folder buttons open shared dialogs",
+                "useSearch cleans up debounce timer on unmount"
+            ],
+            "definition_of_done": ["All 7 tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/manager/ tests/unit/hooks/useSearch.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["MANAGER-001"]
+        },
+        {
+            "id": "MANAGER-003", "category": "core", "priority": "MEDIUM",
+            "title": "Open Manager from popup, settings in manager, and E2E",
+            "description": "'Open Manager' button in popup TreeScreen. Manager settings reuses SettingsScreen. E2E tests for full manager flows.",
+            "story_points": 5,
+            "steps": [
+                "RED: Playwright test: 'popup Open Manager button opens manager.html in new tab'",
+                "RED: Playwright test: 'manager login → tree → search → add bookmark → settings flow'",
+                "RED: Playwright test: 'manager sidebar folder navigation filters main panel'",
+                "GREEN: Add 'Open Manager' button to popup TreeScreen toolbar (chrome.tabs.create({ url: chrome.runtime.getURL('manager.html') })). Wire SettingsScreen into manager routing (reuse, not duplicate).",
+                "REFACTOR: Full verification: tsc + eslint + vitest + coverage + wxt build + test:e2e. Verify zero duplicated business logic between popup and manager."
+            ],
+            "files": ["components/screens/TreeScreen.tsx", "tests/e2e/manager.test.ts"],
+            "acceptance_criteria": [
+                "Popup has 'Open Manager' button → manager.html in new tab",
+                "Manager has settings accessible (reuses SettingsScreen)",
+                "E2E: full manager flow works (login → tree → search → settings)",
+                "E2E: sidebar folder navigation works",
+                "Zero duplicated logic between popup and manager",
+                "Zero regressions"
+            ],
+            "definition_of_done": ["E2E manager flows pass", "Full verification passes"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["MANAGER-001", "MANAGER-002"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "note": "After Modules 9-12 complete (see prerequisites field):",
+            "popup_complete": "Full popup: LoginScreen, SetupScreen, TreeScreen, SettingsScreen with all sub-components. All shared components in components/shared/. All hooks in hooks/ at project root.",
+            "shared_components": "BookmarkTree, BookmarkItem, FolderItem, AddEditBookmarkDialog, AddFolderDialog, ConfirmDialog, FolderPicker, PasswordInput, SetPicker, MnemonicDisplay, ErrorBoundary, all settings sub-components in components/settings/.",
+            "background": "All 16 message handlers fully functional (Module 12 wired up the 10 stubs). Zero NOT_IMPLEMENTED remaining.",
+            "manager_shell": "entrypoints/manager/ may have index.html from Module 1 scaffold. Minimal or empty.",
+            "css_note": "Popup dimensions (380x550) applied at popup App.tsx level only. Shared components use relative/fluid sizing — verified in Module 11."
+        },
+        "what_does_not_exist": {
+            "manager_ui": "No ManagerApp, ManagerSidebar, ManagerToolbar, SearchResults. No useSearch hook.",
+            "manager_entry": "entrypoints/manager/main.tsx does not exist (or minimal stub).",
+            "manager_components": "components/manager/ directory does not exist."
+        }
+    },
+    "context": {
+        "tech_stack": { "runtime": "Node.js 20 LTS", "ui": "React 19 + shadcn/ui. CSS grid or flexbox for sidebar layout.", "testing": "@testing-library/react + Vitest + Playwright", "forbidden_patterns": ["Duplicating popup components", "Business logic in manager components", "Components > 300 lines", "Optimistic updates", "Hooks in lib/ (use hooks/ at root)", "manifest.type meta tag in manager index.html"] },
+        "layout": {
+            "description": "Sidebar + main content. Sidebar: 250px fixed, full height. Main: fluid.",
+            "sidebar": "Folder tree (folders only). Set picker. Lock button. 'Open Settings' link.",
+            "main_panel": "Toolbar (search + actions) + BookmarkTree/SearchResults. Selected folder contents, or search results, or root."
+        },
+        "component_reuse": "The entire value of this module is reuse. ManagerApp ~150-200 lines of layout + routing. ManagerSidebar ~100-150 lines. Everything else imported from components/shared/ and components/screens/.",
+        "architecture": {
+            "communication": "Same HYBRID pattern as popup. Own SessionContext + TreeContext (independent React root, same hooks). Both popup and manager communicate with same background worker.",
+            "stale_state": "If popup and manager are open simultaneously, one doesn't see the other's changes mid-session. Acceptable for v1.0. Future: chrome.runtime.onMessage listener for cross-window state change notifications.",
+            "manager_components": "Manager-specific layout components live in components/manager/ — not shared with popup. Follows components/screens/ and components/shared/ precedent. Only ManagerSidebar, ManagerToolbar, SearchResults live here.",
+            "css_isolation": "Popup constraints (380x550) applied at popup App.tsx level only. Shared components must use relative/fluid sizing. Manager's full-page layout means shared components stretch to fill available space."
+        },
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": ["CLAUDE.md", "entrypoints/popup/App.tsx (pattern to follow — after Module 10 completes)", "components/shared/", "components/screens/", "components/settings/", "hooks/", "lib/data-model.ts (flattenTree, isFolder, isBookmark for search and sidebar)", "This PRD"],
+        "inputs": [
+            { "file": "components/shared/*", "from_module": "Modules 10-12", "what_it_provides": "All shared UI components" },
+            { "file": "components/screens/*", "from_module": "Modules 10-12", "what_it_provides": "LoginScreen, SetupScreen, SettingsScreen" },
+            { "file": "components/settings/*", "from_module": "Module 12", "what_it_provides": "All settings sub-components" },
+            { "file": "hooks/*", "from_module": "Modules 10-11", "what_it_provides": "useSession, useSendMessage, useTree (in hooks/ at root)" },
+            { "file": "lib/data-model.ts", "from_module": "Module 4", "what_it_provides": "flattenTree, isFolder, isBookmark" },
+            { "file": "lib/sentry.ts", "from_module": "Module 1", "what_it_provides": "initSentry() — called in manager main.tsx" }
+        ],
+        "outputs": [
+            { "file": "entrypoints/manager/ManagerApp.tsx", "consumed_by": "End users", "description": "≤200 lines. Layout + routing, all content from shared." },
+            { "file": "hooks/useSearch.ts", "consumed_by": "Manager (and potentially popup in future)", "description": "Search hook: flattenTree → filter(isBookmark) → filter by query → debounce 200ms → cleanup on unmount." }
+        ]
+    },
+    "known_risks": [
+        { "issue": "WXT manager entry point configuration", "severity": "MEDIUM", "action": "WXT auto-detects entrypoints/manager/index.html. Verify. May need wxt.config.ts." },
+        { "issue": "Context isolation — independent React roots", "severity": "LOW", "action": "Each creates own providers via same hooks. Both talk to same background. Correct." },
+        { "issue": "Stale state between popup and manager", "severity": "MEDIUM", "action": "Both GET_STATE on mount. No cross-window refresh in v1.0. Acceptable." },
+        { "issue": "Shared component CSS assumes popup dimensions", "severity": "MEDIUM", "action": "Popup constraints applied at popup App.tsx level only. Shared components use relative/fluid sizing. Verify BookmarkTree, dialogs render correctly in full-page context." },
+        { "issue": "Concurrent SAVE from popup and manager", "severity": "LOW", "action": "chrome.runtime.onMessage processes sequentially. Last-write-wins. Acceptable for v1.0." },
+        { "issue": "manager index.html must not have manifest.type meta tag", "severity": "MEDIUM", "action": "Popup has meta name='manifest.type' content='browser_action'. Manager must NOT — it's a regular extension page. WXT may handle this automatically; verify in built output." }
+    ],
+    "critical_path": "001 -> 002 -> 003",
+    "total_story_points": 18, "total_stories": 3,
+    "progress_log": { "format_rules": { "file": "progress.md in .prd/module-13-manager/", "format": "Append-only. ## MANAGER-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
+    "metadata": { "passing_stories": 0, "build_plan_day": "Day 4", "estimated_test_count": "~13 unit tests + 3 E2E tests", "session_protocol": "One Claude Code session. Verify WXT manager entry point. Focus on reuse — minimal new code. Test in wxt dev.", "quality_gate": "Manager loads. Sidebar works. Search filters bookmarks only (not folders). Zero duplicated logic. All ≤ 300 lines. useSearch cleans up on unmount.", "human_review_required": "Open popup and manager side by side. Same functionality, different layouts. Grep for duplicated business logic — expect zero. Verify shared components render at full-page width." },
+    "execution_rules": { "execution_order": "MANAGER-001 → 002 → 003. REQUIRES Modules 9-12 complete.", "clarifying_questions": "Encouraged. Key: WXT manager entry point, sidebar layout, search isBookmark filter, CSS isolation.", "prd_scope": "Module 13 of 22.", "commit_protocol": "feat(manager): MANAGER-XXX — <title>", "failure_protocol": "Max 3 attempts." }
+}

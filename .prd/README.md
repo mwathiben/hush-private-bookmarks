@@ -13,10 +13,10 @@
 | 07 | BIP39 Recovery | 1 | ✅ Complete | 3/3 | 16/16 |
 | 08 | Incognito Mode | 1 | ✅ Complete | 2/2 | 8/8 |
 | 09 | Background Service Worker | - | ⬜ Not Started | - | - |
-| 10 | Popup UI — Auth Screens | - | ⬜ Not Started | - | - |
+| 10 | Popup UI — Auth Screens | 1 | ⬜ Not Started | 0/4 | 0/29 |
 | 11 | Popup UI — Bookmark Management | - | ⬜ Not Started | - | - |
 | 12 | Popup UI — Settings & Utilities | - | ⬜ Not Started | - | - |
-| 13 | Full-Page Manager | - | ⬜ Not Started | - | - |
+| 13 | Full-Page Manager | 1 | ⬜ Not Started | 0/3 | 0/18 |
 | 14 | Hush 1.0 Import | - | ⬜ Not Started | - | - |
 | 15a | Cloud Sync Client | - | ⬜ Not Started | - | - |
 | 16a | Payment Integration (ProGate) | - | ⬜ Not Started | - | - |

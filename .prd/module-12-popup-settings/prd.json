@@ -1,0 +1,250 @@
+{
+    "project": {
+        "name": "Module 12: Popup UI — Settings & Utilities",
+        "description": "Create SettingsScreen with password change, recovery phrase verification, import/export (Chrome bookmarks, HTML file, encrypted backup), password set management, auto-lock config, theme toggle, and clear data. CRITICAL: This module also wires up the 10 NOT_IMPLEMENTED message handlers in background.ts. Split into SETTINGS-001a (backend handlers) and SETTINGS-001b (UI) for independent testability. Target: SettingsScreen ≤300 lines, each sub-component ≤200 lines.",
+        "version": "1.2.0",
+        "created": "2026-03-10",
+        "parent_plan": "Hush Consolidated Build Plan — Day 4"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": ["Chrome bookmark import flow (click → chrome.bookmarks.getTree → convert → save)", "Encrypted JSON backup export/import flow"],
+        "falls_short": [
+            { "id": 1, "deficiency": "Settings scattered across popup.js", "hush_requires": "Dedicated SettingsScreen with organized sections." },
+            { "id": 2, "deficiency": "Basic inline password change form", "hush_requires": "Password change: current → new → confirm → re-encrypt all data." },
+            { "id": 3, "deficiency": "No recovery phrase access after setup", "hush_requires": "RecoveryPhraseVerify: user enters phrase in single textarea, validateMnemonic confirms validity. Phrase is NEVER stored." },
+            { "id": 4, "deficiency": "No HTML bookmark import", "hush_requires": "Import from HTML file: file picker → parseHtmlBookmarks (lib/ call) → merge into tree → SAVE. Distinct from encrypted backup import (IMPORT_BACKUP message)." },
+            { "id": 5, "deficiency": "No password set management UI", "hush_requires": "Create/rename/delete sets via background messages." }
+        ],
+        "do_not_incorporate": ["Inline settings in popup", "Settings that modify crypto parameters"],
+        "build_from_scratch": [
+            "SETTINGS-001a: Wire all 10 NOT_IMPLEMENTED background handlers with real logic",
+            "SETTINGS-001b: components/screens/SettingsScreen.tsx — organized sections: Account, Import/Export, Data, About",
+            "components/settings/PasswordChangeForm.tsx — current + new + confirm flow via CHANGE_PASSWORD message",
+            "components/settings/RecoveryPhraseVerify.tsx — single textarea input, trim + lowercase + split on whitespace, validateMnemonic. Does NOT use MnemonicDisplay (that's for display, not input).",
+            "components/settings/ImportSection.tsx — 3 distinct flows: Chrome (IMPORT_CHROME_BOOKMARKS), HTML (parseHtmlBookmarks + SAVE), backup (IMPORT_BACKUP)",
+            "components/settings/ExportSection.tsx — EXPORT_BACKUP message. Disabled when session is locked.",
+            "components/settings/SetManagement.tsx — list/create/rename/delete sets via background messages",
+            "components/settings/AutoLockConfig.tsx — UPDATE_AUTO_LOCK message",
+            "components/settings/ClearDataSection.tsx — CLEAR_ALL with double confirmation",
+            "components/settings/ThemeToggle.tsx — dark/light/system. Reads/writes localStorage. App.tsx must also read on mount (coordinate with Module 10 dark mode init)."
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "SETTINGS-001a", "category": "core", "priority": "CRITICAL",
+            "title": "Wire all 10 NOT_IMPLEMENTED background handlers",
+            "description": "Replace all 10 NOT_IMPLEMENTED stubs in entrypoints/background.ts with real implementations using existing lib/ functions. This is backend-only — independently testable without any UI. Tests use the same mock-chrome pattern from Module 9.",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'CHANGE_PASSWORD decrypts with old password and re-encrypts with new'",
+                "RED: Test: 'CHANGE_PASSWORD with wrong current password returns error'",
+                "RED: Test: 'UPDATE_AUTO_LOCK clears and recreates alarm with new minutes'",
+                "RED: Test: 'CREATE_SET creates set in manifest + saves empty tree encrypted with password'",
+                "RED: Test: 'RENAME_SET renames set in manifest'",
+                "RED: Test: 'DELETE_SET removes set from manifest + deletes storage key'",
+                "RED: Test: 'SWITCH_SET locks current + loads new set + updates session'",
+                "RED: Test: 'SWITCH_SET with wrong password returns INVALID_PASSWORD'",
+                "RED: Test: 'CLEAR_ALL with confirmation DELETE clears storage and locks session'",
+                "RED: Test: 'CLEAR_ALL rejects if confirmation is not DELETE'",
+                "RED: Test: 'IMPORT_CHROME_BOOKMARKS calls chrome.bookmarks.getTree, extracts result[0].children, converts via convertChromeBookmarks'",
+                "RED: Test: 'IMPORT_BACKUP calls importEncryptedBackup with blob + password'",
+                "RED: Test: 'EXPORT_BACKUP calls exportEncryptedBackup with cached tree + password'",
+                "RED: Test: 'EXPORT_BACKUP returns error when session is locked (no cached password)'",
+                "GREEN: Wire each handler in background.ts switch cases:",
+                "  CHANGE_PASSWORD: loadSetData(activeSetId, msg.currentPassword) → saveSetData(activeSetId, plaintext, msg.newPassword) → update cached password → return success. Recovery blob unaffected (uses mnemonic, not user password).",
+                "  UPDATE_AUTO_LOCK: chrome.alarms.clear(AUTO_LOCK_ALARM) → chrome.alarms.create(AUTO_LOCK_ALARM, { delayInMinutes: msg.minutes }) → return success",
+                "  CREATE_SET: createSet(msg.name) → saveSetData(newSetId, JSON.stringify(createEmptyTree()), msg.password) → return { setId }",
+                "  RENAME_SET: renameSet(msg.setId, msg.newName) → return success",
+                "  DELETE_SET: deleteSet(msg.setId) → return success",
+                "  SWITCH_SET: lock current (clear alarm, null tree/password) → setActiveSetId(msg.setId) → loadSetData(msg.setId, msg.password) → JSON.parse → cache tree + password → chrome.storage.session.set → create alarm → return SessionState",
+                "  CLEAR_ALL: validate msg.confirmation === 'DELETE' → clearAll() → chrome.storage.session.clear() → null session → return success",
+                "  IMPORT_CHROME_BOOKMARKS: chrome.bookmarks.getTree() → extract result[0]!.children (Chrome root node pattern — bookmarks bar, other, mobile are children of invisible root) → convertChromeBookmarks(children) → return { tree, stats }",
+                "  IMPORT_BACKUP: importEncryptedBackup(msg.blob, msg.password) → return { tree }",
+                "  EXPORT_BACKUP: validate cached password exists → exportEncryptedBackup(cachedTree, cachedPassword) → return { blob }",
+                "REFACTOR: Verify zero NOT_IMPLEMENTED stubs remain (grep). Consider extracting handlers to separate file if background.ts exceeds 300 lines."
+            ],
+            "files": ["entrypoints/background.ts", "tests/unit/entrypoints/background.test.ts"],
+            "acceptance_criteria": [
+                "All 10 NOT_IMPLEMENTED stubs replaced with real implementations",
+                "grep 'NOT_IMPLEMENTED' entrypoints/background.ts returns zero results",
+                "CHANGE_PASSWORD: decrypt old → re-encrypt new → save. Does NOT invalidate recovery blob.",
+                "CREATE_SET: creates empty tree, not null — JSON.stringify(createEmptyTree())",
+                "IMPORT_CHROME_BOOKMARKS: extracts result[0].children before passing to convertChromeBookmarks (Chrome root node pattern)",
+                "EXPORT_BACKUP: passes cachedTree (BookmarkTree object) directly to exportEncryptedBackup — no JSON.stringify (function handles serialization internally)",
+                "EXPORT_BACKUP: returns error when no cached password (session locked)",
+                "CLEAR_ALL: rejects unless confirmation === 'DELETE'",
+                "SWITCH_SET: full lock → unlock cycle with new set",
+                "All handlers use Result<T, E> pattern — check .success before proceeding"
+            ],
+            "definition_of_done": ["All 14 handler tests pass", "tsc clean", "Zero NOT_IMPLEMENTED remaining"],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit && grep -c NOT_IMPLEMENTED entrypoints/background.ts | grep '^0$'",
+            "estimated_effort": "large", "passes": false, "attempt_count": 0, "depends_on": []
+        },
+        {
+            "id": "SETTINGS-001b", "category": "core", "priority": "CRITICAL",
+            "title": "SettingsScreen shell with password change and recovery verification",
+            "description": "Create SettingsScreen with organized sections, password change flow, and recovery phrase verification. RecoveryPhraseVerify uses a single textarea (not MnemonicDisplay — that's for display, not input).",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'SettingsScreen renders section headers'",
+                "RED: Test: 'back button navigates to tree screen'",
+                "RED: Test: 'PasswordChangeForm requires current, new, confirmation'",
+                "RED: Test: 'PasswordChangeForm rejects mismatched passwords'",
+                "RED: Test: 'PasswordChangeForm sends CHANGE_PASSWORD and waits for response'",
+                "RED: Test: 'RecoveryPhraseVerify has single textarea input'",
+                "RED: Test: 'RecoveryPhraseVerify trims, lowercases, splits on whitespace, validates via validateMnemonic'",
+                "GREEN: Create SettingsScreen with sections (Account, Import/Export, Data, About) and back nav. Create PasswordChangeForm (current → new → confirm → CHANGE_PASSWORD message → wait → success/error). Create RecoveryPhraseVerify: single textarea, on submit: trim + lowercase + split(/\\s+/) → validateMnemonic(normalized) → show valid/invalid result. CANNOT display original phrase — never stored.",
+                "REFACTOR: Confirm RecoveryPhraseVerify does NOT import MnemonicDisplay"
+            ],
+            "files": ["components/screens/SettingsScreen.tsx", "components/settings/PasswordChangeForm.tsx", "components/settings/RecoveryPhraseVerify.tsx", "tests/unit/components/screens/SettingsScreen.test.tsx", "tests/unit/components/settings/PasswordChangeForm.test.tsx", "tests/unit/components/settings/RecoveryPhraseVerify.test.tsx"],
+            "acceptance_criteria": [
+                "SettingsScreen with organized sections and back navigation",
+                "PasswordChangeForm: current + new + confirm → CHANGE_PASSWORD → wait-for-response",
+                "RecoveryPhraseVerify: single textarea, trim + lowercase + split on whitespace → validateMnemonic",
+                "RecoveryPhraseVerify does NOT use MnemonicDisplay (that component is for display, not input)",
+                "Shows valid/invalid result. Cannot display the original phrase (by design).",
+                "components/settings/ directory is intentional — separates settings sub-components from shared components",
+                "All flows show loading states and error handling"
+            ],
+            "definition_of_done": ["All 7 settings tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/ && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["SETTINGS-001a"]
+        },
+        {
+            "id": "SETTINGS-002", "category": "core", "priority": "HIGH",
+            "title": "Import/Export: Chrome bookmarks, HTML file, encrypted backup",
+            "description": "Three distinct import flows + one export flow. Chrome import: IMPORT_CHROME_BOOKMARKS message → receive tree + stats → merge. HTML import: file picker → FileReader → parseHtmlBookmarks (lib/ call in UI — pure function, no browser API) → merge → SAVE. Backup import: IMPORT_BACKUP message. These are DIFFERENT flows — do not conflate.",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'Chrome import button sends IMPORT_CHROME_BOOKMARKS and shows stats'",
+                "RED: Test: 'Chrome import merges result into current tree via SAVE'",
+                "RED: Test: 'HTML import opens file picker, reads file, calls parseHtmlBookmarks, merges via SAVE'",
+                "RED: Test: 'backup export sends EXPORT_BACKUP and triggers file download'",
+                "RED: Test: 'backup export button disabled when session is locked'",
+                "RED: Test: 'backup import sends IMPORT_BACKUP with blob + password (prompts for password)'",
+                "RED: Test: 'import shows stats after successful import'",
+                "GREEN: Create ImportSection with 3 flows: (1) Chrome: send IMPORT_CHROME_BOOKMARKS → receive { tree, stats } → append result.data.tree (the 'Imported' wrapper folder) as a single top-level folder into current tree root.children → SAVE. Note: convertChromeBookmarks wraps results in a folder named 'Imported' (bookmark-import.ts:52). (2) HTML: file input → FileReader.readAsText → parseHtmlBookmarks(html) → append result.data.tree (also an 'Imported' wrapper) to root.children → SAVE. parseHtmlBookmarks is a pure lib/ function safe to call from UI. (3) Backup: file input → read text → prompt for backup password → IMPORT_BACKUP { blob, password } → receive tree → replace current tree → SAVE. Create ExportSection: EXPORT_BACKUP → receive { blob } → create Blob → URL.createObjectURL → download link. Disable export button when !isUnlocked from SessionContext.",
+                "REFACTOR: Extract merge logic: append imported wrapper folder to current tree root.children"
+            ],
+            "files": ["components/settings/ImportSection.tsx", "components/settings/ExportSection.tsx", "tests/unit/components/settings/ImportSection.test.tsx", "tests/unit/components/settings/ExportSection.test.tsx"],
+            "acceptance_criteria": [
+                "3 distinct import flows: Chrome (IMPORT_CHROME_BOOKMARKS), HTML (parseHtmlBookmarks + SAVE), backup (IMPORT_BACKUP)",
+                "Chrome and HTML import: append result.data.tree ('Imported' wrapper folder from bookmark-import.ts:52) as a single top-level folder in current tree root.children — do NOT flatten children",
+                "Backup import prompts for backup password separately and replaces entire tree",
+                "Export sends EXPORT_BACKUP → blob → download",
+                "Export button disabled when session is locked (no cached password)",
+                "Import stats displayed after success (from result.data.stats)",
+                "Merge strategy: result.data.tree is a Folder named 'Imported' containing all imported items — append it whole to root.children"
+            ],
+            "definition_of_done": ["All 7 import/export tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/settings/ && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["SETTINGS-001a", "SETTINGS-001b"]
+        },
+        {
+            "id": "SETTINGS-003", "category": "core", "priority": "HIGH",
+            "title": "Set management, auto-lock, theme, and clear data",
+            "description": "SetManagement (CREATE_SET, RENAME_SET, DELETE_SET), AutoLockConfig (UPDATE_AUTO_LOCK), ThemeToggle (localStorage — coordinate with Module 10 App.tsx dark mode init), ClearDataSection (CLEAR_ALL with double confirm).",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'SetManagement lists sets from context'",
+                "RED: Test: 'create set sends CREATE_SET message'",
+                "RED: Test: 'delete set shows ConfirmDialog then sends DELETE_SET'",
+                "RED: Test: 'AutoLockConfig sends UPDATE_AUTO_LOCK with new minutes'",
+                "RED: Test: 'ClearDataSection requires double confirmation then sends CLEAR_ALL'",
+                "RED: Test: 'ThemeToggle cycles light/dark/system and persists to localStorage'",
+                "GREEN: Create SetManagement (list from SessionContext.sets, CREATE_SET/RENAME_SET/DELETE_SET messages. Cannot delete default set.). AutoLockConfig (input for minutes, UPDATE_AUTO_LOCK). ThemeToggle (3-way: light/dark/system, localStorage key 'hush-theme'. On mount reads localStorage and applies class. NOTE: App.tsx from Module 10 also needs to read this on mount to set initial theme — add a useTheme hook or inline the read in App.tsx. If Module 10 already handles dark mode via system preference, extend to also check localStorage.). ClearDataSection (ConfirmDialog → type 'DELETE' → CLEAR_ALL → lock → login).",
+                "REFACTOR: Consider extracting useTheme hook to hooks/ for shared popup/manager use"
+            ],
+            "files": ["components/settings/SetManagement.tsx", "components/settings/AutoLockConfig.tsx", "components/settings/ThemeToggle.tsx", "components/settings/ClearDataSection.tsx", "tests/unit/components/settings/SetManagement.test.tsx", "tests/unit/components/settings/ThemeToggle.test.tsx"],
+            "acceptance_criteria": [
+                "SetManagement: list, create (CREATE_SET), rename (RENAME_SET), delete (DELETE_SET with ConfirmDialog)",
+                "Cannot delete default set",
+                "AutoLockConfig: UPDATE_AUTO_LOCK with new minutes value",
+                "ThemeToggle: light/dark/system. localStorage key 'hush-theme'. Applied on mount.",
+                "Theme initialization: App.tsx reads localStorage('hush-theme') on mount, falls back to system preference",
+                "ClearDataSection: double confirmation → CLEAR_ALL { confirmation: 'DELETE' } → lock → login",
+                "All via background messages. Zero direct storage calls (except localStorage for theme)."
+            ],
+            "definition_of_done": ["All 6 tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/settings/ && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["SETTINGS-001b"]
+        },
+        {
+            "id": "SETTINGS-004", "category": "quality", "priority": "MEDIUM",
+            "title": "E2E settings flows and integration verification",
+            "description": "Playwright E2E for settings. Full verification. Confirm zero NOT_IMPLEMENTED in background.",
+            "story_points": 5,
+            "steps": [
+                "Playwright E2E: settings → change password → re-login with new password",
+                "Playwright E2E: export backup → import backup → verify data intact",
+                "Playwright E2E: create set → switch → delete → back to default",
+                "Playwright E2E: theme toggle persists across popup close/reopen",
+                "Full verification: tsc + eslint + vitest + coverage + wxt build + test:e2e",
+                "Verify: grep NOT_IMPLEMENTED entrypoints/background.ts returns 0"
+            ],
+            "files": ["tests/e2e/popup-settings.test.ts"],
+            "acceptance_criteria": ["E2E settings flows pass", "Zero NOT_IMPLEMENTED in background.ts", "Zero regressions", "All components ≤ 300 lines", "components/settings/ directory confirmed intentional"],
+            "definition_of_done": ["Full verification passes"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e && grep -c NOT_IMPLEMENTED entrypoints/background.ts | grep '^0$'",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["SETTINGS-001a", "SETTINGS-001b", "SETTINGS-002", "SETTINGS-003"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "popup": "Modules 10-11 complete. App.tsx with state machine router, SessionContext, TreeContext. LoginScreen, SetupScreen, TreeScreen with full bookmark CRUD. All shared components: BookmarkTree, BookmarkItem, FolderItem, AddEditBookmarkDialog, AddFolderDialog, ConfirmDialog, FolderPicker, PasswordInput, SetPicker, MnemonicDisplay, ErrorBoundary.",
+            "hooks": "hooks/useSession.ts, hooks/useSendMessage.ts, hooks/useTree.ts (at project root).",
+            "router": "State machine with settings and import as valid screens from tree.",
+            "background": "Module 9. All 16 message types defined. 6 core handlers implemented. 10 handlers return NOT_IMPLEMENTED — SETTINGS-001a wires them up.",
+            "dark_mode": "Module 10 AUTH-004 implements dark mode via system preference. ThemeToggle in this module extends to localStorage-based user choice."
+        },
+        "what_does_not_exist": {
+            "settings": "No SettingsScreen or any settings sub-components. No components/settings/ directory.",
+            "import_export_ui": "No ImportSection, ExportSection (lib/ functions exist but no UI).",
+            "background_handlers": "10 message handlers in background.ts are NOT_IMPLEMENTED stubs."
+        }
+    },
+    "context": {
+        "tech_stack": { "runtime": "Node.js 20 LTS", "ui": "React 19 + shadcn/ui", "testing": "@testing-library/react + Vitest + Playwright", "forbidden_patterns": ["Business logic in components", "Direct chrome.* calls (route through background)", "Components > 300 lines", "Optimistic updates", "Hooks in lib/ (use hooks/ at root)"] },
+        "import_flows": {
+            "chrome": "IMPORT_CHROME_BOOKMARKS message → background calls chrome.bookmarks.getTree() → extracts result[0].children (Chrome root pattern) → convertChromeBookmarks → returns Result<{ tree, stats }>. UI appends result.data.tree ('Imported' wrapper folder) as single top-level folder to current root.children → SAVE.",
+            "html": "File picker → FileReader → parseHtmlBookmarks(html) — called DIRECTLY in UI (pure lib/ function, no browser API). Returns Result<{ tree, stats }>. UI appends result.data.tree ('Imported' wrapper folder) to root.children → SAVE.",
+            "backup_import": "File picker → read text → prompt password → IMPORT_BACKUP { blob, password } message to background → returns tree → replace current tree entirely → SAVE.",
+            "backup_export": "EXPORT_BACKUP message → background passes cachedTree (BookmarkTree object, NOT JSON string) + cachedPassword to exportEncryptedBackup → returns blob string → UI creates download. Disabled when locked."
+        },
+        "import_merge_strategy": "convertChromeBookmarks and parseHtmlBookmarks both return ImportResult where data.tree is a Folder named 'Imported' (bookmark-import.ts:52). The 'Imported' folder is appended WHOLE as a single top-level folder to current tree root.children. This is clean and reversible — user can delete the folder if unwanted. Backup import replaces the entire tree (different behavior).",
+        "password_change_flow": "CHANGE_PASSWORD: background decrypts with old → re-encrypts with new → saves. Recovery blob unaffected (encrypted with mnemonic-derived password, NOT user password).",
+        "theme_coordination": "ThemeToggle writes to localStorage('hush-theme'). App.tsx reads on mount: check localStorage first, fall back to prefers-color-scheme. Both popup and manager need this — consider useTheme hook in hooks/.",
+        "components_settings_directory": "components/settings/ is intentional. Settings sub-components are numerous and only used by SettingsScreen. Keeping them separate from components/shared/ (which Module 13 reuses) is cleaner.",
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": ["CLAUDE.md", "entrypoints/background.ts (find NOT_IMPLEMENTED stubs)", "lib/password-sets.ts (saveSetData, loadSetData — string-based API, returns Result<T,E>)", "lib/bookmark-import.ts (parseHtmlBookmarks, convertChromeBookmarks — both return ImportResult with 'Imported' wrapper folder)", "lib/bookmark-backup.ts (exportEncryptedBackup takes BookmarkTree not string, importEncryptedBackup)", "lib/recovery.ts (validateMnemonic)", "lib/storage.ts (clearAll)", "lib/data-model.ts (createEmptyTree)", "This PRD"],
+        "inputs": [
+            { "file": "components/shared/*", "from_module": "Modules 10-11", "what_it_provides": "ConfirmDialog, PasswordInput, dialogs. NOTE: MnemonicDisplay is NOT used by RecoveryPhraseVerify." },
+            { "file": "lib/password-sets.ts", "from_module": "Module 6", "what_it_provides": "createSet, deleteSet, renameSet, listSets, saveSetData, loadSetData, getActiveSetId, setActiveSetId" },
+            { "file": "lib/bookmark-import.ts", "from_module": "Module 5", "what_it_provides": "convertChromeBookmarks, parseHtmlBookmarks — both return ImportResult = Result<{ tree: BookmarkTree, stats: ImportStats }>. tree is a wrapper Folder named 'Imported'." },
+            { "file": "lib/bookmark-backup.ts", "from_module": "Module 5", "what_it_provides": "exportEncryptedBackup(tree: BookmarkTree, password: string): Promise<string> — takes BookmarkTree object, NOT JSON string. importEncryptedBackup(blob: string, password: string)" },
+            { "file": "lib/recovery.ts", "from_module": "Module 7", "what_it_provides": "validateMnemonic (pure function)" },
+            { "file": "lib/storage.ts", "from_module": "Module 3", "what_it_provides": "clearAll" },
+            { "file": "lib/data-model.ts", "from_module": "Module 4", "what_it_provides": "createEmptyTree (for CREATE_SET empty tree)" },
+            { "file": "hooks/useSendMessage.ts", "from_module": "Module 10", "what_it_provides": "Typed message sender for all background communication" }
+        ],
+        "outputs": [
+            { "file": "components/screens/SettingsScreen.tsx + sub-components", "consumed_by": "Module 13 (Manager reuses SettingsScreen)", "description": "Settings UI. components/settings/ directory." },
+            { "file": "entrypoints/background.ts (modified)", "consumed_by": "All UI modules", "description": "All 16 handlers functional. Zero NOT_IMPLEMENTED." }
+        ]
+    },
+    "known_risks": [
+        { "issue": "Password change re-encryption is slow (PBKDF2 × 2)", "severity": "MEDIUM", "action": "Loading indicator. Rare operation." },
+        { "issue": "chrome.bookmarks.getTree() root node pattern", "severity": "HIGH", "action": "Chrome returns invisible root. Extract result[0].children before convertChromeBookmarks. Documented in SETTINGS-001a handler spec." },
+        { "issue": "Recovery phrase can't be displayed — only verified", "severity": "LOW", "action": "RecoveryPhraseVerify with single textarea. NOT MnemonicDisplay." },
+        { "issue": "CLEAR_ALL is irreversible", "severity": "HIGH", "action": "Double confirmation: dialog + type 'DELETE'." },
+        { "issue": "background.ts may exceed 300 lines after 10 handlers", "severity": "MEDIUM", "action": "Extract handler functions to background-handlers.ts if needed." },
+        { "issue": "Theme localStorage ↔ App.tsx coordination", "severity": "MEDIUM", "action": "ThemeToggle writes localStorage. App.tsx reads on mount. Document in SETTINGS-003." },
+        { "issue": "Export when locked", "severity": "MEDIUM", "action": "Disable export button when !isUnlocked. Background handler also validates cached password." },
+        { "issue": "exportEncryptedBackup signature", "severity": "LOW", "action": "Takes BookmarkTree object, NOT JSON string. Function handles serialization internally. Documented in acceptance criteria." }
+    ],
+    "critical_path": "001a -> 001b -> 002/003 -> 004",
+    "total_story_points": 31, "total_stories": 5,
+    "progress_log": { "format_rules": { "file": "progress.md in .prd/module-12-popup-settings/", "format": "Append-only. ## SETTINGS-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
+    "metadata": { "passing_stories": 0, "build_plan_day": "Day 4", "estimated_test_count": "~14 handler tests + ~20 UI tests = ~34 total", "session_protocol": "One Claude Code session. Wire background handlers FIRST (001a), then build UI (001b+). Test in wxt dev.", "quality_gate": "All 16 handlers functional. Zero NOT_IMPLEMENTED. Settings UI works. Password change works. Import/export works. Recovery verify uses textarea. Export disabled when locked.", "human_review_required": "Walk through: password change, Chrome import (verify 'Imported' folder preserved), HTML import, backup export/import, set management, clear data, theme toggle. Grep NOT_IMPLEMENTED — expect zero." },
+    "execution_rules": { "execution_order": "SETTINGS-001a → 001b → 002/003 → 004", "clarifying_questions": "Encouraged. Key: Chrome root node extraction, theme localStorage coordination, handler file organization.", "prd_scope": "Module 12 of 18.", "commit_protocol": "feat(popup-settings): SETTINGS-XXX — <title>", "failure_protocol": "Max 3 attempts." }
+}

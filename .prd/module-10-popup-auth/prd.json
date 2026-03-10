@@ -1,0 +1,205 @@
+{
+    "project": {
+        "name": "Module 10: Popup UI — Auth Screens",
+        "description": "Create the popup React app shell with screen-based state machine routing, SessionContext provider, background message hooks, and auth screens (Login, Setup). First React UI module. Establishes popup architecture that Modules 11-12 build on. Popup dimensions: 380px wide, 550px tall (CSS on body). Components use shadcn/ui primitives. Zero business logic in components — all data flows through lib/ via background messages. Wait-for-response pattern: UI disables action → sends message → awaits response → updates context. Target: App.tsx ≤150 lines, each screen ≤200 lines.",
+        "version": "1.2.0",
+        "created": "2026-03-10",
+        "updated": "2026-03-10",
+        "parent_plan": "Hush Consolidated Build Plan — Day 4"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": ["Login flow: password input → decrypt → show bookmarks.", "First-time setup: create password → confirm → ready."],
+        "falls_short": [
+            { "id": 1, "deficiency": "Holy PB popup.js is 2,287 lines mixing auth, tree, import, settings — untestable monolith", "hush_requires": "Separate: App.tsx (router), LoginScreen, SetupScreen, each ≤200 lines. Zero business logic." },
+            { "id": 2, "deficiency": "No password set picker", "hush_requires": "SetPicker dropdown on login screen from manifest sets." },
+            { "id": 3, "deficiency": "No BIP39 recovery phrase display during setup", "hush_requires": "Setup: create password → confirm → display 12-word mnemonic → user confirms → done." },
+            { "id": 4, "deficiency": "No dark/light theme", "hush_requires": "Tailwind class-based dark mode. System preference respected. Toggle in Module 12." },
+            { "id": 5, "deficiency": "No incognito UI", "hush_requires": "Login screen shows incognito badge/message from IncognitoMode." }
+        ],
+        "do_not_incorporate": ["popup.js monolith", "Inline HTML templates", "Direct chrome.storage calls from UI", "jQuery/DOM manipulation"],
+        "build_from_scratch": [
+            "entrypoints/popup/App.tsx — state machine router + SessionContext + TreeContext providers",
+            "hooks/useSession.ts — GET_STATE on mount, provides SessionContext value. Lives in hooks/ (project root), NOT lib/ — React hooks import useState/useEffect which violate lib/ purity.",
+            "hooks/useSendMessage.ts — typed wrapper around chrome.runtime.sendMessage using BackgroundMessage types. Lives in hooks/ (project root).",
+            "Screen state machine: TRANSITIONS record defining valid screen flows",
+            "components/screens/LoginScreen.tsx — password input, set picker, unlock button, incognito badge",
+            "components/screens/SetupScreen.tsx — create password, confirm, BIP39 display, confirm written down",
+            "components/ui/PasswordInput.tsx — shadcn Input with show/hide toggle",
+            "components/ui/SetPicker.tsx — shadcn Select for password set switching",
+            "SessionContext: { isUnlocked, activeSetId, incognitoMode, sets[], navigate, screen }",
+            "TreeContext: { tree: BookmarkTree | null, setTree } — shell, populated in Module 11",
+            "Popup CSS: 380px width, 550px max-height, overflow scroll"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "AUTH-001", "category": "core", "priority": "CRITICAL",
+            "title": "App shell: state machine router, contexts, message hooks",
+            "description": "Create popup App.tsx with screen state machine, SessionContext, TreeContext (empty shell), and background message hooks. Hooks live in hooks/ at project root (NOT lib/ — React hooks have React imports which violate lib/ purity per CLAUDE.md).",
+            "story_points": 8,
+            "steps": [
+                "PREREQUISITE: Install missing shadcn components: npx shadcn@latest add select label badge. Verify button, input, dialog, alert already present.",
+                "RED: Test: 'App renders without crashing'",
+                "RED: Test: 'shows LoginScreen when session is locked'",
+                "RED: Test: 'shows SetupScreen when no sets have data' (first-time user)",
+                "RED: Test: 'shows TreeScreen stub when session is unlocked'",
+                "RED: Test: 'useSession sends GET_STATE on mount'",
+                "RED: Test: 'useSession provides session state via context'",
+                "RED: Test: 'useSendMessage wraps chrome.runtime.sendMessage with types'",
+                "RED: Test: 'screen transitions follow TRANSITIONS map — valid and invalid'",
+                "GREEN: Create hooks/useSession.ts (GET_STATE on mount, parse response, loading state for SW cold start). Create hooks/useSendMessage.ts (typed sendMessage wrapper returning Promise<BackgroundResponse>). Create App.tsx with state machine (Screen type, TRANSITIONS record, navigate function), SessionContext.Provider, TreeContext.Provider shell. Screen stubs. IMPORTANT: hooks live in hooks/ at project root, NOT in lib/hooks/. The hooks/ directory already exists (hooks/.gitkeep from Module 1).",
+                "REFACTOR: Extract TRANSITIONS to separate const for testability. Verify ErrorBoundary already wraps App in main.tsx (it does — do not duplicate)."
+            ],
+            "files": ["entrypoints/popup/App.tsx", "hooks/useSession.ts", "hooks/useSendMessage.ts", "entrypoints/popup/main.tsx", "tests/unit/entrypoints/popup/App.test.tsx", "tests/unit/hooks/useSession.test.ts", "tests/unit/hooks/useSendMessage.test.ts"],
+            "acceptance_criteria": [
+                "Screen type: 'login' | 'setup' | 'tree' | 'settings' | 'import'",
+                "TRANSITIONS: Record<Screen, Screen[]> enforcing valid flows",
+                "navigate(to: Screen) validates against TRANSITIONS, throws on invalid",
+                "SessionContext: { isUnlocked, activeSetId, incognitoMode, sets[], navigate, screen }",
+                "TreeContext: { tree: BookmarkTree | null, setTree } — shell only",
+                "useSession: sends GET_STATE on mount, handles SW cold start delay (loading spinner + retry), updates context",
+                "useSendMessage: typed wrapper returning Promise<BackgroundResponse>. Imports BackgroundMessage types from lib/background-types.ts",
+                "Hooks live in hooks/ at project root (NOT lib/hooks/) — React imports violate lib/ purity",
+                "App routes: locked → LoginScreen, first-time (no set data) → SetupScreen, unlocked → TreeScreen",
+                "Popup CSS: 380px width, 550px max-height",
+                "ErrorBoundary already wraps App in main.tsx — verified, not re-added",
+                "shadcn Select, Label, Badge components installed"
+            ],
+            "definition_of_done": ["All 8 tests pass", "tsc clean", "wxt build succeeds", "Popup renders in wxt dev"],
+            "verification": "npx vitest run tests/unit/entrypoints/popup/ tests/unit/hooks/ && npx tsc --noEmit && npx wxt build",
+            "estimated_effort": "large", "passes": false, "attempt_count": 0, "depends_on": []
+        },
+        {
+            "id": "AUTH-002", "category": "core", "priority": "CRITICAL",
+            "title": "LoginScreen with password input, set picker, and unlock flow",
+            "description": "Full LoginScreen: password input with show/hide, set picker dropdown (shadcn Select — installed in AUTH-001), unlock button, error display, incognito badge. Sends UNLOCK to background. Wait-for-response: disable button → send → await → navigate on success / show error on failure.",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'LoginScreen renders password input and unlock button'",
+                "RED: Test: 'SetPicker shows all available sets from context'",
+                "RED: Test: 'unlock sends UNLOCK message with password and selected setId'",
+                "RED: Test: 'unlock button disables during send, re-enables on failure'",
+                "RED: Test: 'successful unlock navigates to tree screen'",
+                "RED: Test: 'wrong password shows error message without clearing input'",
+                "RED: Test: 'PasswordInput toggles show/hide password'",
+                "RED: Test: 'incognito badge visible when incognitoMode is incognito_active'",
+                "GREEN: Create LoginScreen with PasswordInput (shadcn Input + eye toggle), SetPicker (shadcn Select populated from SessionContext.sets[]), unlock handler (disable → UNLOCK { password, setId } → await → navigate or error). Incognito badge (shadcn Badge) from SessionContext.incognitoMode. Enter-to-submit on password input.",
+                "REFACTOR: Extract unlock handler to named function for testability"
+            ],
+            "files": ["components/screens/LoginScreen.tsx", "components/ui/PasswordInput.tsx", "components/ui/SetPicker.tsx", "tests/unit/components/screens/LoginScreen.test.tsx"],
+            "acceptance_criteria": [
+                "PasswordInput: shadcn Input + eye icon toggle (show/hide), Enter-to-submit",
+                "SetPicker: shadcn Select populated from SessionContext.sets[]",
+                "Unlock flow: disable button → send UNLOCK { password, setId } → await response → on success navigate('tree') + update session → on failure show error + re-enable",
+                "Error display: wrong password message shown inline, input NOT cleared (user can retry)",
+                "Incognito badge (shadcn Badge): visible when incognitoMode === 'incognito_active', guidance when 'incognito_not_allowed'",
+                "Zero business logic: no encrypt, no chrome.storage, no tree traversal"
+            ],
+            "definition_of_done": ["All 8 login tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/ && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["AUTH-001"]
+        },
+        {
+            "id": "AUTH-003", "category": "core", "priority": "HIGH",
+            "title": "SetupScreen with password creation and BIP39 recovery phrase",
+            "description": "First-time user flow: create password → confirm password → generate + display 12-word mnemonic → user confirms written down → create set + recovery blob via background messages → navigate to tree.",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'SetupScreen renders password creation form'",
+                "RED: Test: 'rejects mismatched password confirmation'",
+                "RED: Test: 'after password confirmed, generates and displays 12-word mnemonic'",
+                "RED: Test: 'MnemonicDisplay renders 12 words in grid with copy button'",
+                "RED: Test: 'confirm button sends CREATE_SET + creates recovery blob'",
+                "RED: Test: 'on success navigates to tree screen'",
+                "GREEN: Create SetupScreen (multi-step: password → confirm → mnemonic → done). Create MnemonicDisplay (12-word grid, numbered, copy-to-clipboard). Flow: generateMnemonic() (can call lib/ directly — pure function, no browser API) → display → on confirm: CREATE_SET message to background with name + password → deriveRecoveryPassword(mnemonic) → createRecoveryBlob(tree_json, mnemonic) → save recovery blob → UNLOCK → navigate to tree. NOTE: createRecoveryBlob(plaintext, phrase) takes the serialized tree as plaintext — at setup time this is an empty tree: JSON.stringify(createEmptyTree()).",
+                "REFACTOR: Decide recovery blob creation path — either (a) multi-message: CREATE_SET → get tree → createRecoveryBlob (lib/ call or new STORE_RECOVERY message), or (b) background handles it all in CREATE_SET handler. Prefer (b) for atomicity."
+            ],
+            "files": ["components/screens/SetupScreen.tsx", "components/shared/MnemonicDisplay.tsx", "tests/unit/components/screens/SetupScreen.test.tsx"],
+            "acceptance_criteria": [
+                "Multi-step flow: password input → confirm → mnemonic display → confirm written → done",
+                "Password minimum length validation (8+ characters)",
+                "Mismatch detection before proceeding",
+                "MnemonicDisplay: 12 words in 3×4 or 4×3 grid, numbered, 'Copy to clipboard' button",
+                "Setup creates set + recovery blob + unlocks",
+                "Loading state during crypto operations",
+                "On completion: navigates to tree screen"
+            ],
+            "definition_of_done": ["All 6 setup tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/ && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["AUTH-001"]
+        },
+        {
+            "id": "AUTH-004", "category": "quality", "priority": "MEDIUM",
+            "title": "Dark mode, E2E, and full verification",
+            "description": "Dark mode support. Playwright E2E for auth flows. Verify ErrorBoundary already wraps App (it does — from Module 1 main.tsx).",
+            "story_points": 5,
+            "steps": [
+                "Implement dark mode: 'dark' class toggle on document, respect prefers-color-scheme",
+                "Verify ErrorBoundary already wraps App in main.tsx (added in Module 1 SCAFFOLD-010) — do NOT add again",
+                "Playwright E2E: popup loads, login screen visible, setup flow for first-time user, unlock/lock cycle",
+                "Full verification: tsc + eslint + vitest + coverage + wxt build + test:e2e",
+                "Verify all component files ≤ 300 lines, hooks ≤ 100 lines"
+            ],
+            "files": ["entrypoints/popup/App.tsx", "tests/e2e/popup-auth.test.ts"],
+            "acceptance_criteria": ["Dark mode via Tailwind class + system preference", "ErrorBoundary already in place (verified, not re-added)", "E2E auth flows pass", "Zero business logic in components", "All ≤ 300 lines", "Zero regressions"],
+            "definition_of_done": ["E2E auth flows pass", "Full verification passes"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["AUTH-001", "AUTH-002", "AUTH-003"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "all_lib_modules": "Modules 1-8 complete. 12 lib/ files. Module 9 complete: entrypoints/background.ts with exhaustive 16-type message handling (6 core + 10 NOT_IMPLEMENTED stubs), lib/background-types.ts with complete BackgroundMessage/BackgroundResponse/SessionState types. Context menus, auto-lock via chrome.alarms, Sentry BrowserClient (verified from stub), incognito detection, chrome.storage.session for tree persistence — all functional.",
+            "popup_shell": "entrypoints/popup/index.html and entrypoints/popup/main.tsx exist from Module 1 scaffold. main.tsx already wraps App in ErrorBoundary. Minimal React root.",
+            "shadcn_ui": "components/ui/ has 4 shadcn primitives: button, input, dialog, alert. Does NOT have: select, label, badge — install in AUTH-001.",
+            "hooks_directory": "hooks/ exists at project root (hooks/.gitkeep from Module 1). Empty — ready for useSession.ts, useSendMessage.ts.",
+            "background_types": "lib/background-types.ts (TYPES ONLY) exports: BackgroundMessage (16-type union), BackgroundResponse, SessionState, MessageType. ADD_BOOKMARK uses parentPath?: readonly number[].",
+            "test_infrastructure": "~600+ unit tests, ~100+ E2E tests. happy-dom. @testing-library/react ^16.3.2 already installed. Coverage: 80% lib/, 60% UI.",
+            "react_version": "React 19.2.4 (not 18)."
+        },
+        "what_does_not_exist": {
+            "popup_ui": "No LoginScreen, SetupScreen, screen routing, session context, tree context.",
+            "shared_components": "No PasswordInput, SetPicker, MnemonicDisplay beyond installed shadcn primitives.",
+            "hooks": "hooks/ directory is empty (.gitkeep only). No useSession, useSendMessage.",
+            "shadcn_missing": "Select, Label, Badge components not yet installed."
+        }
+    },
+    "context": {
+        "tech_stack": { "runtime": "Node.js 20 LTS", "ui": "React 19 functional components, hooks only. No class components. No Redux/Zustand.", "styling": "Tailwind CSS + shadcn/ui. Dark mode via class-based toggle.", "testing": "Vitest + @testing-library/react (^16.3.2, already installed). Playwright for E2E.", "forbidden_patterns": ["Class components", "Redux/Zustand", "Business logic in components", "Direct chrome.* calls from components", "console.log, as any, @ts-ignore", "Components > 300 lines", "Optimistic updates", "Hooks in lib/ (use hooks/ at project root)"] },
+        "architecture": {
+            "communication": "HYBRID: GET_STATE on popup mount loads full session. Mutations WAIT FOR RESPONSE — no optimistic rendering, no rollback. ~5-20ms latency.",
+            "contexts": "SPLIT: SessionContext (auth, sets, navigation) + TreeContext (bookmark data). Isolated re-renders.",
+            "routing": "State machine: Screen union + TRANSITIONS record. navigate() validates. No react-router. ~15 lines.",
+            "ui_feedback": "Disable action → inline spinner → await → update on success / error on failure → re-enable.",
+            "popup_dimensions": "380px wide, 550px max-height. Vertical stack.",
+            "hooks_location": "hooks/ at project root. NOT lib/hooks/. React hooks import useState/useEffect — violates lib/ purity (zero React/DOM imports). The hooks/ directory bridges lib/ ↔ components/ per CLAUDE.md architecture."
+        },
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": ["CLAUDE.md (especially hooks/ location rule and lib/ purity)", "lib/background-types.ts (16-type protocol, SessionState)", "lib/password-sets.ts (PasswordSetInfo)", "lib/recovery.ts (generateMnemonic, createRecoveryBlob)", "lib/incognito.ts (IncognitoMode)", "entrypoints/popup/main.tsx (verify ErrorBoundary already wraps App)", "components/ui/ (check installed components)", "This PRD"],
+        "inputs": [
+            { "file": "lib/background-types.ts", "from_module": "Module 9", "what_it_provides": "BackgroundMessage (16 types), BackgroundResponse, SessionState, MessageType" },
+            { "file": "lib/types.ts", "from_module": "Module 1", "what_it_provides": "BookmarkTree, PasswordSetInfo, RecoveryMetadata" },
+            { "file": "lib/recovery.ts", "from_module": "Module 7", "what_it_provides": "generateMnemonic (pure function, safe to call from UI)" },
+            { "file": "lib/incognito.ts", "from_module": "Module 8", "what_it_provides": "IncognitoMode" }
+        ],
+        "outputs": [
+            { "file": "entrypoints/popup/App.tsx", "consumed_by": "Modules 11-12 add screens", "description": "≤150 lines. State machine + providers." },
+            { "file": "hooks/useSession.ts", "consumed_by": "All popup/manager screens", "description": "Session state hook. In hooks/ at root." },
+            { "file": "hooks/useSendMessage.ts", "consumed_by": "All popup/manager screens", "description": "Typed message sender. In hooks/ at root." },
+            { "file": "components/screens/LoginScreen.tsx + SetupScreen.tsx", "consumed_by": "App.tsx + Module 13 manager", "description": "Auth screens." },
+            { "file": "components/ui/PasswordInput.tsx + SetPicker.tsx", "consumed_by": "LoginScreen, SetupScreen, SettingsScreen", "description": "Shared UI primitives." },
+            { "file": "components/shared/MnemonicDisplay.tsx", "consumed_by": "SetupScreen + Module 12 settings", "description": "Recovery phrase display." }
+        ]
+    },
+    "known_risks": [
+        { "issue": "Background not ready when popup mounts (SW cold start)", "severity": "HIGH", "action": "useSession handles delayed GET_STATE. Loading spinner. Retry with short delay." },
+        { "issue": "SetupScreen crypto operations may block UI", "severity": "MEDIUM", "action": "Loading state during PBKDF2. CREATE_SET message routes through background." },
+        { "issue": "Popup dimensions vary by OS/browser", "severity": "MEDIUM", "action": "Width in CSS, content-driven height with max-height + overflow." },
+        { "issue": "shadcn Select styling in 380px popup", "severity": "LOW", "action": "Test dropdown positioning in narrow popup. Portal if needed." }
+    ],
+    "critical_path": "001 -> 002/003 -> 004",
+    "total_story_points": 29, "total_stories": 4,
+    "progress_log": { "format_rules": { "file": "progress.md in .prd/module-10-popup-auth/", "format": "Append-only. ## AUTH-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
+    "metadata": { "passing_stories": 0, "build_plan_day": "Day 4", "estimated_test_count": "~30 tests", "session_protocol": "One Claude Code session. Install shadcn Select/Label/Badge first. Verify ErrorBoundary in main.tsx. Test in wxt dev.", "quality_gate": "Popup loads. Login + Setup work. Hooks in hooks/ not lib/. Zero business logic in components. All ≤ 300 lines. Wait-for-response enforced.", "human_review_required": "Walk through wxt dev: first-time setup, login, wrong password, set switching, incognito badge. Verify hooks/ location." },
+    "execution_rules": { "execution_order": "AUTH-001 → 002/003 → 004. IMPORTANT: Module 9 must be fully implemented before starting this module.", "clarifying_questions": "Encouraged. Key: shadcn component installation, recovery blob creation flow in setup, hooks/ path aliases.", "prd_scope": "Module 10 of 22.", "commit_protocol": "feat(popup-auth): AUTH-XXX — <title>", "failure_protocol": "Max 3 attempts." }
+}

@@ -1,0 +1,236 @@
+{
+    "project": {
+        "name": "Module 9: Background Service Worker",
+        "description": "Create entrypoints/background.ts — MV3 service worker orchestrating context menus, keyboard shortcuts, typed message passing, auto-lock timer, Sentry error tracking, and incognito state detection. Also create lib/background-types.ts (TYPES ONLY — zero runtime code) defining the COMPLETE typed message protocol (16 message types) shared between background, popup, and manager. First entrypoint module — crosses lib/ → entrypoints/ boundary. Uses WXT defineBackground(). Core handlers (6) implemented here; remaining handlers stubbed with exhaustive switch for Modules 10-12 to wire up. Target: ≤300 lines (background.ts) + ≤150 lines (background-types.ts).",
+        "version": "1.2.0",
+        "created": "2026-03-10",
+        "parent_plan": "Hush Consolidated Build Plan — Day 4 (first module)"
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": [
+            "Context menu 'Add to [extension]' right-click item that captures page URL and title (Holy PB background.js, 78 lines)",
+            "Message passing via chrome.runtime.onMessage between popup and background"
+        ],
+        "falls_short": [
+            { "id": 1, "deficiency": "Holy PB background.js has untyped messages — ad-hoc objects with no discrimination", "hush_requires": "Typed discriminated union: BackgroundMessage with type field. 16 message types covering ALL operations across Modules 9-13. Each type has typed payload and response." },
+            { "id": 2, "deficiency": "No auto-lock timer — bookmarks stay accessible until manual lock", "hush_requires": "chrome.alarms-based auto-lock. Default 10 minutes. Resets on activity. MV3-safe (survives SW termination)." },
+            { "id": 3, "deficiency": "No error tracking", "hush_requires": "Sentry scoped BrowserClient already initialized in background.ts stub (line 3). Wire captureException to error paths." },
+            { "id": 4, "deficiency": "No incognito detection", "hush_requires": "Detect incognito state on startup + per-message sender. Pass to lib/incognito.ts determineMode()." },
+            { "id": 5, "deficiency": "No keyboard shortcuts", "hush_requires": "chrome.commands for Ctrl+Shift+H to open popup. _execute_action opens popup when popup is set (does NOT toggle — MV3 behavior)." }
+        ],
+        "do_not_incorporate": ["Untyped message passing", "setTimeout for auto-lock (use chrome.alarms for MV3)", "Global Sentry.init()"],
+        "build_from_scratch": [
+            "lib/background-types.ts: Complete 16-type BackgroundMessage discriminated union, BackgroundResponse, SessionState. TYPES ONLY — zero runtime code, zero imports beyond type imports. Must pass lib/ purity check.",
+            "Core message types (Module 9 implements): UNLOCK, LOCK, SAVE, GET_STATE, ADD_BOOKMARK, GET_INCOGNITO_STATE",
+            "Settings message types (Module 12 wires up): CHANGE_PASSWORD, UPDATE_AUTO_LOCK, CREATE_SET, RENAME_SET, DELETE_SET, SWITCH_SET, CLEAR_ALL",
+            "Import/Export message types (Module 12 wires up): IMPORT_CHROME_BOOKMARKS, IMPORT_BACKUP, EXPORT_BACKUP",
+            "handleMessage dispatcher with exhaustive switch — core handlers implemented, stubs return NOT_IMPLEMENTED",
+            "Session state: tree persisted via chrome.storage.session (survives SW termination, cleared on browser close). Password stays in SW memory only (cleared on LOCK, lost on termination — correct security behavior).",
+            "Auto-lock via chrome.alarms: AUTO_LOCK_ALARM, DEFAULT_AUTO_LOCK_MINUTES = 10",
+            "Context menu registration with duplicate prevention",
+            "Incognito detection on startup"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "BG-001", "category": "core", "priority": "CRITICAL",
+            "title": "Complete message protocol types and handler scaffold",
+            "description": "Define the COMPLETE typed message protocol (all 16 types) in lib/background-types.ts (TYPES ONLY — no runtime code). Create entrypoints/background.ts with WXT defineBackground() and message listener dispatching to typed handlers. Core handlers are stubs initially; non-core handlers return NOT_IMPLEMENTED. The exhaustive switch ensures TypeScript catches any unhandled message type at compile time.",
+            "story_points": 8,
+            "steps": [
+                "PREREQUISITE: Modify wxt.config.ts — (a) Add 'alarms' to permissions (contextMenus and activeTab ALREADY EXIST from Module 1 — do NOT re-add). (b) Add manifest.incognito: 'spanning' (deferred from Module 8 — required for incognito detection). (c) Add chrome.commands config: { '_execute_action': { 'suggested_key': { 'default': 'Ctrl+Shift+H' }, 'description': 'Open Hush popup' } }. Research WXT manifest.commands syntax first. NOTE: _execute_action opens the popup when a popup is set (it does NOT toggle — MV3 behavior).",
+                "RED: Test: 'BackgroundMessage union covers all 16 message types'",
+                "RED: Test: 'handleMessage returns error for unknown message type'",
+                "RED: Test: 'UNLOCK message requires password field'",
+                "RED: Test: 'GET_STATE returns session state shape'",
+                "RED: Test: 'non-core message types return NOT_IMPLEMENTED response'",
+                "GREEN: Create lib/background-types.ts with all 16 message types as discriminated union. TYPES ONLY: only type and import type statements — zero runtime code, zero non-type imports. This file lives in lib/ and must pass the purity check. Define BackgroundResponse. Define SessionState. Create entrypoints/background.ts with defineBackground(), chrome.runtime.onMessage listener, handleMessage with exhaustive switch (never type check). Core types get stub handlers; non-core return { success: false, error: 'NOT_IMPLEMENTED', code: message.type }.",
+                "REFACTOR: Verify exhaustive switch with never type check. Verify background-types.ts contains zero runtime code."
+            ],
+            "files": ["lib/background-types.ts", "entrypoints/background.ts", "wxt.config.ts", "tests/unit/lib/background-types.test.ts", "tests/unit/entrypoints/background.test.ts"],
+            "acceptance_criteria": [
+                "lib/background-types.ts exports: BackgroundMessage (16-type union), BackgroundResponse, SessionState, MessageType literal union, all individual message interfaces",
+                "lib/background-types.ts is TYPES ONLY: zero runtime code. Only type and import type statements. Passes lib/ purity check.",
+                "Core (6): UNLOCK { type, password, setId? }, LOCK { type }, SAVE { type, tree: BookmarkTree }, GET_STATE { type }, ADD_BOOKMARK { type, url, title, parentPath?: readonly number[] }, GET_INCOGNITO_STATE { type }",
+                "Settings (7): CHANGE_PASSWORD { type, currentPassword, newPassword }, UPDATE_AUTO_LOCK { type, minutes }, CREATE_SET { type, name, password }, RENAME_SET { type, setId, newName }, DELETE_SET { type, setId }, SWITCH_SET { type, setId, password }, CLEAR_ALL { type, confirmation: 'DELETE' }",
+                "Import/Export (3): IMPORT_CHROME_BOOKMARKS { type }, IMPORT_BACKUP { type, blob, password }, EXPORT_BACKUP { type }",
+                "BackgroundResponse: { success: true; data?: unknown } | { success: false; error: string; code?: string }",
+                "SessionState: { isUnlocked: boolean; activeSetId: string; sets: PasswordSetInfo[]; tree: BookmarkTree | null; incognitoMode: IncognitoMode }",
+                "handleMessage exhaustive switch with never check",
+                "Non-core handlers return { success: false, error: 'NOT_IMPLEMENTED', code: '<type>' }",
+                "wxt.config.ts gains: alarms permission, incognito: 'spanning', commands config with 'Open Hush popup'"
+            ],
+            "definition_of_done": ["All protocol tests pass", "tsc clean", "wxt build succeeds"],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts tests/unit/lib/background-types.test.ts && npx tsc --noEmit && npx wxt build",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": []
+        },
+        {
+            "id": "BG-002", "category": "core", "priority": "CRITICAL",
+            "title": "Unlock/Lock handlers with chrome.storage.session and auto-lock alarm",
+            "description": "UNLOCK: decrypt active set, persist tree to chrome.storage.session, cache password in SW memory only, start auto-lock alarm. LOCK: clear session + password, clear alarm. GET_STATE: read from chrome.storage.session (resilient to SW restart).",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'UNLOCK decrypts active set and returns SessionState'",
+                "RED: Test: 'UNLOCK persists tree to chrome.storage.session'",
+                "RED: Test: 'UNLOCK caches password in memory only (not in storage.session)'",
+                "RED: Test: 'UNLOCK starts auto-lock alarm'",
+                "RED: Test: 'UNLOCK with wrong password returns INVALID_PASSWORD code'",
+                "RED: Test: 'LOCK clears chrome.storage.session and in-memory password'",
+                "RED: Test: 'LOCK clears auto-lock alarm'",
+                "RED: Test: 'auto-lock alarm fires LOCK'",
+                "RED: Test: 'GET_STATE reads from chrome.storage.session'",
+                "GREEN: Two-tier session state: (1) chrome.storage.session for tree, isUnlocked, activeSetId, sets, incognitoMode — survives SW restarts. (2) SW in-memory variable for password — cleared on LOCK, lost on termination. UNLOCK: loadManifest → getActiveSetId → loadSetData → JSON.parse → chrome.storage.session.set → cache password → alarm → SessionState. LOCK: chrome.storage.session.clear + null password → clear alarm. GET_STATE: chrome.storage.session.get. SW termination → password lost → GET_STATE returns locked."
+            ],
+            "files": ["entrypoints/background.ts", "tests/unit/entrypoints/background.test.ts"],
+            "acceptance_criteria": [
+                "Tree in chrome.storage.session (survives SW restart)",
+                "Password in SW memory ONLY (never in any storage)",
+                "UNLOCK: loadSetData → JSON.parse → chrome.storage.session.set → cache pw → alarm → SessionState",
+                "UNLOCK wrong password: { success: false, error: 'Invalid password', code: 'INVALID_PASSWORD' }",
+                "LOCK: chrome.storage.session.clear() + null pw → clear alarm",
+                "Auto-lock: chrome.alarms.create(AUTO_LOCK_ALARM, { delayInMinutes })",
+                "chrome.alarms.onAlarm triggers LOCK",
+                "GET_STATE reads from chrome.storage.session",
+                "SW termination → locked state (password lost = correct)"
+            ],
+            "definition_of_done": ["All 9 tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit",
+            "estimated_effort": "large", "passes": false, "attempt_count": 0, "depends_on": ["BG-001"]
+        },
+        {
+            "id": "BG-003", "category": "core", "priority": "HIGH",
+            "title": "SAVE and ADD_BOOKMARK handlers with alarm reset",
+            "description": "SAVE: JSON.stringify tree, encrypt, persist. ADD_BOOKMARK: addBookmark(tree, parentPath, bookmark) then save. Both reset alarm. Both require cached password.",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'SAVE serializes tree with JSON.stringify before saveSetData'",
+                "RED: Test: 'SAVE resets auto-lock alarm on success'",
+                "RED: Test: 'SAVE with no cached password returns error'",
+                "RED: Test: 'ADD_BOOKMARK adds to tree and saves'",
+                "RED: Test: 'ADD_BOOKMARK resets auto-lock alarm'",
+                "GREEN: SAVE: validate cached password → JSON.stringify(message.tree) → saveSetData(activeSetId, json, password) → chrome.storage.session.set updated tree → resetAlarm(). ADD_BOOKMARK: validate session → addBookmark(cachedTree, message.parentPath ?? [], { type: 'bookmark', title, url, dateAdded: Date.now() }) → JSON.stringify → saveSetData → chrome.storage.session.set → resetAlarm() → return updated tree. CRITICAL: saveSetData/loadSetData work with strings. Always JSON.stringify before save, JSON.parse after load.",
+                "REFACTOR: Extract resetAlarm(), serializeTree(), deserializeTree() helpers"
+            ],
+            "files": ["entrypoints/background.ts", "tests/unit/entrypoints/background.test.ts"],
+            "acceptance_criteria": [
+                "SAVE: JSON.stringify(tree) → saveSetData → update chrome.storage.session → reset alarm",
+                "ADD_BOOKMARK: addBookmark(tree, parentPath ?? [], bookmark) → save → update session → reset alarm → return tree",
+                "JSON.stringify before saveSetData, JSON.parse after loadSetData — explicit everywhere",
+                "Both error when no cached password",
+                "Alarm reset on every successful mutation"
+            ],
+            "definition_of_done": ["All 5 tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["BG-002"]
+        },
+        {
+            "id": "BG-004", "category": "core", "priority": "HIGH",
+            "title": "Context menu, incognito detection, and Sentry error wiring",
+            "description": "Context menu on SW startup. Incognito detection. Verify existing Sentry init (already in stub) and wire captureException to error paths.",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'context menu registered on startup'",
+                "RED: Test: 'context menu click triggers ADD_BOOKMARK with parentPath: []'",
+                "RED: Test: 'GET_INCOGNITO_STATE returns resolved mode'",
+                "RED: Test: 'handleMessage error paths call captureException'",
+                "GREEN: Context menu in main() with removeAll() first. onClicked → ADD_BOOKMARK with parentPath: []. GET_INCOGNITO_STATE: resolve isAllowedIncognitoAccess → determineMode(). SENTRY: Verify existing initSentry() at line 3 of stub — do NOT recreate. Wire captureException to handleMessage catch and handler error paths.",
+                "REFACTOR: Context menu re-registers on every SW startup"
+            ],
+            "files": ["entrypoints/background.ts", "tests/unit/entrypoints/background.test.ts"],
+            "acceptance_criteria": [
+                "Context menu: 'Add to Hush', contexts: ['page', 'link']",
+                "removeAll() before create",
+                "Context menu → ADD_BOOKMARK with parentPath: []",
+                "GET_INCOGNITO_STATE resolves via determineMode()",
+                "Existing initSentry() verified, NOT recreated",
+                "captureException wired to error paths"
+            ],
+            "definition_of_done": ["All 4 tests pass", "tsc clean", "wxt build succeeds"],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit && npx wxt build",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["BG-001"]
+        },
+        {
+            "id": "BG-005", "category": "quality", "priority": "MEDIUM",
+            "title": "Integration, E2E, and full verification",
+            "description": "E2E tests, scaffold-smoke update, full regression.",
+            "story_points": 5,
+            "steps": [
+                "Playwright E2E: extension loads, context menu present, GET_STATE returns locked",
+                "scaffold-smoke.test.ts: LIB_MODULES = 13, background-types.ts exports verified, zero runtime code check",
+                "Full verification: tsc + eslint + vitest + coverage + wxt build + test:e2e",
+                "Verify background.ts ≤ 300, background-types.ts ≤ 150",
+                "Verify built manifest: incognito: 'spanning', alarms in permissions, commands present"
+            ],
+            "files": ["tests/e2e/background.test.ts", "tests/unit/integration/scaffold-smoke.test.ts"],
+            "acceptance_criteria": ["LIB_MODULES = 13", "background.ts ≤ 300 lines", "background-types.ts ≤ 150 lines + zero runtime code", "Built manifest has incognito: 'spanning' + alarms + commands", "E2E passes", "Zero regressions"],
+            "definition_of_done": ["Full verification passes"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["BG-001", "BG-002", "BG-003", "BG-004"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "lib_modules": "12 files in lib/: types.ts, errors.ts, sentry.ts, utils.ts, crypto.ts, storage.ts (263 lines), data-model.ts (299 lines), bookmark-import.ts (191 lines), bookmark-backup.ts (~130 lines), password-sets.ts (238 lines), recovery.ts (66 lines), incognito.ts (58 lines). scaffold-smoke tracks 12 LIB_MODULES.",
+            "types": "lib/types.ts: Bookmark, Folder, BookmarkNode, BookmarkTree = Folder, EncryptedStore, Result<T,E>, PasswordSetInfo, PasswordSetManifest, RecoveryMetadata",
+            "errors": "lib/errors.ts: StorageError (reason?), InvalidPasswordError, DecryptionError, DataModelError (kind), ImportError (source?, format?), RecoveryError (RecoveryErrorContext)",
+            "key_exports": {
+                "password_sets": "loadManifest, createSet, deleteSet, renameSet, listSets, setStorageKey, validateManifest, saveSetData, loadSetData, hasSetData, getActiveSetId, setActiveSetId, MANIFEST_KEY, MANIFEST_VERSION",
+                "recovery": "generateMnemonic, validateMnemonic, deriveRecoveryPassword, createRecoveryBlob, recoverFromBlob, recoveryStorageKey, RECOVERY_KEY_PREFIX",
+                "incognito": "determineMode, shouldAutoUnlock, getIncognitoMessage, INCOGNITO_MESSAGES, IncognitoState, IncognitoMode, IncognitoConfig",
+                "data_model": "addBookmark(tree: BookmarkTree, parentPath: readonly number[], bookmark: Omit<Bookmark, 'id'>): Result<BookmarkTree, DataModelError>",
+                "storage": "saveEncryptedData, loadEncryptedData, hasData, clearAll, getStorageUsage, validateEncryptedStore, STORAGE_KEY, DEFAULT_STORAGE_QUOTA, RETRY_CONFIG",
+                "crypto": "encrypt, decrypt, deriveKey, generateSalt, verifyPassword, CRYPTO_CONFIG",
+                "bookmark_import": "convertChromeBookmarks, parseHtmlBookmarks, ChromeBookmarkTreeNode, ImportStats",
+                "bookmark_backup": "exportEncryptedBackup, importEncryptedBackup, BACKUP_VERSION, isValidBookmarkTree"
+            },
+            "test_counts": "586 unit tests (30 files), 97 E2E tests. Build: 594.45 kB. happy-dom environment.",
+            "sentry": "DSN obtained. @sentry/browser installed. lib/sentry.ts exists. background.ts stub ALREADY calls initSentry() at line 3.",
+            "wxt_config": "wxt.config.ts has: permissions [storage, contextMenus, activeTab, bookmarks], optional_permissions [history]. Does NOT have: alarms permission, incognito: 'spanning', commands config.",
+            "entrypoints": "entrypoints/background.ts: minimal stub with defineBackground(), initSentry() at line 3, empty onInstalled handler.",
+            "serialization_note": "saveSetData takes string, loadSetData returns string. JSON.stringify before save, JSON.parse after load."
+        },
+        "what_does_not_exist": {
+            "background": "No message handling, context menus, auto-lock, shortcuts.",
+            "background_types": "lib/background-types.ts does not exist.",
+            "manifest_additions": "alarms, incognito: 'spanning', commands — all missing from wxt.config.ts."
+        }
+    },
+    "context": {
+        "tech_stack": { "runtime": "Node.js 20 LTS", "wxt": "defineBackground() from 'wxt/sandbox'.", "sentry": "Already initialized in stub. Verify and wire captureException.", "chrome_alarms": "chrome.alarms.create/clear/onAlarm. MV3-safe.", "chrome_storage_session": "Persists across SW restarts, cleared on browser close. Tree + metadata here. Password NEVER here.", "testing": "Vitest + happy-dom. Mock chrome.runtime.onMessage, contextMenus, alarms, extension.isAllowedIncognitoAccess, storage.session.", "forbidden_patterns": ["Global Sentry.init()", "setTimeout for auto-lock", "Untyped messages", "Business logic in background.ts", "console.log, as any, @ts-ignore", "Password in chrome.storage.session", "Runtime code in lib/background-types.ts"] },
+        "message_protocol": {
+            "architecture": "HYBRID: GET_STATE on mount + message-per-mutation. Wait-for-response (NOT optimistic). ~5-20ms latency.",
+            "complete_protocol": "All 16 types in Module 9. Core (6) implemented. Settings/Import (10) stubbed → Module 12 wires up.",
+            "add_bookmark_signature": "ADD_BOOKMARK carries parentPath?: readonly number[] (NOT folderId). Matches addBookmark(tree, parentPath, bookmark). Default [] = root."
+        },
+        "session_architecture": {
+            "two_tier": "chrome.storage.session = tree + metadata. SW memory = password.",
+            "sw_termination": "Tree survives. Password lost. GET_STATE → locked. User re-enters. Correct.",
+            "browser_close": "chrome.storage.session cleared. Fresh state. Correct."
+        },
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": ["CLAUDE.md", "lib/password-sets.ts (saveSetData/loadSetData take/return strings)", "lib/data-model.ts (addBookmark: parentPath, not folderId)", "lib/incognito.ts", "lib/sentry.ts", "entrypoints/background.ts (existing stub with initSentry())", "WXT defineBackground() docs", "This PRD"],
+        "inputs": [
+            { "file": "lib/password-sets.ts", "from_module": "Module 6", "what_it_provides": "All set CRUD. saveSetData/loadSetData work with strings." },
+            { "file": "lib/incognito.ts", "from_module": "Module 8", "what_it_provides": "determineMode, IncognitoMode" },
+            { "file": "lib/data-model.ts", "from_module": "Module 4", "what_it_provides": "addBookmark(tree, parentPath: readonly number[], bookmark)" },
+            { "file": "lib/errors.ts", "from_module": "Modules 1-7", "what_it_provides": "All error types" }
+        ],
+        "outputs": [
+            { "file": "entrypoints/background.ts", "consumed_by": "Modules 10-13", "description": "≤300 lines. 6 core + 10 stubs." },
+            { "file": "lib/background-types.ts", "consumed_by": "Modules 10-13", "description": "≤150 lines. 16-type protocol. TYPES ONLY." }
+        ]
+    },
+    "known_risks": [
+        { "issue": "SW termination loses password", "severity": "HIGH", "action": "Tree in chrome.storage.session. Password lost = user re-enters. Correct." },
+        { "issue": "chrome.alarms min 1 minute", "severity": "LOW", "action": "DEFAULT_AUTO_LOCK_MINUTES = 10." },
+        { "issue": "Context menu re-registration", "severity": "MEDIUM", "action": "removeAll() + create in main()." },
+        { "issue": "Mocking chrome.* in tests", "severity": "HIGH", "action": "Check WXT test utils. Manual mocks if needed." },
+        { "issue": "chrome.storage.session Firefox support", "severity": "MEDIUM", "action": "Chrome 102+, Edge 102+ (we target 120+). Firefox limited — research WXT polyfill." },
+        { "issue": "background.ts line budget", "severity": "MEDIUM", "action": "10 stubs are one-liners. If over, extract to background-handlers.ts." }
+    ],
+    "critical_path": "001 -> 002 -> 003/004 -> 005",
+    "total_story_points": 31, "total_stories": 5,
+    "progress_log": { "format_rules": { "file": "progress.md in .prd/module-09-background/", "format": "Append-only. ## BG-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
+    "metadata": { "passing_stories": 0, "build_plan_day": "Day 4", "estimated_test_count": "~28 tests", "session_protocol": "One Claude Code session. Research WXT defineBackground() + chrome.alarms + chrome.storage.session. Verify initSentry() in stub. Commit per story.", "quality_gate": "All tests pass. tsc clean. wxt build. 16 types exhaustive. ≤300 + ≤150 lines. background-types.ts zero runtime code. incognito: 'spanning' in manifest. Password never in storage.", "human_review_required": "Verify: incognito: 'spanning', Sentry not re-initialized, password never in storage, ADD_BOOKMARK uses parentPath, JSON.stringify/parse around saveSetData/loadSetData." },
+    "execution_rules": { "execution_order": "BG-001 → 002 → 003/004 → 005", "clarifying_questions": "Encouraged. Key: chrome.storage.session Firefox support, initSentry() integration, JSON serialization.", "prd_scope": "Module 9 of 22.", "commit_protocol": "feat(background): BG-XXX — <title>", "failure_protocol": "Max 3 attempts." }
+}
