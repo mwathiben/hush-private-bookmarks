@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | BG-001 | Complete message protocol types and handler scaffold | PASSED | 1 |
 | BG-002 | Unlock/Lock handlers with chrome.storage.session and auto-lock alarm | PASSED | 1 |
-| BG-003 | SAVE and ADD_BOOKMARK handlers with alarm reset | NOT STARTED | 0 |
+| BG-003 | SAVE and ADD_BOOKMARK handlers with alarm reset | PASSED | 1 |
 | BG-004 | Context menu, incognito detection, and Sentry error wiring | NOT STARTED | 0 |
 | BG-005 | Integration, E2E, and full verification | NOT STARTED | 0 |
 
@@ -147,4 +147,56 @@ $ npx wxt build
 
 $ npx playwright test
 104 passed (2.0m)
+```
+
+---
+
+## Session: 2026-03-11T18:10:00Z
+
+**Task**: BG-003 - SAVE and ADD_BOOKMARK handlers with alarm reset
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Implemented `handleSave`: validates cachedPassword → JSON.stringify(tree) → saveSetData → update chrome.storage.session → resetAlarm
+- Implemented `handleAddBookmark`: validates cachedPassword + tree → addBookmark from data-model → JSON.stringify → saveSetData → update session → resetAlarm → return updated tree
+- Extracted `resetAlarm()` helper: clear + create alarm (DRY for SAVE and ADD_BOOKMARK)
+- Extracted `getSessionState()` helper: reads SessionState from browser.storage.session (reused by handleGetState, handleSave, handleAddBookmark)
+- Refactored `handleGetState` to use `getSessionState()` helper
+- Updated switch: SAVE → handleSave, ADD_BOOKMARK → handleAddBookmark
+- Updated UNIMPLEMENTED_TYPES: removed SAVE and ADD_BOOKMARK (13→11)
+- Added mocks for `saveSetData` and `addBookmark` in test setup
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `entrypoints/background.ts` | +saveSetData import, +addBookmark import, +SaveMessage/AddBookmarkMessage type imports, +resetAlarm helper, +getSessionState helper, +handleSave, +handleAddBookmark, refactored handleGetState. 158→223 lines. |
+| `tests/unit/entrypoints/background.test.ts` | +saveSetData mock, +addBookmark mock, +DataModelError import, UNIMPLEMENTED_TYPES 13→11, +5 SAVE tests, +5 ADD_BOOKMARK tests, +3 CodeRabbit edge-case tests. 316→536 lines (39 total tests). |
+
+### Acceptance Criteria Verification
+
+1. [PASS] SAVE: JSON.stringify(tree) → saveSetData → update chrome.storage.session → reset alarm — test: "serializes tree with JSON.stringify before saveSetData"
+2. [PASS] ADD_BOOKMARK: addBookmark(tree, parentPath ?? [], bookmark) → save → update session → reset alarm → return tree — test: "adds bookmark to tree and saves"
+3. [PASS] JSON.stringify before saveSetData, explicit everywhere — verified via mock assertion on saveSetData args
+4. [PASS] Both error when no cached password — tests: "returns NOT_UNLOCKED when no cached password" (×2)
+5. [PASS] Alarm reset on every successful mutation — tests: "resets auto-lock alarm on success" (×2)
+
+### CodeRabbit Review Findings (3 edge-case tests added)
+
+1. SAVE with null session state (cached password but cleared session) — covers `!state` branch
+2. ADD_BOOKMARK with null tree in session state — covers `!state.tree` guard
+3. ADD_BOOKMARK when saveSetData fails — verifies session NOT updated on partial failure
+
+### Verification Results
+
+```
+$ npx tsc --noEmit
+(clean — 0 errors)
+
+$ npx eslint .
+(clean — 0 errors)
+
+$ npx vitest run
+Test Files  32 passed (32)
+Tests       652 passed (652)
 ```

@@ -121,7 +121,7 @@
             ],
             "definition_of_done": ["All 5 tests pass", "tsc clean"],
             "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit",
-            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["BG-002"]
+            "estimated_effort": "medium", "passes": true, "attempt_count": 1, "depends_on": ["BG-002"]
         },
         {
             "id": "BG-004", "category": "core", "priority": "HIGH",
@@ -231,6 +231,6 @@
     "critical_path": "001 -> 002 -> 003/004 -> 005",
     "total_story_points": 31, "total_stories": 5,
     "progress_log": { "format_rules": { "file": "progress.md in .prd/module-09-background/", "format": "Append-only. ## BG-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
-    "metadata": { "passing_stories": 2, "build_plan_day": "Day 4", "estimated_test_count": "~28 tests", "session_protocol": "One Claude Code session. Research WXT defineBackground() + chrome.alarms + chrome.storage.session. Verify initSentry() in stub. Commit per story.", "quality_gate": "All tests pass. tsc clean. wxt build. 16 types exhaustive. ≤300 + ≤150 lines. background-types.ts zero runtime code. incognito: 'spanning' in manifest. Password never in storage.", "human_review_required": "Verify: incognito: 'spanning', Sentry not re-initialized, password never in storage, ADD_BOOKMARK uses parentPath, JSON.stringify/parse around saveSetData/loadSetData." },
+    "metadata": { "passing_stories": 3, "build_plan_day": "Day 4", "estimated_test_count": "~28 tests", "session_protocol": "One Claude Code session. Research WXT defineBackground() + chrome.alarms + chrome.storage.session. Verify initSentry() in stub. Commit per story.", "quality_gate": "All tests pass. tsc clean. wxt build. 16 types exhaustive. ≤300 + ≤150 lines. background-types.ts zero runtime code. incognito: 'spanning' in manifest. Password never in storage.", "human_review_required": "Verify: incognito: 'spanning', Sentry not re-initialized, password never in storage, ADD_BOOKMARK uses parentPath, JSON.stringify/parse around saveSetData/loadSetData." },
     "execution_rules": { "execution_order": "BG-001 → 002 → 003/004 → 005", "clarifying_questions": "Encouraged. Key: chrome.storage.session Firefox support, initSentry() integration, JSON serialization.", "prd_scope": "Module 9 of 22.", "commit_protocol": "feat(background): BG-XXX — <title>", "failure_protocol": "Max 3 attempts." }
 }

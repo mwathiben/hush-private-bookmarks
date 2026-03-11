@@ -11,6 +11,11 @@ vi.mock('@/lib/password-sets', () => ({
   getActiveSetId: vi.fn(),
   loadSetData: vi.fn(),
   listSets: vi.fn(),
+  saveSetData: vi.fn(),
+}));
+
+vi.mock('@/lib/data-model', () => ({
+  addBookmark: vi.fn(),
 }));
 
 vi.mock('@/lib/incognito', () => ({
@@ -20,11 +25,12 @@ vi.mock('@/lib/incognito', () => ({
 import { handleMessage, onAlarmFired } from '@/entrypoints/background';
 import type { BackgroundResponse, MessageType, SessionState } from '@/lib/background-types';
 import type { BookmarkTree, PasswordSetInfo } from '@/lib/types';
-import { getActiveSetId, loadSetData, listSets } from '@/lib/password-sets';
+import { getActiveSetId, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
+import { addBookmark } from '@/lib/data-model';
 import { InvalidPasswordError, StorageError } from '@/lib/errors';
 
 const UNIMPLEMENTED_TYPES: MessageType[] = [
-  'SAVE', 'ADD_BOOKMARK', 'GET_INCOGNITO_STATE',
+  'GET_INCOGNITO_STATE',
   'CHANGE_PASSWORD', 'UPDATE_AUTO_LOCK', 'CREATE_SET', 'RENAME_SET',
   'DELETE_SET', 'SWITCH_SET', 'CLEAR_ALL',
   'IMPORT_CHROME_BOOKMARKS', 'IMPORT_BACKUP', 'EXPORT_BACKUP',
@@ -82,8 +88,8 @@ describe('handleMessage — unimplemented types', () => {
     });
   }
 
-  it('covers all 13 unimplemented message types', () => {
-    expect(UNIMPLEMENTED_TYPES).toHaveLength(13);
+  it('covers all 11 unimplemented message types', () => {
+    expect(UNIMPLEMENTED_TYPES).toHaveLength(11);
   });
 });
 
@@ -309,6 +315,236 @@ describe('handleMessage — GET_STATE', () => {
       const state = response.data as SessionState;
       expect(state.isUnlocked).toBe(true);
       expect(state.activeSetId).toBe('default');
+      expect(state.tree).toEqual(TEST_TREE);
+    }
+  });
+});
+
+describe('handleMessage — SAVE', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await handleMessage({ type: 'LOCK' });
+  });
+
+  it('serializes tree with JSON.stringify before saveSetData', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    const newTree: BookmarkTree = {
+      type: 'folder', id: 'r', name: 'Root', dateAdded: 0,
+      children: [{ type: 'bookmark', id: 'b1', title: 'Test', url: 'https://x.com', dateAdded: 1 }],
+    };
+    // #when
+    const response = await handleMessage({ type: 'SAVE', tree: newTree });
+    // #then
+    expect(response.success).toBe(true);
+    expect(vi.mocked(saveSetData)).toHaveBeenCalledWith('default', JSON.stringify(newTree), 'test-pw');
+  });
+
+  it('resets auto-lock alarm on success', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    // #when
+    await handleMessage({ type: 'SAVE', tree: TEST_TREE });
+    // #then
+    const alarm = await browser.alarms.get('hush_auto_lock');
+    expect(alarm).toBeDefined();
+  });
+
+  it('returns NOT_UNLOCKED when no cached password', async () => {
+    // #when
+    const response = await handleMessage({ type: 'SAVE', tree: TEST_TREE });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
+    }
+  });
+
+  it('updates session state tree after save', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    const newTree: BookmarkTree = {
+      type: 'folder', id: 'r', name: 'Updated', dateAdded: 0, children: [],
+    };
+    // #when
+    await handleMessage({ type: 'SAVE', tree: newTree });
+    // #then
+    const stateResponse = await handleMessage({ type: 'GET_STATE' });
+    if (stateResponse.success) {
+      const state = stateResponse.data as SessionState;
+      expect(state.tree).toEqual(newTree);
+    }
+  });
+
+  it('returns STORAGE_ERROR when saveSetData fails', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({
+      success: false,
+      error: new StorageError('write_failed', { operation: 'write', reason: 'write_failed' }),
+    });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    // #when
+    const response = await handleMessage({ type: 'SAVE', tree: TEST_TREE });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('STORAGE_ERROR');
+    }
+  });
+
+  it('returns NOT_UNLOCKED when session state is null despite cached password', async () => {
+    // #given — unlock then externally clear session storage
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    await browser.storage.session.clear();
+    // #when
+    const response = await handleMessage({ type: 'SAVE', tree: TEST_TREE });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
+    }
+  });
+});
+
+describe('handleMessage — ADD_BOOKMARK', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await handleMessage({ type: 'LOCK' });
+  });
+
+  it('adds bookmark to tree and saves', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    const updatedTree: BookmarkTree = {
+      type: 'folder', id: 'r', name: 'Root', dateAdded: 0,
+      children: [{ type: 'bookmark', id: 'new-1', title: 'New', url: 'https://new.com', dateAdded: 1 }],
+    };
+    vi.mocked(addBookmark).mockReturnValue({ success: true, data: updatedTree });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    // #when
+    const response = await handleMessage({ type: 'ADD_BOOKMARK', url: 'https://new.com', title: 'New' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      expect(response.data).toEqual(updatedTree);
+    }
+    expect(vi.mocked(addBookmark)).toHaveBeenCalledWith(
+      TEST_TREE, [],
+      expect.objectContaining({ type: 'bookmark', title: 'New', url: 'https://new.com' }),
+    );
+    expect(vi.mocked(saveSetData)).toHaveBeenCalledWith('default', JSON.stringify(updatedTree), 'test-pw');
+  });
+
+  it('resets auto-lock alarm on success', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    const updatedTree: BookmarkTree = { ...TEST_TREE, children: [] };
+    vi.mocked(addBookmark).mockReturnValue({ success: true, data: updatedTree });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    // #when
+    await handleMessage({ type: 'ADD_BOOKMARK', url: 'https://x.com', title: 't' });
+    // #then
+    const alarm = await browser.alarms.get('hush_auto_lock');
+    expect(alarm).toBeDefined();
+  });
+
+  it('returns NOT_UNLOCKED when no cached password', async () => {
+    // #when
+    const response = await handleMessage({ type: 'ADD_BOOKMARK', url: 'https://x.com', title: 't' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
+    }
+  });
+
+  it('uses parentPath when provided', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    vi.mocked(addBookmark).mockReturnValue({ success: true, data: TEST_TREE });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    // #when
+    await handleMessage({ type: 'ADD_BOOKMARK', url: 'https://x.com', title: 't', parentPath: [0, 1] });
+    // #then
+    expect(vi.mocked(addBookmark)).toHaveBeenCalledWith(
+      TEST_TREE, [0, 1],
+      expect.objectContaining({ type: 'bookmark' }),
+    );
+  });
+
+  it('returns DATA_MODEL_ERROR when addBookmark fails', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    const { DataModelError } = await import('@/lib/errors');
+    vi.mocked(addBookmark).mockReturnValue({
+      success: false,
+      error: new DataModelError('Path not found', { kind: 'path_not_found' }),
+    });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    // #when
+    const response = await handleMessage({ type: 'ADD_BOOKMARK', url: 'https://x.com', title: 't' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('DATA_MODEL_ERROR');
+    }
+  });
+
+  it('returns NOT_UNLOCKED when session tree is null', async () => {
+    // #given — unlock, then set session state with null tree
+    mockSuccessfulUnlock();
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    const noTreeState: SessionState = {
+      isUnlocked: true, activeSetId: 'default', sets: [],
+      tree: null, incognitoMode: 'normal_mode',
+    };
+    await browser.storage.session.set({ sessionState: noTreeState });
+    // #when
+    const response = await handleMessage({ type: 'ADD_BOOKMARK', url: 'https://x.com', title: 't' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
+    }
+  });
+
+  it('does not update session when saveSetData fails', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    const updatedTree: BookmarkTree = { ...TEST_TREE, name: 'Modified' };
+    vi.mocked(addBookmark).mockReturnValue({ success: true, data: updatedTree });
+    vi.mocked(saveSetData).mockResolvedValue({
+      success: false,
+      error: new StorageError('write_failed', { operation: 'write', reason: 'write_failed' }),
+    });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    // #when
+    const response = await handleMessage({ type: 'ADD_BOOKMARK', url: 'https://x.com', title: 't' });
+    // #then
+    expect(response.success).toBe(false);
+    const stateResponse = await handleMessage({ type: 'GET_STATE' });
+    if (stateResponse.success) {
+      const state = stateResponse.data as SessionState;
       expect(state.tree).toEqual(TEST_TREE);
     }
   });

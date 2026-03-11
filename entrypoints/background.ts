@@ -1,10 +1,13 @@
 import { initSentry, captureException } from '@/lib/sentry';
-import { getActiveSetId, loadSetData, listSets } from '@/lib/password-sets';
+import { getActiveSetId, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
+import { addBookmark } from '@/lib/data-model';
 import { determineMode } from '@/lib/incognito';
 import { InvalidPasswordError } from '@/lib/errors';
 import type {
+  AddBookmarkMessage,
   BackgroundMessage,
   BackgroundResponse,
+  SaveMessage,
   SessionState,
   UnlockMessage,
 } from '@/lib/background-types';
@@ -80,7 +83,7 @@ async function handleUnlock(msg: UnlockMessage): Promise<BackgroundResponse> {
 
   await browser.storage.session.set({ [SESSION_KEY]: state });
   cachedPassword = msg.password;
-  await browser.alarms.create(AUTO_LOCK_ALARM, { delayInMinutes: DEFAULT_AUTO_LOCK_MINUTES });
+  await resetAlarm();
 
   return { success: true, data: state };
 }
@@ -96,12 +99,73 @@ async function handleGetState(): Promise<BackgroundResponse> {
   if (cachedPassword === null) {
     return { success: true, data: LOCKED_STATE };
   }
-  const result = await browser.storage.session.get(SESSION_KEY);
-  const stored = result[SESSION_KEY] as SessionState | undefined;
+  const stored = await getSessionState();
   if (!stored) {
     return { success: true, data: LOCKED_STATE };
   }
   return { success: true, data: stored };
+}
+
+async function resetAlarm(): Promise<void> {
+  await browser.alarms.clear(AUTO_LOCK_ALARM);
+  await browser.alarms.create(AUTO_LOCK_ALARM, { delayInMinutes: DEFAULT_AUTO_LOCK_MINUTES });
+}
+
+async function getSessionState(): Promise<SessionState | null> {
+  const result = await browser.storage.session.get(SESSION_KEY);
+  return (result[SESSION_KEY] as SessionState | undefined) ?? null;
+}
+
+async function handleSave(msg: SaveMessage): Promise<BackgroundResponse> {
+  if (cachedPassword === null) {
+    return { success: false, error: 'Not unlocked', code: 'NOT_UNLOCKED' };
+  }
+  const state = await getSessionState();
+  if (!state) {
+    return { success: false, error: 'No active session', code: 'NOT_UNLOCKED' };
+  }
+
+  const json = JSON.stringify(msg.tree);
+  const saveResult = await saveSetData(state.activeSetId, json, cachedPassword);
+  if (!saveResult.success) {
+    return { success: false, error: saveResult.error.message, code: 'STORAGE_ERROR' };
+  }
+
+  const updatedState: SessionState = { ...state, tree: msg.tree };
+  await browser.storage.session.set({ [SESSION_KEY]: updatedState });
+  await resetAlarm();
+  return { success: true };
+}
+
+async function handleAddBookmark(msg: AddBookmarkMessage): Promise<BackgroundResponse> {
+  if (cachedPassword === null) {
+    return { success: false, error: 'Not unlocked', code: 'NOT_UNLOCKED' };
+  }
+  const state = await getSessionState();
+  if (!state || !state.tree) {
+    return { success: false, error: 'No active session', code: 'NOT_UNLOCKED' };
+  }
+
+  const result = addBookmark(state.tree, msg.parentPath ?? [], {
+    type: 'bookmark',
+    title: msg.title,
+    url: msg.url,
+    dateAdded: Date.now(),
+  });
+  if (!result.success) {
+    return { success: false, error: result.error.message, code: 'DATA_MODEL_ERROR' };
+  }
+
+  const json = JSON.stringify(result.data);
+  const saveResult = await saveSetData(state.activeSetId, json, cachedPassword);
+  if (!saveResult.success) {
+    return { success: false, error: saveResult.error.message, code: 'STORAGE_ERROR' };
+  }
+
+  const updatedState: SessionState = { ...state, tree: result.data };
+  await browser.storage.session.set({ [SESSION_KEY]: updatedState });
+  await resetAlarm();
+  return { success: true, data: result.data };
 }
 
 export function onAlarmFired(alarm: { name: string }): void {
@@ -119,7 +183,9 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
     case 'GET_STATE':
       return handleGetState();
     case 'SAVE':
+      return handleSave(msg);
     case 'ADD_BOOKMARK':
+      return handleAddBookmark(msg);
     case 'GET_INCOGNITO_STATE':
     case 'CHANGE_PASSWORD':
     case 'UPDATE_AUTO_LOCK':
