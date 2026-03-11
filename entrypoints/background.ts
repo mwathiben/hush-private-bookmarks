@@ -34,13 +34,9 @@ const VALID_TYPES = new Set<string>([
 ]);
 
 function isBackgroundMessage(msg: unknown): msg is BackgroundMessage {
-  return (
-    typeof msg === 'object' &&
-    msg !== null &&
-    'type' in msg &&
-    typeof (msg as { type: unknown }).type === 'string' &&
-    VALID_TYPES.has((msg as { type: unknown }).type as string)
-  );
+  if (typeof msg !== 'object' || msg === null || !('type' in msg)) return false;
+  const t = (msg as Record<string, unknown>).type;
+  return typeof t === 'string' && VALID_TYPES.has(t);
 }
 
 async function handleUnlock(msg: UnlockMessage): Promise<BackgroundResponse> {
@@ -71,9 +67,7 @@ async function handleUnlock(msg: UnlockMessage): Promise<BackgroundResponse> {
   let isAllowedIncognito = false;
   try {
     isAllowedIncognito = await browser.extension.isAllowedIncognitoAccess();
-  } catch {
-    // Not available in all contexts — default to false
-  }
+  } catch { /* not available in all contexts */ }
   const incognitoMode = determineMode({ isIncognitoContext: false, isAllowedIncognito });
 
   const state: SessionState = {
@@ -112,7 +106,7 @@ async function handleGetState(): Promise<BackgroundResponse> {
 
 export function onAlarmFired(alarm: { name: string }): void {
   if (alarm.name === AUTO_LOCK_ALARM) {
-    void handleLock();
+    void handleLock().catch(captureException);
   }
 }
 

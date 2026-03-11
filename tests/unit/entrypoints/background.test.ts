@@ -21,7 +21,7 @@ import { handleMessage, onAlarmFired } from '@/entrypoints/background';
 import type { BackgroundResponse, MessageType, SessionState } from '@/lib/background-types';
 import type { BookmarkTree, PasswordSetInfo } from '@/lib/types';
 import { getActiveSetId, loadSetData, listSets } from '@/lib/password-sets';
-import { InvalidPasswordError } from '@/lib/errors';
+import { InvalidPasswordError, StorageError } from '@/lib/errors';
 
 const UNIMPLEMENTED_TYPES: MessageType[] = [
   'SAVE', 'ADD_BOOKMARK', 'GET_INCOGNITO_STATE',
@@ -162,6 +162,59 @@ describe('handleMessage — UNLOCK', () => {
       expect(response.code).toBe('INVALID_PASSWORD');
     }
   });
+
+  it('returns STORAGE_ERROR when getActiveSetId fails', async () => {
+    // #given
+    vi.mocked(getActiveSetId).mockResolvedValue({
+      success: false,
+      error: new StorageError('read_failed', { operation: 'read', reason: 'read_failed' }),
+    });
+    // #when
+    const response = await handleMessage({ type: 'UNLOCK', password: 'pw' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('STORAGE_ERROR');
+    }
+  });
+
+  it('returns STORAGE_ERROR when loadSetData fails with non-password error', async () => {
+    // #given
+    vi.mocked(getActiveSetId).mockResolvedValue({ success: true, data: 'default' });
+    vi.mocked(loadSetData).mockResolvedValue({
+      success: false,
+      error: new StorageError('read_failed', { operation: 'read', reason: 'read_failed' }),
+    });
+    // #when
+    const response = await handleMessage({ type: 'UNLOCK', password: 'pw' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('STORAGE_ERROR');
+    }
+  });
+
+  it('returns PARSE_ERROR when decrypted data is invalid JSON', async () => {
+    // #given
+    vi.mocked(getActiveSetId).mockResolvedValue({ success: true, data: 'default' });
+    vi.mocked(loadSetData).mockResolvedValue({ success: true, data: 'not-json{{{' });
+    // #when
+    const response = await handleMessage({ type: 'UNLOCK', password: 'pw' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('PARSE_ERROR');
+    }
+  });
+
+  it('uses explicit setId when provided', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    // #when
+    await handleMessage({ type: 'UNLOCK', password: 'pw', setId: 'custom-set' });
+    // #then
+    expect(vi.mocked(loadSetData)).toHaveBeenCalledWith('custom-set', 'pw');
+  });
 });
 
 describe('handleMessage — LOCK', () => {
@@ -232,7 +285,6 @@ describe('handleMessage — GET_STATE', () => {
   });
 
   it('returns locked state when no session exists', async () => {
-    // #given — fresh state, no unlock
     // #when
     const response = await handleMessage({ type: 'GET_STATE' });
     // #then
