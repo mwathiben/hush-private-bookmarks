@@ -10,7 +10,14 @@ export default defineConfig({
     name: 'Hush Private Bookmarks',
     description: 'Privacy-first hidden bookmarks for your browser',
     default_locale: 'en',
-    permissions: ['storage', 'contextMenus', 'activeTab', 'bookmarks'],
+    permissions: ['storage', 'contextMenus', 'activeTab', 'bookmarks', 'alarms'],
     optional_permissions: ['history'],
+    incognito: 'spanning',
+    commands: {
+      _execute_action: {
+        suggested_key: { default: 'Ctrl+Shift+H' },
+        description: 'Open Hush popup',
+      },
+    },
   },
 });

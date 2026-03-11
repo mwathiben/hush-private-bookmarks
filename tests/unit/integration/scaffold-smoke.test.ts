@@ -117,9 +117,16 @@ import {
 } from '@/lib/incognito';
 import type { IncognitoState, IncognitoMode, IncognitoConfig } from '@/lib/incognito';
 
+import type {
+  BackgroundMessage,
+  BackgroundResponse,
+  SessionState,
+  MessageType,
+} from '@/lib/background-types';
+
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts', 'background-types.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -269,6 +276,23 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(state).toBeDefined();
     expect(mode).toBeDefined();
     expect(config).toBeDefined();
+  });
+
+  it('background-types exports type-check correctly', () => {
+    const msg: BackgroundMessage = { type: 'GET_STATE' };
+    const resp: BackgroundResponse = { success: true };
+    const session: SessionState = {
+      isUnlocked: false,
+      activeSetId: 'default',
+      sets: [],
+      tree: null,
+      incognitoMode: 'normal_mode',
+    };
+    const msgType: MessageType = 'LOCK';
+    expect(msg.type).toBe('GET_STATE');
+    expect(resp.success).toBe(true);
+    expect(session.isUnlocked).toBe(false);
+    expect(msgType).toBe('LOCK');
   });
 });
 
@@ -431,7 +455,7 @@ describe('scaffold integration: error class properties', () => {
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(12);
+    expect(LIB_MODULES).toHaveLength(13);
   });
 });
 
@@ -576,6 +600,27 @@ describe('scaffold integration: architecture constraints', () => {
 
   it('incognito.ts has zero browser/chrome API imports', () => {
     const content = readFileSync(resolve(ROOT, 'lib', 'incognito.ts'), 'utf-8');
+    expect(content).not.toMatch(/from\s+['"]wxt\/browser['"]/);
+    expect(content).not.toContain('chrome.');
+    expect(content).not.toContain('browser.');
+  });
+
+  it('background-types.ts is within 150-line limit', () => {
+    const lines = readFileSync(resolve(ROOT, 'lib', 'background-types.ts'), 'utf-8').split('\n').length;
+    expect(lines).toBeLessThanOrEqual(150);
+  });
+
+  it('background-types.ts has zero external dependencies', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'background-types.ts'), 'utf-8');
+    const importRegex = /from\s+['"]([^@./][^'"]*)['"]/g;
+    let match;
+    while ((match = importRegex.exec(content)) !== null) {
+      throw new Error(`Unexpected external dependency: ${match[1]}`);
+    }
+  });
+
+  it('background-types.ts has zero browser/chrome API imports', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'background-types.ts'), 'utf-8');
     expect(content).not.toMatch(/from\s+['"]wxt\/browser['"]/);
     expect(content).not.toContain('chrome.');
     expect(content).not.toContain('browser.');
