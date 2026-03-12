@@ -8,7 +8,7 @@
 | BG-002 | Unlock/Lock handlers with chrome.storage.session and auto-lock alarm | PASSED | 1 |
 | BG-003 | SAVE and ADD_BOOKMARK handlers with alarm reset | PASSED | 1 |
 | BG-004 | Context menu, incognito detection, and Sentry error wiring | PASSED | 1 |
-| BG-005 | Integration, E2E, and full verification | NOT STARTED | 0 |
+| BG-005 | Integration, E2E, and full verification | PASSED | 1 |
 
 **Critical Path**: 001 → 002 → 003/004 → 005
 
@@ -256,3 +256,81 @@ background-types.ts: 127 lines (≤150 budget)
 
 Deslop review: no AI slop in diff
 ```
+
+---
+
+## Session: 2026-03-12T21:00:00Z
+
+**Task**: BG-005 - Integration, E2E, and full verification
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Fixed INTERNAL_ERROR response: added missing `code` field for consistency with all other error responses
+- Added scaffold-smoke test enforcing background.ts ≤300 line budget
+- Added 9 new Playwright E2E tests across 2 describe blocks (BG-003/BG-004 + BG-005)
+- Full verification suite: tsc, eslint, vitest (656 tests), wxt build, playwright (113 tests)
+- Deslop review: zero AI slop in diff
+- Tracer bullet analysis: mapped full blast radius (11 browser APIs, 13 lib/ modules, 5 test files)
+- Security audit: password never in storage, Sentry PII-safe, no console.log, no type suppressions
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `entrypoints/background.ts` | Fixed INTERNAL_ERROR: added `code: 'INTERNAL_ERROR'`, human-readable error message. 259→260 lines. |
+| `tests/e2e/background-message.test.ts` | +9 E2E tests: SAVE/ADD_BOOKMARK not-unlocked, GET_INCOGNITO_STATE, NOT_IMPLEMENTED shape, contextMenus permission, SW active, sequential consistency, NOT_IMPLEMENTED consistency, rapid messages. 121→280 lines. |
+| `tests/unit/entrypoints/background.test.ts` | Updated INTERNAL_ERROR assertion to match new response shape. |
+| `tests/unit/integration/scaffold-smoke.test.ts` | +background.ts ≤300 line budget test. 629→634 lines. |
+
+### Acceptance Criteria Verification
+
+1. [PASS] LIB_MODULES = 13 — already enforced since BG-001
+2. [PASS] background.ts ≤ 300 lines — 260 lines, now enforced by scaffold-smoke test
+3. [PASS] background-types.ts ≤ 150 lines + zero runtime code — 127 lines, enforced by scaffold-smoke
+4. [PASS] Built manifest has incognito: 'spanning' + alarms + commands — verified in E2E BG-001 tests
+5. [PASS] E2E passes — 113/113 tests (18 background-specific)
+6. [PASS] Zero regressions — 656 unit tests, 113 E2E tests all green
+
+### Code Issues Found and Fixed
+
+1. **INTERNAL_ERROR missing code field** (background.ts L254) — only error response without `code` field. Fixed: `{ success: false, error: 'Internal error', code: 'INTERNAL_ERROR' }`
+2. **No background.ts line budget test** — background-types.ts had one, background.ts didn't. Fixed: added scaffold-smoke test.
+3. **contextMenus.create() not awaited** (background.ts L190) — researched: NOT a bug. `create()` returns ID synchronously per Chrome API. Correct as-is.
+4. **onMessage listener pattern** — researched: returning Promise directly (not `return true`) is correct MV3 best practice (Chrome 99+). Correct as-is.
+
+### Verification Results
+
+```
+$ npx tsc --noEmit
+(clean — 0 errors)
+
+$ npx eslint .
+(clean — 0 errors)
+
+$ npx vitest run
+Test Files  32 passed (32)
+Tests       656 passed (656)
+
+$ npx wxt build
+✔ Finished in 33.4s
+Total: 607.54 kB
+
+$ npx playwright test
+113 passed (5.3m)
+```
+
+---
+
+## Module Summary
+
+All 5 stories PASSED on first attempt. Module 9 complete.
+
+| ID | Title | Attempts | Tests Added |
+| --- | --- | --- | --- |
+| BG-001 | Message protocol types + handler scaffold | 1 | 18 unit + 6 E2E |
+| BG-002 | Unlock/Lock + storage.session + auto-lock | 1 | 9 unit + 3 E2E |
+| BG-003 | SAVE + ADD_BOOKMARK + alarm reset | 1 | 8 unit |
+| BG-004 | Context menu + incognito + Sentry | 1 | 4 unit |
+| BG-005 | Integration, E2E, full verification | 1 | 1 unit + 9 E2E |
+
+**Final counts**: 260 lines (background.ts), 127 lines (background-types.ts), 42 unit tests, 18 E2E tests, 656 total unit tests, 113 total E2E tests.

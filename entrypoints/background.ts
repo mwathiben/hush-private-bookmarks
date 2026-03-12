@@ -251,7 +251,7 @@ export default defineBackground(() => {
       return handleMessage(message).catch(
         (err: unknown): BackgroundResponse => {
           captureException(err);
-          return { success: false, error: 'INTERNAL_ERROR' };
+          return { success: false, error: 'Internal error', code: 'INTERNAL_ERROR' };
         },
       );
     },

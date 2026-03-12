@@ -118,3 +118,162 @@ test.describe('Background service worker: BG-002', () => {
     await page.close();
   });
 });
+
+test.describe('Background service worker: BG-003/BG-004', () => {
+  test('SAVE without unlock returns NOT_UNLOCKED', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({
+        type: 'SAVE',
+        tree: { type: 'folder', title: 'Root', children: [], dateAdded: 0 },
+      });
+    });
+
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
+    }
+    await page.close();
+  });
+
+  test('ADD_BOOKMARK without unlock returns NOT_UNLOCKED', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({
+        type: 'ADD_BOOKMARK',
+        url: 'https://example.com',
+        title: 'Test Bookmark',
+      });
+    });
+
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
+    }
+    await page.close();
+  });
+
+  test('GET_INCOGNITO_STATE returns success with mode', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({ type: 'GET_INCOGNITO_STATE' });
+    });
+
+    expect(response.success).toBe(true);
+    if (response.success) {
+      expect(typeof response.data).toBe('string');
+    }
+    await page.close();
+  });
+
+  test('NOT_IMPLEMENTED handler returns correct shape', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({
+        type: 'CHANGE_PASSWORD',
+        currentPassword: 'a',
+        newPassword: 'b',
+      });
+    });
+
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.error).toBe('NOT_IMPLEMENTED');
+      expect(response.code).toBe('CHANGE_PASSWORD');
+    }
+    await page.close();
+  });
+
+  test('manifest has contextMenus permission', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    const res = await page.goto(`chrome-extension://${extensionId}/manifest.json`);
+    const manifest = await res!.json();
+    expect(manifest.permissions).toContain('contextMenus');
+    await page.close();
+  });
+});
+
+test.describe('Background service worker: BG-005', () => {
+  test('service worker is active', async ({ context, extensionId }) => {
+    const [sw] = context.serviceWorkers();
+    expect(sw).toBeDefined();
+    expect(sw!.url()).toContain(extensionId);
+  });
+
+  test('sequential messages maintain state consistency', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const results = await page.evaluate<BackgroundResponse[]>(async () => {
+      const r1 = await chrome.runtime.sendMessage({ type: 'GET_STATE' });
+      const r2 = await chrome.runtime.sendMessage({ type: 'LOCK' });
+      const r3 = await chrome.runtime.sendMessage({ type: 'GET_STATE' });
+      return [r1, r2, r3];
+    });
+
+    expect(results).toHaveLength(3);
+    expect(results[0]!.success).toBe(true);
+    expect(results[1]!.success).toBe(true);
+    expect(results[2]!.success).toBe(true);
+    if (results[0]!.success && results[2]!.success) {
+      const state0 = results[0]!.data as { isUnlocked: boolean };
+      const state2 = results[2]!.data as { isUnlocked: boolean };
+      expect(state0.isUnlocked).toBe(false);
+      expect(state2.isUnlocked).toBe(false);
+    }
+    await page.close();
+  });
+
+  test('multiple NOT_IMPLEMENTED handlers respond consistently', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const results = await page.evaluate<BackgroundResponse[]>(async () => {
+      const r1 = await chrome.runtime.sendMessage({ type: 'EXPORT_BACKUP' });
+      const r2 = await chrome.runtime.sendMessage({ type: 'IMPORT_CHROME_BOOKMARKS' });
+      return [r1, r2];
+    });
+
+    expect(results).toHaveLength(2);
+    for (const [i, expectedCode] of (['EXPORT_BACKUP', 'IMPORT_CHROME_BOOKMARKS'] as const).entries()) {
+      const r = results[i]!;
+      expect(r.success).toBe(false);
+      if (!r.success) {
+        expect(r.error).toBe('NOT_IMPLEMENTED');
+        expect(r.code).toBe(expectedCode);
+      }
+    }
+    await page.close();
+  });
+
+  test('rapid sequential messages all return valid responses', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const results = await page.evaluate<BackgroundResponse[]>(async () => {
+      const responses: BackgroundResponse[] = [];
+      for (let i = 0; i < 5; i++) {
+        responses.push(await chrome.runtime.sendMessage({ type: 'GET_STATE' }));
+      }
+      return responses;
+    });
+
+    expect(results).toHaveLength(5);
+    for (const r of results) {
+      expect(r.success).toBe(true);
+      if (r.success) {
+        const state = r.data as { isUnlocked: boolean };
+        expect(state.isUnlocked).toBe(false);
+      }
+    }
+    await page.close();
+  });
+});

@@ -648,11 +648,11 @@ describe('Sentry error wiring', () => {
     const response = await handleMessage({ type: 'UNLOCK', password: 'pw' }).catch(
       (err: unknown): BackgroundResponse => {
         captureException(err);
-        return { success: false, error: 'INTERNAL_ERROR' };
+        return { success: false, error: 'Internal error', code: 'INTERNAL_ERROR' };
       },
     );
     // #then
     expect(captureException).toHaveBeenCalledWith(expect.any(Error));
-    expect(response).toEqual({ success: false, error: 'INTERNAL_ERROR' });
+    expect(response).toEqual({ success: false, error: 'Internal error', code: 'INTERNAL_ERROR' });
   });
 });

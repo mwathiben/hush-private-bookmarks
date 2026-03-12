@@ -625,4 +625,9 @@ describe('scaffold integration: architecture constraints', () => {
     expect(content).not.toContain('chrome.');
     expect(content).not.toContain('browser.');
   });
+
+  it('background.ts is within 300-line limit', () => {
+    const lines = readFileSync(resolve(ROOT, 'entrypoints', 'background.ts'), 'utf-8').split('\n').length;
+    expect(lines).toBeLessThanOrEqual(300);
+  });
 });
