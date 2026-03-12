@@ -191,6 +191,36 @@
             { "file": "components/shared/MnemonicDisplay.tsx", "consumed_by": "SetupScreen + Module 12 settings", "description": "Recovery phrase display." }
         ]
     },
+    "carried_from_module_9": {
+        "source": "CodeRabbit review of BG-005 (2026-03-12)",
+        "items": [
+            {
+                "id": "CR-M9-1",
+                "suggestion": "Make `code` required on the failure branch of BackgroundResponse (currently optional `code?: string`)",
+                "target_story": "AUTH-001",
+                "rationale": "useSendMessage consumes BackgroundResponse — tightening the type before UI code depends on it prevents optional-chaining sprawl in every consumer"
+            },
+            {
+                "id": "CR-M9-3",
+                "suggestion": "Add E2E test for invalid `type` value sent to background (tests VALID_TYPES guard in real browser)",
+                "target_story": "AUTH-004",
+                "rationale": "AUTH-004 is the first E2E verification story for popup — natural place to add message validation edge case"
+            },
+            {
+                "id": "CR-M9-4",
+                "suggestion": "Add E2E test for UNLOCK with wrong password when stored encrypted data exists (INVALID_PASSWORD path)",
+                "target_story": "AUTH-004",
+                "rationale": "Most security-relevant missing E2E path. AUTH-002/003 create the stored data prerequisite; AUTH-004 E2E sweep verifies it"
+            }
+        ],
+        "not_applicable": [
+            {
+                "id": "CR-M9-2",
+                "suggestion": "Normalize NOT_IMPLEMENTED `error` field to human-readable ('Not implemented')",
+                "reason": "Resolves itself in Module 12 SETTINGS-001a when all 10 NOT_IMPLEMENTED stubs are replaced with real handlers"
+            }
+        ]
+    },
     "known_risks": [
         { "issue": "Background not ready when popup mounts (SW cold start)", "severity": "HIGH", "action": "useSession handles delayed GET_STATE. Loading spinner. Retry with short delay." },
         { "issue": "SetupScreen crypto operations may block UI", "severity": "MEDIUM", "action": "Loading state during PBKDF2. CREATE_SET message routes through background." },
