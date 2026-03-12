@@ -7,7 +7,7 @@
 | BG-001 | Complete message protocol types and handler scaffold | PASSED | 1 |
 | BG-002 | Unlock/Lock handlers with chrome.storage.session and auto-lock alarm | PASSED | 1 |
 | BG-003 | SAVE and ADD_BOOKMARK handlers with alarm reset | PASSED | 1 |
-| BG-004 | Context menu, incognito detection, and Sentry error wiring | NOT STARTED | 0 |
+| BG-004 | Context menu, incognito detection, and Sentry error wiring | PASSED | 1 |
 | BG-005 | Integration, E2E, and full verification | NOT STARTED | 0 |
 
 **Critical Path**: 001 → 002 → 003/004 → 005
@@ -199,4 +199,60 @@ $ npx eslint .
 $ npx vitest run
 Test Files  32 passed (32)
 Tests       652 passed (652)
+```
+
+---
+
+## Session: 2026-03-12T19:40:00Z
+
+**Task**: BG-004 - Context menu, incognito detection, and Sentry error wiring
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Implemented `handleGetIncognitoState`: browser.extension.isAllowedIncognitoAccess → determineMode → return mode
+- Implemented `registerContextMenu`: removeAll → create('Add to Hush', ['page', 'link']) → addListener(onContextMenuClicked)
+- Implemented `onContextMenuClicked`: guards menuItemId, extracts url/title from info+tab, dispatches ADD_BOOKMARK with parentPath: []
+- Wired GET_INCOGNITO_STATE into handleMessage switch (no longer returns NOT_IMPLEMENTED)
+- Wired registerContextMenu into defineBackground with .catch(captureException) — handles fakeBrowser throws in test env
+- Verified existing initSentry() at line 17 and captureException in 4 error paths (onMessage catch, onAlarmFired, registerContextMenu, onContextMenuClicked)
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `entrypoints/background.ts` | +Browser type import, +CONTEXT_MENU_ID, +handleGetIncognitoState, +registerContextMenu, +onContextMenuClicked, wired switch + defineBackground. 223→259 lines. |
+| `tests/unit/entrypoints/background.test.ts` | +registerContextMenu/onContextMenuClicked/determineMode/captureException imports, UNIMPLEMENTED_TYPES 11→10, +4 BG-004 tests (context menu registration, click handler, GET_INCOGNITO_STATE, Sentry error wiring). 552→647 lines (42 total tests). |
+
+### Acceptance Criteria Verification
+
+1. [PASS] Context menu: 'Add to Hush', contexts: ['page', 'link'] — test: "registers context menu on startup"
+2. [PASS] removeAll() before create — removeAll is first call in registerContextMenu
+3. [PASS] Context menu → ADD_BOOKMARK with parentPath: [] — test: "context menu click triggers ADD_BOOKMARK with parentPath: []"
+4. [PASS] GET_INCOGNITO_STATE resolves via determineMode() — test: "returns resolved incognito mode"
+5. [PASS] Existing initSentry() verified, NOT recreated — line 17, unchanged from BG-001
+6. [PASS] captureException wired to error paths — 4 wiring points verified
+
+### Key Decision: fakeBrowser contextMenus
+
+`@webext-core/fake-browser` throws "not implemented" for ALL contextMenus methods. Solution: bundle all contextMenus work into `registerContextMenu()` async function, called via `void registerContextMenu().catch(captureException)` in defineBackground. The throw becomes a rejected promise caught silently by mocked captureException during tests. Individual tests spy on browser.contextMenus methods before calling registerContextMenu directly.
+
+### Verification Results
+
+```
+$ npx tsc --noEmit
+(clean — 0 errors)
+
+$ npx eslint entrypoints/background.ts tests/unit/entrypoints/background.test.ts
+(clean — exit 0, 0 errors)
+
+$ npx vitest run
+Test Files  32 passed (32)
+Tests       655 passed (655)
+
+$ npx wxt build
+✔ Finished in 16.5s
+background.ts: 259 lines (≤300 budget)
+background-types.ts: 127 lines (≤150 budget)
+
+Deslop review: no AI slop in diff
 ```

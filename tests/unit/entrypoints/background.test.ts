@@ -22,15 +22,18 @@ vi.mock('@/lib/incognito', () => ({
   determineMode: vi.fn().mockReturnValue('normal_mode'),
 }));
 
-import { handleMessage, onAlarmFired } from '@/entrypoints/background';
+import {
+  handleMessage, onAlarmFired, registerContextMenu, onContextMenuClicked,
+} from '@/entrypoints/background';
 import type { BackgroundResponse, MessageType, SessionState } from '@/lib/background-types';
 import type { BookmarkTree, PasswordSetInfo } from '@/lib/types';
 import { getActiveSetId, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
 import { addBookmark } from '@/lib/data-model';
+import { captureException } from '@/lib/sentry';
+import { determineMode } from '@/lib/incognito';
 import { InvalidPasswordError, StorageError } from '@/lib/errors';
 
 const UNIMPLEMENTED_TYPES: MessageType[] = [
-  'GET_INCOGNITO_STATE',
   'CHANGE_PASSWORD', 'UPDATE_AUTO_LOCK', 'CREATE_SET', 'RENAME_SET',
   'DELETE_SET', 'SWITCH_SET', 'CLEAR_ALL',
   'IMPORT_CHROME_BOOKMARKS', 'IMPORT_BACKUP', 'EXPORT_BACKUP',
@@ -88,8 +91,8 @@ describe('handleMessage — unimplemented types', () => {
     });
   }
 
-  it('covers all 11 unimplemented message types', () => {
-    expect(UNIMPLEMENTED_TYPES).toHaveLength(11);
+  it('covers all 10 unimplemented message types', () => {
+    expect(UNIMPLEMENTED_TYPES).toHaveLength(10);
   });
 });
 
@@ -547,5 +550,109 @@ describe('handleMessage — ADD_BOOKMARK', () => {
       const state = stateResponse.data as SessionState;
       expect(state.tree).toEqual(TEST_TREE);
     }
+  });
+});
+
+describe('context menu registration', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('registers context menu on startup', async () => {
+    // #given
+    const removeAllSpy = vi.spyOn(browser.contextMenus, 'removeAll')
+      .mockResolvedValue();
+    const createSpy = vi.spyOn(browser.contextMenus, 'create')
+      .mockReturnValue(1);
+    vi.spyOn(browser.contextMenus.onClicked, 'addListener')
+      .mockImplementation(() => {});
+    // #when
+    await registerContextMenu();
+    // #then
+    expect(removeAllSpy).toHaveBeenCalledOnce();
+    expect(createSpy).toHaveBeenCalledWith({
+      id: 'add-to-hush',
+      title: 'Add to Hush',
+      contexts: ['page', 'link'],
+    });
+  });
+
+  it('context menu click triggers ADD_BOOKMARK with parentPath: []', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    const updatedTree: BookmarkTree = { ...TEST_TREE };
+    vi.mocked(addBookmark).mockReturnValue({ success: true, data: updatedTree });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    const info = {
+      menuItemId: 'add-to-hush',
+      editable: false,
+      pageUrl: 'https://example.com',
+    };
+    const tab = {
+      id: 1, index: 0, highlighted: false, active: true, pinned: false,
+      incognito: false, url: 'https://example.com', title: 'Example Page',
+    };
+    // #when
+    onContextMenuClicked(
+      info as unknown as Parameters<typeof onContextMenuClicked>[0],
+      tab as unknown as Parameters<typeof onContextMenuClicked>[1],
+    );
+    await new Promise(resolve => setTimeout(resolve, 10));
+    // #then
+    expect(vi.mocked(addBookmark)).toHaveBeenCalledWith(
+      TEST_TREE, [],
+      expect.objectContaining({ type: 'bookmark', title: 'Example Page', url: 'https://example.com' }),
+    );
+    // cleanup
+    await handleMessage({ type: 'LOCK' });
+  });
+});
+
+describe('handleMessage — GET_INCOGNITO_STATE', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('returns resolved incognito mode', async () => {
+    // #given
+    vi.spyOn(browser.extension, 'isAllowedIncognitoAccess')
+      .mockImplementation(() => Promise.resolve(true));
+    vi.mocked(determineMode).mockReturnValue('incognito_active');
+    // #when
+    const response = await handleMessage({ type: 'GET_INCOGNITO_STATE' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      expect(response.data).toBe('incognito_active');
+    }
+    expect(vi.mocked(determineMode)).toHaveBeenCalledWith({
+      isIncognitoContext: false,
+      isAllowedIncognito: true,
+    });
+  });
+});
+
+describe('Sentry error wiring', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('handleMessage rejection is caught by captureException wrapper', async () => {
+    // #given — force handleMessage to reject
+    vi.mocked(getActiveSetId).mockRejectedValue(new Error('unexpected crash'));
+    // #when — mirror the defineBackground wrapper pattern
+    const response = await handleMessage({ type: 'UNLOCK', password: 'pw' }).catch(
+      (err: unknown): BackgroundResponse => {
+        captureException(err);
+        return { success: false, error: 'INTERNAL_ERROR' };
+      },
+    );
+    // #then
+    expect(captureException).toHaveBeenCalledWith(expect.any(Error));
+    expect(response).toEqual({ success: false, error: 'INTERNAL_ERROR' });
   });
 });

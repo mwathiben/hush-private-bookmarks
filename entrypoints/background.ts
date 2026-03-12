@@ -1,3 +1,4 @@
+import type { Browser } from 'wxt/browser';
 import { initSentry, captureException } from '@/lib/sentry';
 import { getActiveSetId, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
 import { addBookmark } from '@/lib/data-model';
@@ -18,6 +19,7 @@ initSentry();
 const AUTO_LOCK_ALARM = 'hush_auto_lock';
 const DEFAULT_AUTO_LOCK_MINUTES = 10;
 const SESSION_KEY = 'sessionState';
+const CONTEXT_MENU_ID = 'add-to-hush';
 
 let cachedPassword: string | null = null;
 
@@ -168,10 +170,42 @@ async function handleAddBookmark(msg: AddBookmarkMessage): Promise<BackgroundRes
   return { success: true, data: result.data };
 }
 
+async function handleGetIncognitoState(): Promise<BackgroundResponse> {
+  let isAllowedIncognito = false;
+  try {
+    isAllowedIncognito = await browser.extension.isAllowedIncognitoAccess();
+  } catch { /* not available in all contexts */ }
+  const mode = determineMode({ isIncognitoContext: false, isAllowedIncognito });
+  return { success: true, data: mode };
+}
+
 export function onAlarmFired(alarm: { name: string }): void {
   if (alarm.name === AUTO_LOCK_ALARM) {
     void handleLock().catch(captureException);
   }
+}
+
+export async function registerContextMenu(): Promise<void> {
+  await browser.contextMenus.removeAll();
+  browser.contextMenus.create({
+    id: CONTEXT_MENU_ID,
+    title: 'Add to Hush',
+    contexts: ['page', 'link'],
+  });
+  browser.contextMenus.onClicked.addListener(onContextMenuClicked);
+}
+
+export function onContextMenuClicked(
+  info: Browser.contextMenus.OnClickData,
+  tab?: Browser.tabs.Tab,
+): void {
+  if (info.menuItemId !== CONTEXT_MENU_ID) return;
+  const url = info.linkUrl ?? tab?.url ?? '';
+  const title = info.linkUrl
+    ? (info.selectionText ?? info.linkUrl)
+    : (tab?.title ?? '');
+  if (!url) return;
+  void handleMessage({ type: 'ADD_BOOKMARK', url, title, parentPath: [] }).catch(captureException);
 }
 
 export function handleMessage(msg: BackgroundMessage): Promise<BackgroundResponse> {
@@ -187,6 +221,7 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
     case 'ADD_BOOKMARK':
       return handleAddBookmark(msg);
     case 'GET_INCOGNITO_STATE':
+      return handleGetIncognitoState();
     case 'CHANGE_PASSWORD':
     case 'UPDATE_AUTO_LOCK':
     case 'CREATE_SET':
@@ -206,6 +241,7 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
 }
 
 export default defineBackground(() => {
+  void registerContextMenu().catch(captureException);
   browser.alarms.onAlarm.addListener(onAlarmFired);
 
   browser.runtime.onMessage.addListener(
