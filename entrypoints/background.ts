@@ -1,6 +1,6 @@
 import type { Browser } from 'wxt/browser';
 import { initSentry, captureException } from '@/lib/sentry';
-import { getActiveSetId, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
+import { getActiveSetId, hasSetData, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
 import { addBookmark } from '@/lib/data-model';
 import { determineMode } from '@/lib/incognito';
 import { InvalidPasswordError } from '@/lib/errors';
@@ -23,13 +23,17 @@ const CONTEXT_MENU_ID = 'add-to-hush';
 
 let cachedPassword: string | null = null;
 
-const LOCKED_STATE: SessionState = {
-  isUnlocked: false,
-  activeSetId: '',
-  sets: [],
-  tree: null,
-  incognitoMode: 'normal_mode',
-};
+async function buildLockedState(): Promise<SessionState> {
+  const setsResult = await listSets();
+  const sets = setsResult.success ? setsResult.data : [];
+  const activeSetId = sets.find(s => s.isDefault)?.id ?? '';
+  let hasData = false;
+  if (activeSetId) {
+    const dataResult = await hasSetData(activeSetId);
+    hasData = dataResult.success ? dataResult.data : false;
+  }
+  return { isUnlocked: false, activeSetId, sets, tree: null, incognitoMode: 'normal_mode', hasData };
+}
 
 const VALID_TYPES = new Set<string>([
   'UNLOCK', 'LOCK', 'SAVE', 'GET_STATE', 'ADD_BOOKMARK',
@@ -81,6 +85,7 @@ async function handleUnlock(msg: UnlockMessage): Promise<BackgroundResponse> {
     sets,
     tree,
     incognitoMode,
+    hasData: true,
   };
 
   await browser.storage.session.set({ [SESSION_KEY]: state });
@@ -99,11 +104,11 @@ async function handleLock(): Promise<BackgroundResponse> {
 
 async function handleGetState(): Promise<BackgroundResponse> {
   if (cachedPassword === null) {
-    return { success: true, data: LOCKED_STATE };
+    return { success: true, data: await buildLockedState() };
   }
   const stored = await getSessionState();
   if (!stored) {
-    return { success: true, data: LOCKED_STATE };
+    return { success: true, data: await buildLockedState() };
   }
   return { success: true, data: stored };
 }

@@ -106,6 +106,7 @@ describe('background-types: SessionState', () => {
       sets: [{ id: 'default', name: 'Default', createdAt: 0, lastAccessedAt: 0, isDefault: true }],
       tree: null,
       incognitoMode: 'normal_mode',
+      hasData: false,
     };
     expect(state.isUnlocked).toBe(false);
     expect(state.tree).toBeNull();
@@ -118,6 +119,7 @@ describe('background-types: SessionState', () => {
       sets: [],
       tree: { type: 'folder', id: 'r', name: 'Root', children: [], dateAdded: 0 },
       incognitoMode: 'incognito_active',
+      hasData: true,
     };
     expect(state.tree).not.toBeNull();
   });

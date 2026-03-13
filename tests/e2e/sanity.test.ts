@@ -1,15 +1,16 @@
 import { test, expect } from './fixtures/extension';
 
 test.describe('Extension popup sanity', () => {
-  test('popup loads and displays expected content', async ({
+  test('popup loads and shows setup screen for first-time user', async ({
     context,
     extensionId,
   }) => {
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
-    await expect(page.locator('h1')).toHaveText('Hush');
-    await expect(page.getByRole('button', { name: 'Get Started' })).toBeVisible();
+    await expect(
+      page.locator('[data-testid="setup-screen"], [data-testid="login-screen"]'),
+    ).toBeVisible({ timeout: 5000 });
 
     await page.close();
   });

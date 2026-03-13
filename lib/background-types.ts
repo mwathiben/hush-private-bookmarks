@@ -124,4 +124,5 @@ export interface SessionState {
   readonly sets: readonly PasswordSetInfo[];
   readonly tree: BookmarkTree | null;
   readonly incognitoMode: IncognitoMode;
+  readonly hasData: boolean;
 }

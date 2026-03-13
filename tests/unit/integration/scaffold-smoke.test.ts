@@ -287,6 +287,7 @@ describe('scaffold integration: lib/ imports resolve', () => {
       sets: [],
       tree: null,
       incognitoMode: 'normal_mode',
+      hasData: false,
     };
     const msgType: MessageType = 'LOCK';
     expect(msg.type).toBe('GET_STATE');

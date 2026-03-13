@@ -9,6 +9,7 @@ vi.mock('@/lib/sentry', () => ({
 
 vi.mock('@/lib/password-sets', () => ({
   getActiveSetId: vi.fn(),
+  hasSetData: vi.fn(),
   loadSetData: vi.fn(),
   listSets: vi.fn(),
   saveSetData: vi.fn(),
@@ -27,7 +28,7 @@ import {
 } from '@/entrypoints/background';
 import type { BackgroundResponse, MessageType, SessionState } from '@/lib/background-types';
 import type { BookmarkTree, PasswordSetInfo } from '@/lib/types';
-import { getActiveSetId, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
+import { getActiveSetId, hasSetData, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
 import { addBookmark } from '@/lib/data-model';
 import { captureException } from '@/lib/sentry';
 import { determineMode } from '@/lib/incognito';
@@ -49,6 +50,7 @@ function mockSuccessfulUnlock(): void {
   vi.mocked(getActiveSetId).mockResolvedValue({ success: true, data: 'default' });
   vi.mocked(loadSetData).mockResolvedValue({ success: true, data: JSON.stringify(TEST_TREE) });
   vi.mocked(listSets).mockResolvedValue({ success: true, data: TEST_SETS });
+  vi.mocked(hasSetData).mockResolvedValue({ success: true, data: true });
   vi.spyOn(browser.extension, 'isAllowedIncognitoAccess')
     .mockImplementation(() => Promise.resolve(false));
 }
@@ -287,6 +289,8 @@ describe('handleMessage — GET_STATE', () => {
   beforeEach(() => {
     fakeBrowser.reset();
     vi.clearAllMocks();
+    vi.mocked(listSets).mockResolvedValue({ success: true, data: TEST_SETS });
+    vi.mocked(hasSetData).mockResolvedValue({ success: true, data: false });
   });
 
   afterEach(async () => {
@@ -301,8 +305,10 @@ describe('handleMessage — GET_STATE', () => {
     if (response.success) {
       const state = response.data as SessionState;
       expect(state.isUnlocked).toBe(false);
-      expect(state.activeSetId).toBe('');
+      expect(state.activeSetId).toBe('default');
+      expect(state.sets).toEqual(TEST_SETS);
       expect(state.tree).toBeNull();
+      expect(state.hasData).toBe(false);
     }
   });
 
@@ -519,7 +525,7 @@ describe('handleMessage — ADD_BOOKMARK', () => {
     await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
     const noTreeState: SessionState = {
       isUnlocked: true, activeSetId: 'default', sets: [],
-      tree: null, incognitoMode: 'normal_mode',
+      tree: null, incognitoMode: 'normal_mode', hasData: true,
     };
     await browser.storage.session.set({ sessionState: noTreeState });
     // #when
