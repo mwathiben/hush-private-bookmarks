@@ -8,9 +8,39 @@ export interface UseSessionResult {
   readonly session: SessionState | null;
 }
 
+function isIncognitoMode(value: unknown): value is SessionState['incognitoMode'] {
+  return value === 'incognito_active' || value === 'normal_mode' || value === 'incognito_not_allowed';
+}
+
+function isPasswordSetInfoArray(value: unknown): value is SessionState['sets'] {
+  if (!Array.isArray(value)) return false;
+
+  return value.every((set) =>
+    typeof set === 'object'
+    && set !== null
+    && 'id' in set
+    && typeof set.id === 'string'
+    && 'name' in set
+    && typeof set.name === 'string'
+    && 'createdAt' in set
+    && typeof set.createdAt === 'number'
+    && 'lastAccessedAt' in set
+    && typeof set.lastAccessedAt === 'number'
+    && 'isDefault' in set
+    && typeof set.isDefault === 'boolean');
+}
+
 function isSessionState(data: unknown): data is SessionState {
-  return typeof data === 'object' && data !== null
-    && 'isUnlocked' in data && 'hasData' in data;
+  if (typeof data !== 'object' || data === null) return false;
+
+  if (!('isUnlocked' in data) || typeof data.isUnlocked !== 'boolean') return false;
+  if (!('hasData' in data) || typeof data.hasData !== 'boolean') return false;
+  if (!('activeSetId' in data) || typeof data.activeSetId !== 'string') return false;
+  if (!('sets' in data) || !isPasswordSetInfoArray(data.sets)) return false;
+  if (!('tree' in data) || (data.tree !== null && typeof data.tree !== 'object')) return false;
+  if (!('incognitoMode' in data) || !isIncognitoMode(data.incognitoMode)) return false;
+
+  return true;
 }
 
 export function useSession(sendMessage: SendMessageFn): UseSessionResult {
