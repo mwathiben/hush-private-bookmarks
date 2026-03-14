@@ -6,7 +6,7 @@ import { SetPicker } from '@/components/ui/SetPicker';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getIncognitoMessage } from '@/lib/incognito';
-import type { SessionState } from '@/lib/background-types';
+import { isSessionState } from '@/hooks/useSession';
 
 export default function LoginScreen(): React.JSX.Element {
   const { session } = useSessionState();
@@ -33,12 +33,15 @@ export default function LoginScreen(): React.JSX.Element {
         setId: selectedSetId,
       });
 
-      if (response.success) {
+      if (response.success && isSessionState(response.data)) {
         setPassword('');
         dispatch({
           type: 'SET_SESSION',
-          session: response.data as SessionState,
+          session: response.data,
         });
+      } else if (response.success) {
+        setError('Invalid session data from background');
+        setUnlocking(false);
       } else {
         setError(response.error);
         setUnlocking(false);

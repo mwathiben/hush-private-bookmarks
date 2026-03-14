@@ -59,7 +59,7 @@
             ],
             "definition_of_done": ["All 8 tests pass", "tsc clean", "Tree renders in popup dimensions"],
             "verification": "npx vitest run tests/unit/components/ tests/unit/hooks/ && npx tsc --noEmit",
-            "estimated_effort": "large", "passes": false, "attempt_count": 0, "depends_on": []
+            "estimated_effort": "large", "passes": true, "attempt_count": 1, "depends_on": []
         },
         {
             "id": "BOOKMARK-002", "category": "core", "priority": "CRITICAL",
@@ -200,6 +200,6 @@
     "critical_path": "001 -> 002 -> 003 -> 004",
     "total_story_points": 31, "total_stories": 4,
     "progress_log": { "format_rules": { "file": "progress.md in .prd/module-11-popup-bookmarks/", "format": "Append-only. ## BOOKMARK-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
-    "metadata": { "passing_stories": 0, "build_plan_day": "Day 4", "estimated_test_count": "~32 tests", "session_protocol": "One Claude Code session. Check shadcn Accordion/DropdownMenu. Test in wxt dev.", "quality_gate": "Tree renders. CRUD works. Wait-for-response enforced. moveItem uses toIndex. Zero business logic. All ≤ 300 lines.", "human_review_required": "Walk through wxt dev: add bookmark, folder, edit, delete, move (verify appends to end of target). Verify wait-for-response." },
+    "metadata": { "passing_stories": 1, "build_plan_day": "Day 4", "estimated_test_count": "~32 tests", "session_protocol": "One Claude Code session. Check shadcn Accordion/DropdownMenu. Test in wxt dev.", "quality_gate": "Tree renders. CRUD works. Wait-for-response enforced. moveItem uses toIndex. Zero business logic. All ≤ 300 lines.", "human_review_required": "Walk through wxt dev: add bookmark, folder, edit, delete, move (verify appends to end of target). Verify wait-for-response." },
     "execution_rules": { "execution_order": "BOOKMARK-001 → 002 → 003 → 004", "clarifying_questions": "Encouraged. Key: shadcn components, Accordion vs custom, DropdownMenu positioning, moveItem toIndex default.", "prd_scope": "Module 11 of 18.", "commit_protocol": "feat(popup-bookmarks): BOOKMARK-XXX — <title>", "failure_protocol": "Max 3 attempts." }
 }

@@ -5,7 +5,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput';
 import { MnemonicDisplay } from '@/components/shared/MnemonicDisplay';
 import { Button } from '@/components/ui/button';
 import { generateMnemonic } from '@/lib/recovery';
-import type { SessionState } from '@/lib/background-types';
+import { isSessionState } from '@/hooks/useSession';
 
 type Step =
   | 'create-password'
@@ -53,14 +53,17 @@ export default function SetupScreen(): React.JSX.Element {
         password,
       });
 
-      if (response.success) {
+      if (response.success && isSessionState(response.data)) {
         setPassword('');
         setConfirmPassword('');
         setMnemonic('');
         dispatch({
           type: 'SET_SESSION',
-          session: response.data as SessionState,
+          session: response.data,
         });
+      } else if (response.success) {
+        setError('Invalid session data from background');
+        setStep('confirm-backup');
       } else {
         setError(response.error);
         setStep('confirm-backup');

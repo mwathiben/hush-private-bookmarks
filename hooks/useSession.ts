@@ -30,7 +30,7 @@ function isPasswordSetInfoArray(value: unknown): value is SessionState['sets'] {
     && typeof set.isDefault === 'boolean');
 }
 
-function isSessionState(data: unknown): data is SessionState {
+export function isSessionState(data: unknown): data is SessionState {
   if (typeof data !== 'object' || data === null) return false;
 
   if (!('isUnlocked' in data) || typeof data.isUnlocked !== 'boolean') return false;
