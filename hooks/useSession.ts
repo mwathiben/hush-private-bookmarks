@@ -37,7 +37,12 @@ export function isSessionState(data: unknown): data is SessionState {
   if (!('hasData' in data) || typeof data.hasData !== 'boolean') return false;
   if (!('activeSetId' in data) || typeof data.activeSetId !== 'string') return false;
   if (!('sets' in data) || !isPasswordSetInfoArray(data.sets)) return false;
-  if (!('tree' in data) || (data.tree !== null && typeof data.tree !== 'object')) return false;
+  if (!('tree' in data)) return false;
+  if (data.tree !== null) {
+    if (typeof data.tree !== 'object') return false;
+    const tree = data.tree as Record<string, unknown>;
+    if (tree.type !== 'folder' || !Array.isArray(tree.children)) return false;
+  }
   if (!('incognitoMode' in data) || !isIncognitoMode(data.incognitoMode)) return false;
 
   return true;

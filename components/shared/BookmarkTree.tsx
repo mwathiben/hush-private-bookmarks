@@ -22,7 +22,7 @@ export function BookmarkTree({
         if (isFolder(node)) {
           return <FolderItem key={node.id} folder={node} depth={depth} />;
         }
-        return null;
+        return node satisfies never;
       })}
     </Accordion>
   );
