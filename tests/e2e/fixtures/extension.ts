@@ -17,9 +17,12 @@ export const test = base.extend<ExtensionFixtures>({
       );
     }
 
+    const headed = process.env.HEADED === 'true';
+
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
-      headless: false,
+      // Set HEADED=true for local debugging; CI defaults to headless.
+      headless: !headed,
       args: [
         `--disable-extensions-except=${EXTENSION_PATH}`,
         `--load-extension=${EXTENSION_PATH}`,
