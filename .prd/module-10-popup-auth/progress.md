@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | AUTH-001 | App shell: state machine router, contexts, message hooks | PASSED | 1 |
 | AUTH-002 | LoginScreen with password input, set picker, and unlock flow | PASSED | 1 |
-| AUTH-003 | SetupScreen with password creation and BIP39 recovery phrase | NOT STARTED | 0 |
+| AUTH-003 | SetupScreen with password creation and BIP39 recovery phrase | PASSED | 1 |
 | AUTH-004 | Dark mode, E2E, and full verification | NOT STARTED | 0 |
 
 **Critical Path**: 001 → 002/003 → 004
@@ -122,3 +122,56 @@ eslint .: 0 errors, 0 warnings
 wxt build: 696.28 kB total, succeeded in 12.6s
 playwright (popup-login): 5 passed (26.8s)
 ```
+
+---
+
+## Session: 2026-03-14T11:30:00Z
+**Task**: AUTH-003 - SetupScreen with password creation and BIP39 recovery phrase
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created MnemonicDisplay shared component: 12-word BIP39 grid (3×4), numbered words, copy-to-clipboard with 2s feedback, try/catch on clipboard API
+- Replaced SetupScreen stub with full multi-step flow: 5 internal steps (create-password → confirm-password → show-mnemonic → confirm-backup → creating)
+- Matches LoginScreen's handleUnlock pattern exactly for handleCreate (wait-for-response: disable → send → await → dispatch or error)
+- Created 10 unit tests across 2 describe blocks (SetupScreen + MnemonicDisplay)
+- Created 4 Playwright E2E tests for setup flow (fresh extension = setup screen)
+- Created components/shared/ directory (first shared component)
+- CodeRabbit review fixes: added try/catch on clipboard write (unhandled promise), clear mnemonic from state on success (security)
+- Deslop review: no slop found
+
+### Files Created
+| File | Purpose |
+| --- | --- |
+| components/shared/MnemonicDisplay.tsx | 12-word BIP39 mnemonic grid with copy-to-clipboard (55 lines) |
+| tests/unit/components/screens/SetupScreen.test.tsx | 10 unit tests: password validation, mismatch, mnemonic display, CREATE_SET, SET_SESSION, loading, error, clipboard |
+| tests/e2e/popup-setup.test.ts | 4 E2E tests: setup screen visible, password validation, mismatch error, full flow through to NOT_IMPLEMENTED |
+
+### Files Modified
+| File | Changes |
+| --- | --- |
+| components/screens/SetupScreen.tsx | Replaced stub with full 5-step setup flow (195 lines) |
+
+### Acceptance Criteria Verification
+1. Multi-step flow: password input → confirm → mnemonic display → confirm written → done — PASS
+2. Password minimum length validation (8+ characters) — PASS
+3. Mismatch detection before proceeding — PASS
+4. MnemonicDisplay: 12 words in 3×4 grid, numbered, 'Copy to clipboard' button — PASS
+5. Setup sends CREATE_SET with name + password, dispatches SET_SESSION on success — PASS
+6. Loading state during vault creation (button disabled, "Creating..." text) — PASS
+7. On failure: shows error, returns to confirm-backup step, re-enables button — PASS
+
+### Verification Results
+```
+tsc --noEmit: clean (0 errors)
+vitest run: 699 tests passed (37 suites)
+eslint .: 0 errors, 1 warning (components/shared/ not in explicit-function-return-type override — expected)
+wxt build: 722.9 kB total, succeeded in 16.9s
+playwright (popup-setup): 4 passed (15.0s)
+```
+
+### CodeRabbit Review Actions
+- CRITICAL: `as SessionState` cast — kept for consistency with LoginScreen pattern (isSessionState guard exists)
+- HIGH: Mnemonic not cleared after vault creation — FIXED (added setMnemonic(''))
+- HIGH: Unhandled clipboard promise rejection — FIXED (added try/catch)
+- HIGH: Mnemonic never sent to background — BY DESIGN (Module 12 scope per plan)
+- MEDIUM items (5-8): Accepted as-is (timer pattern, indirect testing, dead mock, stub assertion)
