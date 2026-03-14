@@ -36,7 +36,7 @@ export function useTree(): UseTreeReturn {
         return true;
       }
 
-      setError(response.error);
+      setError(response.error ?? 'Unknown error');
       return false;
     } catch {
       setError('Failed to save bookmarks');

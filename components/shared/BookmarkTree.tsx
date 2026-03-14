@@ -22,7 +22,8 @@ export function BookmarkTree({
         if (isFolder(node)) {
           return <FolderItem key={node.id} folder={node} depth={depth} />;
         }
-        return node satisfies never;
+        const _exhaustive: never = node;
+        throw new Error(`Unexpected BookmarkNode type: ${JSON.stringify(_exhaustive)}`);
       })}
     </Accordion>
   );

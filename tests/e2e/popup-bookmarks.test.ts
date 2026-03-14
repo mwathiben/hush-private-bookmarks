@@ -169,6 +169,7 @@ emptyTreeTest.describe('Popup bookmarks — empty tree (BOOKMARK-001)', () => {
         name: /add bookmark/i,
       });
       const count = await addButtons.count();
+      expect(count).toBeGreaterThan(0);
       for (let i = 0; i < count; i++) {
         await expect(addButtons.nth(i)).toBeDisabled();
       }
