@@ -5,7 +5,7 @@
 | ID | Title | Status | Attempts |
 | --- | --- | --- | --- |
 | AUTH-001 | App shell: state machine router, contexts, message hooks | PASSED | 1 |
-| AUTH-002 | LoginScreen with password input, set picker, and unlock flow | NOT STARTED | 0 |
+| AUTH-002 | LoginScreen with password input, set picker, and unlock flow | PASSED | 1 |
 | AUTH-003 | SetupScreen with password creation and BIP39 recovery phrase | NOT STARTED | 0 |
 | AUTH-004 | Dark mode, E2E, and full verification | NOT STARTED | 0 |
 
@@ -75,4 +75,50 @@ vitest run: 676 tests passed (35 suites)
 eslint .: 0 errors, 0 warnings
 wxt build: 615.58 kB total, succeeded in 14.8s
 playwright (sanity + popup-auth): 4 passed (11.3s)
+```
+
+---
+
+## Session: 2026-03-14T10:30:00Z
+**Task**: AUTH-002 - LoginScreen with password input, set picker, and unlock flow
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created PasswordInput component: shadcn Input + eye icon toggle (show/hide), Enter-to-submit, aria-label for accessibility
+- Created SetPicker component: shadcn Select wrapper populated from PasswordSetInfo[], returns null for single-set
+- Replaced LoginScreen stub with full implementation: password input, set picker, unlock flow with wait-for-response pattern, incognito badge, error display
+- Created 10 unit tests for LoginScreen covering all acceptance criteria + 2 additional tests (network error, Enter key submit)
+- Created 5 Playwright E2E tests with inline Web Crypto seeding via service worker evaluate
+- Fixed E2E "Set not found" bug: seeded set ID must match LoginScreen's selectedSetId default ('default')
+- Code review fixes: password clearing on successful unlock (defense-in-depth), aria-label on PasswordInput Input element
+
+### Files Created
+| File | Purpose |
+| --- | --- |
+| components/ui/PasswordInput.tsx | shadcn Input + eye icon toggle, Enter-to-submit, aria-label |
+| components/ui/SetPicker.tsx | shadcn Select wrapper for PasswordSetInfo[] |
+| tests/unit/components/screens/LoginScreen.test.tsx | 10 unit tests for LoginScreen |
+| tests/e2e/popup-login.test.ts | 5 E2E tests: login screen, empty password, wrong password, correct password, toggle visibility |
+
+### Files Modified
+| File | Changes |
+| --- | --- |
+| components/screens/LoginScreen.tsx | Replaced stub with full implementation (108 lines) |
+| tests/e2e/fixtures/extension.ts | Added `headless: false` per user request |
+
+### Acceptance Criteria Verification
+1. PasswordInput: shadcn Input + eye icon toggle (show/hide), Enter-to-submit — PASS
+2. SetPicker: shadcn Select populated from SessionContext.sets[] — PASS
+3. Unlock flow: disable button → send UNLOCK → await → navigate on success / error on failure — PASS
+4. Error display: wrong password message shown inline, input NOT cleared — PASS
+5. Incognito badge: visible when incognito_not_allowed, guidance text from getIncognitoMessage — PASS
+6. Zero business logic: no encrypt, no chrome.storage, no tree traversal — PASS
+
+### Verification Results
+```
+tsc --noEmit: clean (0 errors)
+vitest run: 689 tests passed (36 suites)
+eslint .: 0 errors, 0 warnings
+wxt build: 696.28 kB total, succeeded in 12.6s
+playwright (popup-login): 5 passed (26.8s)
 ```

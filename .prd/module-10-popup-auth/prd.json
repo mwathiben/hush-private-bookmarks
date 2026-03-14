@@ -97,7 +97,7 @@
             ],
             "definition_of_done": ["All 8 login tests pass", "tsc clean"],
             "verification": "npx vitest run tests/unit/components/ && npx tsc --noEmit",
-            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["AUTH-001"]
+            "estimated_effort": "medium", "passes": true, "attempt_count": 1, "depends_on": ["AUTH-001"]
         },
         {
             "id": "AUTH-003", "category": "core", "priority": "HIGH",
@@ -230,6 +230,6 @@
     "critical_path": "001 -> 002/003 -> 004",
     "total_story_points": 29, "total_stories": 4,
     "progress_log": { "format_rules": { "file": "progress.md in .prd/module-10-popup-auth/", "format": "Append-only. ## AUTH-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
-    "metadata": { "passing_stories": 1, "build_plan_day": "Day 4", "estimated_test_count": "~30 tests", "session_protocol": "One Claude Code session. Install shadcn Select/Label/Badge first. Verify ErrorBoundary in main.tsx. Test in wxt dev.", "quality_gate": "Popup loads. Login + Setup work. Hooks in hooks/ not lib/. Zero business logic in components. All ≤ 300 lines. Wait-for-response enforced.", "human_review_required": "Walk through wxt dev: first-time setup, login, wrong password, set switching, incognito badge. Verify hooks/ location." },
+    "metadata": { "passing_stories": 2, "build_plan_day": "Day 4", "estimated_test_count": "~30 tests", "session_protocol": "One Claude Code session. Install shadcn Select/Label/Badge first. Verify ErrorBoundary in main.tsx. Test in wxt dev.", "quality_gate": "Popup loads. Login + Setup work. Hooks in hooks/ not lib/. Zero business logic in components. All ≤ 300 lines. Wait-for-response enforced.", "human_review_required": "Walk through wxt dev: first-time setup, login, wrong password, set switching, incognito badge. Verify hooks/ location." },
     "execution_rules": { "execution_order": "AUTH-001 → 002/003 → 004. IMPORTANT: Module 9 must be fully implemented before starting this module.", "clarifying_questions": "Encouraged. Key: shadcn component installation, recovery blob creation flow in setup, hooks/ path aliases.", "prd_scope": "Module 10 of 22.", "commit_protocol": "feat(popup-auth): AUTH-XXX — <title>", "failure_protocol": "Max 3 attempts." }
 }
