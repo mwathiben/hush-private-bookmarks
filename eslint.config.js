@@ -43,6 +43,13 @@ export default [
   },
 
   {
+    files: ['components/shared/**/*.tsx'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+
+  {
     files: ['entrypoints/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',

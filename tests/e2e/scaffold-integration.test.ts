@@ -24,7 +24,11 @@ test.describe('Scaffold integration', () => {
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
-    const button = page.getByRole('button', { name: 'Get Started' });
+    await expect(
+      page.locator('[data-testid="setup-screen"]'),
+    ).toBeVisible({ timeout: 10_000 });
+
+    const button = page.getByRole('button', { name: 'Next' });
     await expect(button).toBeVisible();
 
     const display = await button.evaluate(

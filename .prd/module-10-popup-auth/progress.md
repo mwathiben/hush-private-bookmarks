@@ -7,7 +7,7 @@
 | AUTH-001 | App shell: state machine router, contexts, message hooks | PASSED | 1 |
 | AUTH-002 | LoginScreen with password input, set picker, and unlock flow | PASSED | 1 |
 | AUTH-003 | SetupScreen with password creation and BIP39 recovery phrase | PASSED | 1 |
-| AUTH-004 | Dark mode, E2E, and full verification | NOT STARTED | 0 |
+| AUTH-004 | Dark mode, E2E, and full verification | PASSED | 1 |
 
 **Critical Path**: 001 → 002/003 → 004
 
@@ -175,3 +175,81 @@ playwright (popup-setup): 4 passed (15.0s)
 - HIGH: Unhandled clipboard promise rejection — FIXED (added try/catch)
 - HIGH: Mnemonic never sent to background — BY DESIGN (Module 12 scope per plan)
 - MEDIUM items (5-8): Accepted as-is (timer pattern, indirect testing, dead mock, stub assertion)
+
+---
+
+## Session: 2026-03-14T14:00:00Z
+**Task**: AUTH-004 - Dark mode, E2E, and full verification
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Added dark mode system preference detection: synchronous `matchMedia` + class toggle before React render (FOUC prevention)
+- Added `change` event listener for live OS theme switching while popup is open
+- Added ESLint override for `components/shared/**/*.tsx` (explicit-function-return-type off)
+- Added CR-M9-3 E2E test: invalid `type` value (`'TOTALLY_BOGUS'`) exercises `VALID_TYPES.has(t)` guard
+- Created dark mode E2E tests using `page.emulateMedia({ colorScheme })` before `page.goto()`
+- Fixed 5 pre-existing E2E failures:
+  - BG-002 `activeSetId`: test expected `''` but `buildLockedState()` auto-creates default set with UUID — fixed assertion to UUID regex
+  - ErrorBoundary (3 tests): `?__test_throw=1` mechanism was never wired up — added `TestErrorTrigger` component in main.tsx
+  - scaffold-integration: "Get Started" button replaced by SetupScreen "Next" in AUTH-001 — updated test
+- Full architecture audit: zero violations found (all files within limits, no console.log, no as any, no React in lib/)
+- Deslop review: no AI slop found
+- CodeRabbit review: 2 MEDIUM findings accepted (TestErrorTrigger in production necessary for E2E against prod builds; emulateMedia verified working)
+
+### Files Created
+| File | Purpose |
+| --- | --- |
+| tests/e2e/popup-dark-mode.test.ts | 2 E2E tests: dark preference applies .dark class, light preference does not |
+
+### Files Modified
+| File | Changes |
+| --- | --- |
+| entrypoints/popup/main.tsx | Added dark mode detection (4 lines) + TestErrorTrigger for ErrorBoundary E2E (6 lines) |
+| eslint.config.js | Added components/shared/**/*.tsx override for explicit-function-return-type |
+| tests/e2e/background-message.test.ts | Added CR-M9-3 test (16 lines), fixed BG-002 activeSetId assertion to UUID regex |
+| tests/e2e/scaffold-integration.test.ts | Updated "Get Started" → "Next" button + setup-screen wait |
+
+### Acceptance Criteria Verification
+1. Dark mode via Tailwind class + system preference — PASS
+2. ErrorBoundary already in place (verified, not re-added) — PASS
+3. E2E auth flows pass — PASS (all 127 E2E tests pass, including 3 new)
+4. Zero business logic in components — PASS
+5. All files ≤ 300 lines — PASS (largest: SetupScreen 194, App.tsx 149)
+6. Zero regressions — PASS (699 unit + 127 E2E = 826 total tests)
+
+### Verification Results
+```
+tsc --noEmit: clean (0 errors)
+eslint .: 0 errors, 0 warnings
+vitest run: 699 tests passed (37 suites)
+wxt build: 723.28 kB total, succeeded in 12.3s
+playwright: 127 passed (3.1m) — 0 failures
+```
+
+### CodeRabbit Review Actions
+- MEDIUM: TestErrorTrigger ships in production — ACCEPTED (E2E runs against prod build, can't gate behind DEV)
+- MEDIUM: emulateMedia before goto on extension pages — VERIFIED working
+- LOW: Dark mode listener never cleaned up — ACCEPTED (popup window destroyed on close)
+- LOW: CR-M9-3 test similar to existing test — BY DESIGN (different code path: `type` field present vs absent)
+
+---
+
+## Module Summary
+
+All 4 AUTH stories PASSED on first attempt. Module 10 complete.
+
+| ID | Title | Status | Attempts |
+| --- | --- | --- | --- |
+| AUTH-001 | App shell: state machine router, contexts, message hooks | PASSED | 1 |
+| AUTH-002 | LoginScreen with password input, set picker, and unlock flow | PASSED | 1 |
+| AUTH-003 | SetupScreen with password creation and BIP39 recovery phrase | PASSED | 1 |
+| AUTH-004 | Dark mode, E2E, and full verification | PASSED | 1 |
+
+### Module Metrics
+- Total unit tests: 699 (37 suites)
+- Total E2E tests: 127
+- Production build: 723.28 kB uncompressed
+- Files created: 12 new files (3 screens, 2 UI components, 1 shared component, 2 hooks, 4 test files)
+- Files modified: 8 existing files
+- Zero `as any`, zero `@ts-ignore`, zero `console.log`, zero circular imports
+- All files within line limits (max: SetupScreen 194/300, App.tsx 149/150)

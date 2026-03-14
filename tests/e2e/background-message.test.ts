@@ -74,6 +74,23 @@ test.describe('Background service worker: BG-001', () => {
     expect(['undefined', 'no-handler']).toContain(response);
     await page.close();
   });
+
+  test('invalid type value is rejected by VALID_TYPES guard', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate(async () => {
+      try {
+        const result = await chrome.runtime.sendMessage({ type: 'TOTALLY_BOGUS' });
+        return result === undefined ? 'undefined' : 'handled';
+      } catch {
+        return 'no-handler';
+      }
+    });
+
+    expect(['undefined', 'no-handler']).toContain(response);
+    await page.close();
+  });
 });
 
 test.describe('Background service worker: BG-002', () => {
@@ -89,7 +106,9 @@ test.describe('Background service worker: BG-002', () => {
     if (response.success) {
       const state = response.data as { isUnlocked: boolean; activeSetId: string };
       expect(state.isUnlocked).toBe(false);
-      expect(state.activeSetId).toBe('');
+      expect(state.activeSetId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
     }
     await page.close();
   });

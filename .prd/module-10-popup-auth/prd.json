@@ -144,7 +144,7 @@
             "acceptance_criteria": ["Dark mode via Tailwind class + system preference", "ErrorBoundary already in place (verified, not re-added)", "E2E auth flows pass", "Zero business logic in components", "All ≤ 300 lines", "Zero regressions"],
             "definition_of_done": ["E2E auth flows pass", "Full verification passes"],
             "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
-            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["AUTH-001", "AUTH-002", "AUTH-003"]
+            "estimated_effort": "medium", "passes": true, "attempt_count": 1, "depends_on": ["AUTH-001", "AUTH-002", "AUTH-003"]
         }
     ],
     "starting_state": {
@@ -230,6 +230,6 @@
     "critical_path": "001 -> 002/003 -> 004",
     "total_story_points": 29, "total_stories": 4,
     "progress_log": { "format_rules": { "file": "progress.md in .prd/module-10-popup-auth/", "format": "Append-only. ## AUTH-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
-    "metadata": { "passing_stories": 3, "build_plan_day": "Day 4", "estimated_test_count": "~30 tests", "session_protocol": "One Claude Code session. Install shadcn Select/Label/Badge first. Verify ErrorBoundary in main.tsx. Test in wxt dev.", "quality_gate": "Popup loads. Login + Setup work. Hooks in hooks/ not lib/. Zero business logic in components. All ≤ 300 lines. Wait-for-response enforced.", "human_review_required": "Walk through wxt dev: first-time setup, login, wrong password, set switching, incognito badge. Verify hooks/ location." },
+    "metadata": { "passing_stories": 4, "build_plan_day": "Day 4", "estimated_test_count": "~30 tests", "session_protocol": "One Claude Code session. Install shadcn Select/Label/Badge first. Verify ErrorBoundary in main.tsx. Test in wxt dev.", "quality_gate": "Popup loads. Login + Setup work. Hooks in hooks/ not lib/. Zero business logic in components. All ≤ 300 lines. Wait-for-response enforced.", "human_review_required": "Walk through wxt dev: first-time setup, login, wrong password, set switching, incognito badge. Verify hooks/ location." },
     "execution_rules": { "execution_order": "AUTH-001 → 002/003 → 004. IMPORTANT: Module 9 must be fully implemented before starting this module.", "clarifying_questions": "Encouraged. Key: shadcn component installation, recovery blob creation flow in setup, hooks/ path aliases.", "prd_scope": "Module 10 of 22.", "commit_protocol": "feat(popup-auth): AUTH-XXX — <title>", "failure_protocol": "Max 3 attempts." }
 }
