@@ -107,3 +107,13 @@ When multiple test groups share identical fixture setup (same steps, different s
 ### Cross-Folder Move Testing
 
 Single-folder move tests (root → Work) don't exercise the code path where a bookmark moves between two non-root folders. Add cross-folder tests (root → Work → Personal) to cover `getByLabel('Actions', { exact: true })` selector disambiguation when multiple folder action buttons exist.
+
+### CodeRabbit VSC Auto-Review: Accept/Reject Discipline
+
+CodeRabbit's VSCode integration auto-applies fixes. Review each with zero confirmation bias:
+
+- **Reject** changes that violate CLAUDE.md (e.g., `console.error` in production code when `no-console` is enforced; editing `components/ui/` shadcn source files).
+- **Reject** type changes that regress to deprecated APIs (global `JSX.Element` deprecated in React 19 — use `React.JSX.Element`).
+- **Accept** test renames that match what assertions actually verify (test titles are documentation).
+- **Accept** test fixes where describe block and test interactions disagree (folder describe + bookmark dialog interactions = wrong test).
+- **Accept** exhaustive-switch improvements (`throw` over `return msg` for `never` branches).
