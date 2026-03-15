@@ -82,7 +82,7 @@ export function sessionReducer(state: SessionStateValue, action: SessionAction):
     }
     case 'NAVIGATE': {
       if (!TRANSITIONS[state.screen].includes(action.to)) {
-        throw new Error(`Invalid transition: ${state.screen} → ${action.to}`);
+        return state;
       }
       return { ...state, screen: action.to };
     }
