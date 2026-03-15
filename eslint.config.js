@@ -66,8 +66,6 @@ export default [
       'no-console': 'off',
       'no-constant-binary-expression': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
-      'react-hooks/rules-of-hooks': 'off',
-      'react-hooks/exhaustive-deps': 'off',
     },
   },
 
@@ -75,6 +73,8 @@ export default [
     files: ['tests/e2e/**/*.ts'],
     rules: {
       'no-empty-pattern': 'off',
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off',
     },
   },
 

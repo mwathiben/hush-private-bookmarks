@@ -423,6 +423,11 @@ populatedTreeTest.describe(
     populatedTreeTest(
       'delete folder via context menu',
       async ({ treePage }) => {
+        await populatedTreeTest.step('verify folder contents visible before delete', async () => {
+          await treePage.getByText('Work').click();
+          await expect(treePage.getByRole('button', { name: 'Jira' })).toBeVisible({ timeout: 10_000 });
+        });
+
         await populatedTreeTest.step('open folder context menu and delete', async () => {
           await treePage.getByLabel('Folder actions').first().click();
           await treePage.getByText('Delete').click();
