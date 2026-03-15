@@ -62,3 +62,13 @@ When `getItemAtPath` doesn't exist in the data model, have `collectPickableFolde
 ### DialogState as Single Discriminated Union
 
 Using a single `DialogState` union (7 variants) instead of separate boolean/enum state variables prevents impossible states (e.g., two dialogs open simultaneously) and makes the action→dialog mapping explicit in the switch statement.
+
+### Deslop: Identical Ternary Branches
+
+`isEdit ? 'Failed to save folder' : 'Failed to save folder'` — when extending a dialog for add/edit modes, check that conditional error messages actually differ. If both branches produce the same string, the ternary is slop. Caught by deslop review, not by tests or linter.
+
+### CodeRabbit Review Findings (BOOKMARK-003)
+
+1. **Duck typing vs type guards** — `'name' in node` works but is fragile. Prefer `isFolder(node)` from data-model.ts for type discrimination. Type guards are stable against future property additions.
+2. **`default: never` in action switches** — adding exhaustive checks to `handleAction` prevents silent ignore when new action types are added. Not a defect today but valuable future-proofing.
+3. **Path array identity vs memo** — `[...basePath, index]` creates new arrays every render, defeating `React.memo` on child components. Acceptable for small popup trees; revisit if manager view has thousands of items.
