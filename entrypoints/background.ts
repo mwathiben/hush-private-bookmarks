@@ -240,7 +240,7 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
       return Promise.resolve({ success: false, error: 'NOT_IMPLEMENTED', code: msg.type });
     default:
       msg satisfies never;
-      return msg;
+      throw new Error(`Unhandled BackgroundMessage type: ${(msg as { type: string }).type}`);
   }
 }
 

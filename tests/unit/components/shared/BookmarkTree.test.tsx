@@ -104,7 +104,7 @@ describe('BookmarkTree', () => {
     expect(accordion?.children).toHaveLength(0);
   });
 
-  it('passes correct paths [0], [1] to items', () => {
+  it('renders action triggers for each bookmark', () => {
     // #given
     const onAction = vi.fn<(action: ItemAction) => void>();
 

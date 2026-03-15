@@ -274,9 +274,9 @@ populatedTreeTest.describe('Popup bookmarks — add folder dialog (BOOKMARK-002)
   populatedTreeTest(
     'dialog cancel closes without changes',
     async ({ treePage }) => {
-      await treePage.getByRole('button', { name: 'Add bookmark' }).click();
+      await treePage.getByRole('button', { name: 'Add folder' }).click();
       await expect(treePage.getByRole('dialog')).toBeVisible();
-      await treePage.getByLabel('Title').fill('Temp');
+      await treePage.getByLabel('Name').fill('Temp');
       await treePage.keyboard.press('Escape');
 
       await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 });
@@ -455,7 +455,7 @@ emptyTreeTest.describe(
     );
 
     emptyTreeTest(
-      'folder lifecycle: create → add bookmark → expand/collapse',
+      'folder lifecycle: create folder and add bookmark to root',
       async ({ treePage }) => {
         await emptyTreeTest.step('create folder', async () => {
           await treePage.getByRole('button', { name: 'Add folder' }).click();
