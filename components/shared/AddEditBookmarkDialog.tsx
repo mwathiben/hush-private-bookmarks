@@ -34,6 +34,12 @@ export interface AddEditBookmarkDialogProps {
   readonly onSave: (newTree: BookmarkTree) => Promise<boolean>;
 }
 
+function buttonLabel(saving: boolean, isEdit: boolean): string {
+  if (saving) return 'Saving...';
+  if (isEdit) return 'Save Changes';
+  return 'Add Bookmark';
+}
+
 function isValidUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -164,7 +170,7 @@ export function AddEditBookmarkDialog({
           )}
           <DialogFooter>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Bookmark'}
+              {buttonLabel(saving, isEdit)}
             </Button>
           </DialogFooter>
         </form>
