@@ -131,7 +131,7 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
     case 'UPDATE_AUTO_LOCK':
       return handleUpdateAutoLock(msg, ctx);
     case 'CREATE_SET':
-      return handleCreateSet(msg);
+      return handleCreateSet(msg, ctx);
     case 'RENAME_SET':
       return handleRenameSet(msg);
     case 'DELETE_SET':

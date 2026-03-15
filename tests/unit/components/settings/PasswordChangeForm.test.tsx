@@ -87,8 +87,10 @@ describe('PasswordChangeForm', () => {
         newPassword: 'new-pass',
       });
     });
-    expect(screen.getByText('Password changed successfully')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Current password')).toHaveValue('');
+    await waitFor(() => {
+      expect(screen.getByText('Password changed successfully')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Current password')).toHaveValue('');
+    });
   });
 
   it('shows error from background when CHANGE_PASSWORD fails', async () => {

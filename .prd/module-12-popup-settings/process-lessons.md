@@ -55,6 +55,10 @@ Adding `useSessionDispatch()` to an existing component (TreeScreen) breaks all i
 
 Adding optional props to shared UI components (PasswordInput) is safe — existing callers are unaffected. But do it as a prerequisite step before the component that needs it, not as a drive-by change mid-implementation.
 
-### CREATE_SET / SetupScreen Contract Mismatch
+### CREATE_SET / SetupScreen Contract Mismatch (RESOLVED)
 
-CREATE_SET handler returns `{ setId }` but SetupScreen expects `SessionState` (checked via `isSessionState()`). This causes "Invalid session data from background" error in the full setup flow. Documented as known issue — fix in a future story that aligns the CREATE_SET response with SetupScreen expectations.
+CREATE_SET handler originally returned `{ setId }` but SetupScreen expects `SessionState` (checked via `isSessionState()`). Fixed by having `handleCreateSet` build and return a full SessionState — reusing the same `activateSession` helper that `loadAndActivateSet` uses. This also required `setActiveSetId` before building the session. The shared `activateSession` helper deduplicates the session-building pattern (listSets → incognito check → build state → persist → cache password → reset alarm) that was previously inlined in `loadAndActivateSet` and duplicated by CodeRabbit's initial fix.
+
+### CodeRabbit VSC Auto-Review: Verify Blast Radius
+
+CodeRabbit on VSC correctly identified the CREATE_SET contract mismatch and fixed it, but the fix duplicated 20 lines from `loadAndActivateSet` into `handleCreateSet`, pushing handlers.ts to 319 lines (over the 300-line limit). Always check: (1) does the fix duplicate existing code? (2) does it push any file over line limits? Extract shared logic into helpers before committing.

@@ -767,18 +767,42 @@ describe('handleMessage — CREATE_SET', () => {
   it('creates set in manifest and saves empty tree encrypted', async () => {
     // #given
     const newSet = { id: 'new-id', name: 'Work', createdAt: 1, lastAccessedAt: 1, isDefault: false };
+    const setsAfterCreate: readonly PasswordSetInfo[] = [...TEST_SETS, newSet];
     vi.mocked(createSet).mockResolvedValue({ success: true, data: newSet });
     vi.mocked(createEmptyTree).mockReturnValue(TEST_TREE);
     vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    vi.mocked(setActiveSetId).mockResolvedValue({ success: true, data: undefined });
+    vi.mocked(listSets).mockResolvedValue({ success: true, data: setsAfterCreate });
+    vi.mocked(determineMode).mockReturnValue('normal_mode');
+    vi.spyOn(browser.extension, 'isAllowedIncognitoAccess')
+      .mockImplementation(() => Promise.resolve(false));
     // #when
     const response = await handleMessage({ type: 'CREATE_SET', name: 'Work', password: 'pw' });
     // #then
     expect(response.success).toBe(true);
     if (response.success) {
-      expect(response.data).toEqual({ setId: 'new-id' });
+      expect(response.data).toEqual({
+        isUnlocked: true,
+        activeSetId: 'new-id',
+        hasData: true,
+        sets: setsAfterCreate,
+        tree: TEST_TREE,
+        incognitoMode: 'normal_mode',
+      });
     }
     expect(vi.mocked(createSet)).toHaveBeenCalledWith('Work');
     expect(vi.mocked(saveSetData)).toHaveBeenCalledWith('new-id', JSON.stringify(TEST_TREE), 'pw');
+    expect(vi.mocked(setActiveSetId)).toHaveBeenCalledWith('new-id');
+
+    const stored = await browser.storage.session.get('sessionState');
+    expect(stored['sessionState']).toEqual({
+      isUnlocked: true,
+      activeSetId: 'new-id',
+      hasData: true,
+      sets: setsAfterCreate,
+      tree: TEST_TREE,
+      incognitoMode: 'normal_mode',
+    });
   });
 
   it('returns STORAGE_ERROR when createSet fails', async () => {

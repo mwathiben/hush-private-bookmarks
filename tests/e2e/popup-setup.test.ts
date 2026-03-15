@@ -102,10 +102,7 @@ test.describe('SetupScreen E2E (AUTH-003)', () => {
     ).toBeVisible();
     await page.getByRole('button', { name: 'Create Vault' }).click();
 
-    // CREATE_SET handler returns { setId } but SetupScreen expects
-    // SessionState — mismatch causes "Invalid session data" error.
-    // This is a known issue to fix in a future story.
-    await expect(page.getByText('Invalid session data from background')).toBeVisible({
+    await expect(page.getByTestId('tree-screen')).toBeVisible({
       timeout: 60_000,
     });
 

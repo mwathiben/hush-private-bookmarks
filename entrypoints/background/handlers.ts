@@ -30,6 +30,23 @@ export interface HandlerContext {
   isAllowedIncognitoAccess(): Promise<boolean>;
 }
 
+async function activateSession(
+  setId: string, password: string, tree: BookmarkTree, ctx: HandlerContext,
+): Promise<BackgroundResponse> {
+  const sets = await listSets().then(r => r.success ? r.data : []);
+  let isAllowedIncognito = false;
+  try { isAllowedIncognito = await ctx.isAllowedIncognitoAccess(); } catch {}
+  const state: SessionState = {
+    isUnlocked: true, activeSetId: setId, sets, tree,
+    incognitoMode: determineMode({ isIncognitoContext: false, isAllowedIncognito }),
+    hasData: true,
+  };
+  await ctx.setSessionState(state);
+  ctx.setCachedPassword(password);
+  await ctx.resetAlarm();
+  return { success: true, data: state };
+}
+
 async function loadAndActivateSet(
   setId: string, password: string, ctx: HandlerContext,
 ): Promise<BackgroundResponse> {
@@ -48,23 +65,7 @@ async function loadAndActivateSet(
     return { success: false, error: 'Corrupted data', code: 'PARSE_ERROR' };
   }
 
-  const setsResult = await listSets();
-  const sets = setsResult.success ? setsResult.data : [];
-  let isAllowedIncognito = false;
-  try {
-    isAllowedIncognito = await ctx.isAllowedIncognitoAccess();
-  } catch { /* not available in all contexts */ }
-
-  const state: SessionState = {
-    isUnlocked: true, activeSetId: setId, sets, tree,
-    incognitoMode: determineMode({ isIncognitoContext: false, isAllowedIncognito }),
-    hasData: true,
-  };
-
-  await ctx.setSessionState(state);
-  ctx.setCachedPassword(password);
-  await ctx.resetAlarm();
-  return { success: true, data: state };
+  return activateSession(setId, password, tree, ctx);
 }
 
 export async function handleUnlock(
@@ -192,7 +193,9 @@ export async function handleUpdateAutoLock(
   return { success: true };
 }
 
-export async function handleCreateSet(msg: CreateSetMessage): Promise<BackgroundResponse> {
+export async function handleCreateSet(
+  msg: CreateSetMessage, ctx: HandlerContext,
+): Promise<BackgroundResponse> {
   const setResult = await createSet(msg.name);
   if (!setResult.success) {
     return { success: false, error: setResult.error.message, code: 'STORAGE_ERROR' };
@@ -202,7 +205,13 @@ export async function handleCreateSet(msg: CreateSetMessage): Promise<Background
   if (!saveResult.success) {
     return { success: false, error: saveResult.error.message, code: 'STORAGE_ERROR' };
   }
-  return { success: true, data: { setId: setResult.data.id } };
+
+  const activeSetResult = await setActiveSetId(setResult.data.id);
+  if (!activeSetResult.success) {
+    return { success: false, error: activeSetResult.error.message, code: 'STORAGE_ERROR' };
+  }
+
+  return activateSession(setResult.data.id, msg.password, emptyTree, ctx);
 }
 
 export async function handleRenameSet(msg: RenameSetMessage): Promise<BackgroundResponse> {
