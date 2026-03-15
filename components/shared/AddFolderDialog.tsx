@@ -105,7 +105,7 @@ export function AddFolderDialog({
     if (ok) {
       onOpenChange(false);
     } else {
-      setError(isEdit ? 'Failed to save folder' : 'Failed to save folder');
+      setError('Failed to save folder');
     }
   }, [name, dialogMode, tree, onSave, onOpenChange, isEdit]);
 
