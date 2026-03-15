@@ -72,3 +72,26 @@ Using a single `DialogState` union (7 variants) instead of separate boolean/enum
 1. **Duck typing vs type guards** — `'name' in node` works but is fragile. Prefer `isFolder(node)` from data-model.ts for type discrimination. Type guards are stable against future property additions.
 2. **`default: never` in action switches** — adding exhaustive checks to `handleAction` prevents silent ignore when new action types are added. Not a defect today but valuable future-proofing.
 3. **Path array identity vs memo** — `[...basePath, index]` creates new arrays every render, defeating `React.memo` on child components. Acceptable for small popup trees; revisit if manager view has thousands of items.
+
+## BOOKMARK-004 (2026-03-15)
+
+### Strict Mode Violations in Playwright
+
+`getByText('Work')` matched both the folder name `<span>Work</span>` and the ConfirmDialog title `Delete "Work"?`. Fix: wait for dialog to close (`getByRole('dialog').not.toBeVisible()`) before checking text that also appears in the dialog. Always consider what other elements share the text you're asserting on.
+
+### `node satisfies never` vs `const _exhaustive: never = node`
+
+Both enforce compile-time exhaustive type checking. `satisfies never` doesn't declare a variable, avoiding unused variable lint/TS errors. Preferred pattern going forward for exhaustive checks in switch/if chains.
+
+### PII in Error Messages
+
+`JSON.stringify(node)` in exhaustive check error leaks bookmark titles/URLs into Sentry. Even "impossible" code paths should not include PII — defense-in-depth. The `never` type already guarantees compile-time exhaustiveness; no runtime data needed in the error.
+
+### eslint-plugin-react-hooks Overrides
+
+- `set-state-in-effect`: OFF for `components/shared/**/*.tsx` — dialog reset pattern (setState in useEffect on `open` change) is legitimate
+- `rules-of-hooks` + `exhaustive-deps`: OFF for `tests/**` — Playwright fixture `use()` function is falsely flagged as React Hook `use`
+
+### Lifecycle Tests vs Granular Tests
+
+Lifecycle tests (add → edit → delete → verify empty state) complement granular tests but don't replace them. Granular tests isolate failures; lifecycle tests catch state transition bugs across operations. Both are needed.

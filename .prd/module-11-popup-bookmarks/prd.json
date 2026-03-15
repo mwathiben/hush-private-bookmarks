@@ -140,7 +140,7 @@
             "acceptance_criteria": ["E2E CRUD flows pass", "Zero business logic in components", "All ≤ 300 lines", "Zero regressions"],
             "definition_of_done": ["E2E passes", "Full verification passes"],
             "verification": "npx tsc --noEmit && npx eslint . && npx vitest run --coverage && npx wxt build && npm run test:e2e",
-            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["BOOKMARK-001", "BOOKMARK-002", "BOOKMARK-003"]
+            "estimated_effort": "medium", "passes": true, "attempt_count": 1, "depends_on": ["BOOKMARK-001", "BOOKMARK-002", "BOOKMARK-003"]
         }
     ],
     "starting_state": {
@@ -200,6 +200,6 @@
     "critical_path": "001 -> 002 -> 003 -> 004",
     "total_story_points": 31, "total_stories": 4,
     "progress_log": { "format_rules": { "file": "progress.md in .prd/module-11-popup-bookmarks/", "format": "Append-only. ## BOOKMARK-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
-    "metadata": { "passing_stories": 3, "build_plan_day": "Day 4", "estimated_test_count": "~32 tests", "session_protocol": "One Claude Code session. Check shadcn Accordion/DropdownMenu. Test in wxt dev.", "quality_gate": "Tree renders. CRUD works. Wait-for-response enforced. moveItem uses toIndex. Zero business logic. All ≤ 300 lines.", "human_review_required": "Walk through wxt dev: add bookmark, folder, edit, delete, move (verify appends to end of target). Verify wait-for-response." },
+    "metadata": { "passing_stories": 4, "build_plan_day": "Day 4", "estimated_test_count": "~32 tests", "session_protocol": "One Claude Code session. Check shadcn Accordion/DropdownMenu. Test in wxt dev.", "quality_gate": "Tree renders. CRUD works. Wait-for-response enforced. moveItem uses toIndex. Zero business logic. All ≤ 300 lines.", "human_review_required": "Walk through wxt dev: add bookmark, folder, edit, delete, move (verify appends to end of target). Verify wait-for-response." },
     "execution_rules": { "execution_order": "BOOKMARK-001 → 002 → 003 → 004", "clarifying_questions": "Encouraged. Key: shadcn components, Accordion vs custom, DropdownMenu positioning, moveItem toIndex default.", "prd_scope": "Module 11 of 18.", "commit_protocol": "feat(popup-bookmarks): BOOKMARK-XXX — <title>", "failure_protocol": "Max 3 attempts." }
 }

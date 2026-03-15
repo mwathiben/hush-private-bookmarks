@@ -107,7 +107,7 @@ export function AddFolderDialog({
     } else {
       setError('Failed to save folder');
     }
-  }, [name, dialogMode, tree, onSave, onOpenChange, isEdit]);
+  }, [name, dialogMode, tree, onSave, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

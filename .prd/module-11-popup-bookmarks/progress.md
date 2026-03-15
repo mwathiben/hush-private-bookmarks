@@ -7,7 +7,7 @@
 | BOOKMARK-001 | TreeScreen, BookmarkTree, and TreeContext integration | PASSED | 1 |
 | BOOKMARK-002 | Add/Edit bookmark and folder dialogs | PASSED | 1 |
 | BOOKMARK-003 | Context actions: delete, move, edit with confirmation dialogs | PASSED | 1 |
-| BOOKMARK-004 | E2E bookmark flows and integration verification | NOT STARTED | 0 |
+| BOOKMARK-004 | E2E bookmark flows and integration verification | PASSED | 1 |
 
 **Critical Path**: BOOKMARK-001 → BOOKMARK-002 → BOOKMARK-003 → BOOKMARK-004
 
@@ -201,3 +201,71 @@ eslint .: clean (exit 0)
 wxt build: success (780.8 KB total uncompressed)
 playwright test popup-bookmarks: 17 passed (1.1m)
 ```
+
+---
+
+## Session: 2026-03-15T14:25:00Z
+**Task**: BOOKMARK-004 - E2E bookmark flows and integration verification
+**Status**: PASSED (attempt 1)
+
+### Work Done
+
+- Fixed 3 pre-existing issues found during tracer bullet analysis:
+  - Removed PII leak in BookmarkTree.tsx error message (defense-in-depth for Sentry)
+  - Replaced duck typing with `isFolder()` type guard in TreeScreen.tsx (CodeRabbit finding from BOOKMARK-003)
+  - Removed redundant `isEdit` from AddFolderDialog useCallback dependency array
+- Installed eslint-plugin-react-hooks v7.0.1 (per MEMORY.md flag)
+  - Configured flat config with overrides for test files and dialog components
+- Added 3 new BOOKMARK-004 lifecycle E2E tests:
+  - Full bookmark CRUD lifecycle: add → edit → delete → empty state
+  - Folder lifecycle: create folder → add bookmark → verify empty state gone
+  - Move between folders with new TWO_FOLDER_TREE fixture
+- Fixed existing move test: added test.step structure and destination folder verification
+- Added delete folder E2E test with dialog close wait
+- Component audit: all 10 components ≤ 300 lines, zero business logic in components
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| components/shared/BookmarkTree.tsx | Removed JSON.stringify PII from error, used `node satisfies never` |
+| components/screens/TreeScreen.tsx | Imported isFolder, replaced duck typing with type guard |
+| components/shared/AddFolderDialog.tsx | Removed redundant isEdit from useCallback deps |
+| eslint.config.js | Added eslint-plugin-react-hooks with overrides |
+| package.json | Added eslint-plugin-react-hooks dependency |
+| tests/e2e/popup-bookmarks.test.ts | Added 3 lifecycle tests, TWO_FOLDER_TREE fixture, fixed move test, added delete folder test |
+
+### Acceptance Criteria Verification
+
+1. E2E CRUD flows pass — PASS (3 new lifecycle tests: full CRUD, folder lifecycle, move between folders)
+2. Zero business logic in components — PASS (all components delegate to lib/ functions via hooks)
+3. All ≤ 300 lines — PASS (max: TreeScreen at 181 lines)
+4. Zero regressions — PASS (148/148 E2E tests pass, 779/779 unit tests pass)
+
+### Verification Results
+
+```
+tsc --noEmit: clean (exit 0)
+vitest run --coverage: 46 test files, 779 tests passed, 0 failed
+eslint .: clean (exit 0)
+wxt build: success (780.76 KB total uncompressed)
+npm run test:e2e: 148 passed (4.8m)
+popup-bookmarks.test.ts: 21 passed (1.5m) — 17 existing + 4 new tests
+```
+
+---
+
+## Module Summary
+
+All 4 stories PASSED on first attempt. Module 11 complete.
+
+| ID | Title | Status | Attempts |
+| --- | --- | --- | --- |
+| BOOKMARK-001 | TreeScreen, BookmarkTree, and TreeContext integration | PASSED | 1 |
+| BOOKMARK-002 | Add/Edit bookmark and folder dialogs | PASSED | 1 |
+| BOOKMARK-003 | Context actions: delete, move, edit with confirmation dialogs | PASSED | 1 |
+| BOOKMARK-004 | E2E bookmark flows and integration verification | PASSED | 1 |
+
+**Total**: 31 story points, 4/4 stories passed, 0 failures across all attempts.
+
+**Key deliverables**: 10 shared components (all ≤ 300 lines), 1 hook (useTree), 21 E2E tests, 779 unit tests passing. Full CRUD lifecycle verified end-to-end. eslint-plugin-react-hooks installed. Pre-existing issues fixed (PII leak, duck typing, redundant deps).

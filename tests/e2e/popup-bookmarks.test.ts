@@ -11,6 +11,36 @@ const EMPTY_TREE = JSON.stringify({
   dateAdded: 0,
 });
 
+const TWO_FOLDER_TREE = JSON.stringify({
+  type: 'folder',
+  id: 'root',
+  name: 'Root',
+  children: [
+    {
+      type: 'bookmark',
+      id: 'b1',
+      title: 'GitHub',
+      url: 'https://github.com',
+      dateAdded: 0,
+    },
+    {
+      type: 'folder',
+      id: 'f1',
+      name: 'Work',
+      children: [],
+      dateAdded: 0,
+    },
+    {
+      type: 'folder',
+      id: 'f2',
+      name: 'Personal',
+      children: [],
+      dateAdded: 0,
+    },
+  ],
+  dateAdded: 0,
+});
+
 const POPULATED_TREE = JSON.stringify({
   type: 'folder',
   id: 'root',
@@ -145,6 +175,24 @@ const populatedTreeTest = extensionTest.extend<{ treePage: Page }>({
     await sw.evaluate(
       seedStorage(),
       [SEED_PASSWORD, POPULATED_TREE] as const,
+    );
+
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    await unlockPopup(page, SEED_PASSWORD);
+    await use(page);
+    await page.close();
+  },
+});
+
+const twoFolderTest = extensionTest.extend<{ treePage: Page }>({
+  treePage: async ({ context, extensionId }, use) => {
+    let sw = context.serviceWorkers()[0];
+    if (!sw) sw = await context.waitForEvent('serviceworker');
+
+    await sw.evaluate(
+      seedStorage(),
+      [SEED_PASSWORD, TWO_FOLDER_TREE] as const,
     );
 
     const page = await context.newPage();
@@ -353,12 +401,137 @@ populatedTreeTest.describe(
     populatedTreeTest(
       'move bookmark to folder via context menu',
       async ({ treePage }) => {
-        await treePage.getByLabel('Actions').first().click();
-        await treePage.getByText('Move to...').click();
-        await expect(treePage.getByText('Move to folder')).toBeVisible({ timeout: 10_000 });
-        await treePage.getByRole('button', { name: /work/i }).click();
-        await expect(treePage.getByText('Move to folder')).not.toBeVisible({ timeout: 10_000 });
-        await expect(treePage.getByRole('button', { name: 'GitHub' })).not.toBeVisible();
+        await populatedTreeTest.step('initiate move via context menu', async () => {
+          await treePage.getByLabel('Actions').first().click();
+          await treePage.getByText('Move to...').click();
+          await expect(treePage.getByText('Move to folder')).toBeVisible({ timeout: 10_000 });
+          await treePage.getByRole('button', { name: /work/i }).click();
+          await expect(treePage.getByText('Move to folder')).not.toBeVisible({ timeout: 10_000 });
+        });
+
+        await populatedTreeTest.step('verify bookmark removed from root', async () => {
+          await expect(treePage.getByRole('button', { name: 'GitHub' })).not.toBeVisible();
+        });
+
+        await populatedTreeTest.step('verify bookmark in destination folder', async () => {
+          await treePage.getByText('Work').click();
+          await expect(treePage.getByRole('button', { name: 'GitHub' })).toBeVisible({ timeout: 10_000 });
+        });
+      },
+    );
+
+    populatedTreeTest(
+      'delete folder via context menu',
+      async ({ treePage }) => {
+        await populatedTreeTest.step('open folder context menu and delete', async () => {
+          await treePage.getByLabel('Folder actions').first().click();
+          await treePage.getByText('Delete').click();
+          await expect(treePage.getByText(/Delete "Work"/)).toBeVisible({ timeout: 10_000 });
+          await treePage.getByRole('button', { name: 'Delete' }).click();
+        });
+
+        await populatedTreeTest.step('verify folder and contents removed', async () => {
+          await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+          await expect(treePage.getByText('Work')).not.toBeVisible({ timeout: 10_000 });
+          await expect(treePage.getByRole('button', { name: 'Jira' })).not.toBeVisible();
+        });
+      },
+    );
+  },
+);
+
+emptyTreeTest.describe(
+  'Popup bookmarks — CRUD lifecycle (BOOKMARK-004)',
+  () => {
+    emptyTreeTest.setTimeout(120_000);
+
+    emptyTreeTest(
+      'full bookmark lifecycle: add → edit → delete → empty state',
+      async ({ treePage }) => {
+        await emptyTreeTest.step('add bookmark via toolbar', async () => {
+          await treePage.getByLabel('Add bookmark').click();
+          await treePage.getByLabel('Title').fill('Test Site');
+          await treePage.getByLabel('URL').fill('https://test.com');
+          await treePage.getByRole('dialog').getByRole('button', { name: /add bookmark/i }).click();
+          await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+          await expect(treePage.getByRole('button', { name: 'Test Site' })).toBeVisible();
+          await expect(treePage.getByText('No bookmarks yet')).not.toBeVisible();
+        });
+
+        await emptyTreeTest.step('edit bookmark via context menu', async () => {
+          await treePage.getByLabel('Actions').first().click();
+          await treePage.getByText('Edit').click();
+          await expect(treePage.getByLabel('Title')).toHaveValue('Test Site', { timeout: 10_000 });
+          await treePage.getByLabel('Title').fill('Updated Site');
+          await treePage.getByRole('button', { name: /save changes/i }).click();
+          await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+          await expect(treePage.getByRole('button', { name: 'Updated Site' })).toBeVisible();
+        });
+
+        await emptyTreeTest.step('delete bookmark via context menu', async () => {
+          await treePage.getByLabel('Actions').first().click();
+          await treePage.getByText('Delete').click();
+          await expect(treePage.getByText(/Delete "Updated Site"/)).toBeVisible({ timeout: 10_000 });
+          await treePage.getByRole('button', { name: 'Delete' }).click();
+          await expect(treePage.getByRole('button', { name: 'Updated Site' })).not.toBeVisible({ timeout: 10_000 });
+          await expect(treePage.getByText('No bookmarks yet')).toBeVisible();
+        });
+      },
+    );
+
+    emptyTreeTest(
+      'folder lifecycle: create → add bookmark → expand/collapse',
+      async ({ treePage }) => {
+        await emptyTreeTest.step('create folder', async () => {
+          await treePage.getByRole('button', { name: 'Add folder' }).click();
+          await expect(treePage.getByRole('dialog')).toBeVisible();
+          await treePage.getByLabel('Name').fill('Research');
+          await treePage.getByRole('button', { name: /add folder/i }).click();
+          await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+          await expect(treePage.getByText('Research')).toBeVisible();
+        });
+
+        await emptyTreeTest.step('add bookmark via toolbar', async () => {
+          await treePage.getByLabel('Add bookmark').click();
+          await treePage.getByLabel('Title').fill('Example');
+          await treePage.getByLabel('URL').fill('https://example.com');
+          await treePage.getByRole('dialog').getByRole('button', { name: /add bookmark/i }).click();
+          await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+          await expect(treePage.getByRole('button', { name: 'Example' })).toBeVisible();
+        });
+
+        await emptyTreeTest.step('verify empty state is gone', async () => {
+          await expect(treePage.getByText('No bookmarks yet')).not.toBeVisible();
+        });
+      },
+    );
+  },
+);
+
+twoFolderTest.describe(
+  'Popup bookmarks — move between folders (BOOKMARK-004)',
+  () => {
+    twoFolderTest.setTimeout(120_000);
+
+    twoFolderTest(
+      'move bookmark to folder and verify destination',
+      async ({ treePage }) => {
+        await twoFolderTest.step('move GitHub to Work folder', async () => {
+          await treePage.getByLabel('Actions').first().click();
+          await treePage.getByText('Move to...').click();
+          await expect(treePage.getByText('Move to folder')).toBeVisible({ timeout: 10_000 });
+          await treePage.getByRole('button', { name: /work/i }).click();
+          await expect(treePage.getByText('Move to folder')).not.toBeVisible({ timeout: 10_000 });
+        });
+
+        await twoFolderTest.step('verify bookmark removed from root', async () => {
+          await expect(treePage.getByRole('button', { name: 'GitHub' })).not.toBeVisible();
+        });
+
+        await twoFolderTest.step('verify bookmark exists in Work folder', async () => {
+          await treePage.getByText('Work').click();
+          await expect(treePage.getByRole('button', { name: 'GitHub' })).toBeVisible({ timeout: 10_000 });
+        });
       },
     );
   },

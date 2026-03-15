@@ -7,7 +7,7 @@ import { AddFolderDialog } from '@/components/shared/AddFolderDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { FolderPicker } from '@/components/shared/FolderPicker';
 import { Button } from '@/components/ui/button';
-import { removeItem, moveItem } from '@/lib/data-model';
+import { removeItem, moveItem, isFolder } from '@/lib/data-model';
 import type { BookmarkDialogMode } from '@/components/shared/AddEditBookmarkDialog';
 import type { FolderDialogMode } from '@/components/shared/AddFolderDialog';
 import type { ItemAction } from '@/components/shared/BookmarkTree';
@@ -161,7 +161,7 @@ export default function TreeScreen(): React.JSX.Element {
           <ConfirmDialog
             open={dialogState.type === 'confirm-delete'}
             onOpenChange={(open) => { if (!open) closeDialog(); }}
-            title={`Delete "${dialogState.type === 'confirm-delete' ? ('name' in dialogState.node ? dialogState.node.name : dialogState.node.title) : ''}"?`}
+            title={`Delete "${dialogState.type === 'confirm-delete' ? (isFolder(dialogState.node) ? dialogState.node.name : dialogState.node.title) : ''}"?`}
             description="This action cannot be undone."
             confirmLabel="Delete"
             variant="destructive"

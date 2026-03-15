@@ -1,6 +1,7 @@
 import { globalIgnores } from 'eslint/config';
 import eslintJs from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
 import wxtAutoImports from './.wxt/eslint-auto-imports.mjs';
 
 export default [
@@ -21,6 +22,8 @@ export default [
   eslintJs.configs.recommended,
 
   ...tseslint.configs.recommended,
+
+  reactHooks.configs.flat.recommended,
 
   {
     rules: {
@@ -46,6 +49,7 @@ export default [
     files: ['components/shared/**/*.tsx'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 
@@ -62,6 +66,8 @@ export default [
       'no-console': 'off',
       'no-constant-binary-expression': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off',
     },
   },
 
