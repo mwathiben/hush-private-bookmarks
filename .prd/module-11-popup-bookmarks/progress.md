@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | BOOKMARK-001 | TreeScreen, BookmarkTree, and TreeContext integration | PASSED | 1 |
 | BOOKMARK-002 | Add/Edit bookmark and folder dialogs | PASSED | 1 |
-| BOOKMARK-003 | Context actions: delete, move, edit with confirmation dialogs | NOT STARTED | 0 |
+| BOOKMARK-003 | Context actions: delete, move, edit with confirmation dialogs | PASSED | 1 |
 | BOOKMARK-004 | E2E bookmark flows and integration verification | NOT STARTED | 0 |
 
 **Critical Path**: BOOKMARK-001 → BOOKMARK-002 → BOOKMARK-003 → BOOKMARK-004
@@ -136,4 +136,68 @@ vitest run --coverage: 39 test files passed, coverage thresholds met
 eslint .: clean (exit 0)
 wxt build --analyze: success (750.34 KB total uncompressed)
 playwright test popup-bookmarks: 12 passed (42.0s, headed mode)
+```
+
+---
+
+## Session: 2026-03-15T14:00:00Z
+**Task**: BOOKMARK-003 - Context actions: delete, move, edit with confirmation dialogs
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Installed shadcn DropdownMenu (manually moved to correct path due to known WXT alias issue)
+- Created ConfirmDialog — reusable confirmation modal with destructive variant support
+- Created FolderPicker — folder selection dialog with collectPickableFolders pure function, depth-based indentation, excludes item and descendants
+- Extended BookmarkTree with ItemAction discriminated union (4 variants), basePath/onAction path threading
+- Added DropdownMenu context menus to BookmarkItem (Edit, Move to..., Delete) with hover-reveal trigger
+- Added DropdownMenu context menus to FolderItem (Rename, Move to..., Delete) — placed outside AccordionTrigger to avoid button nesting
+- Extended AddFolderDialog with FolderDialogMode discriminated union (add/edit), renameFolder support, buttonLabel helper
+- Rewrote TreeScreen with DialogState discriminated union (7 variants), handleAction dispatch, handleConfirmDelete, handleMoveSelect
+- Wrote 5 E2E Playwright tests for delete/edit/move context action flows
+- Fixed E2E strict mode violation: `getByLabel('Name')` → `getByRole('textbox', { name: 'Name' })` for rename folder test
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| components/ui/dropdown-menu.tsx | shadcn DropdownMenu component |
+| components/shared/ConfirmDialog.tsx | Reusable confirmation modal (destructive variant) |
+| components/shared/FolderPicker.tsx | Folder selection for move operations |
+| tests/unit/components/shared/ConfirmDialog.test.tsx | 4 unit tests |
+| tests/unit/components/shared/FolderPicker.test.tsx | 5 unit tests (2 pure function + 3 component) |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| components/shared/BookmarkTree.tsx | Added ItemAction type, basePath/onAction props, path threading |
+| components/shared/BookmarkItem.tsx | Added DropdownMenu (Edit/Move/Delete), path/onAction props |
+| components/shared/FolderItem.tsx | Added DropdownMenu (Rename/Move/Delete), path/onAction props, sibling layout |
+| components/shared/AddFolderDialog.tsx | Extended with FolderDialogMode (add/edit), renameFolder, buttonLabel |
+| components/screens/TreeScreen.tsx | DialogState union, handleAction, handleConfirmDelete, handleMoveSelect |
+| tests/unit/components/shared/BookmarkTree.test.tsx | Added 3 path threading + onAction tests (8 total) |
+| tests/unit/components/shared/BookmarkItem.test.tsx | Added 5 context menu tests (9 total) |
+| tests/unit/components/shared/FolderItem.test.tsx | Added 4 context menu tests (8 total) |
+| tests/unit/components/shared/AddFolderDialog.test.tsx | Added 3 edit mode tests, updated props (9 total) |
+| tests/unit/components/screens/TreeScreen.test.tsx | Added 7 action/dialog tests (19 total) |
+| tests/e2e/popup-bookmarks.test.ts | Added BOOKMARK-003 describe block (5 E2E tests, 17 total) |
+
+### Acceptance Criteria Verification
+
+1. Context menu (shadcn DropdownMenu) with edit/delete/move per item — PASS (BookmarkItem: Edit/Move/Delete, FolderItem: Rename/Move/Delete)
+2. Delete shows ConfirmDialog, SAVE only on confirm, wait-for-response — PASS (TreeScreen.test: confirming delete calls save, canceling does not)
+3. Move shows FolderPicker — user picks target folder — PASS (TreeScreen.test: move action opens FolderPicker)
+4. Move uses moveItem(tree, fromPath, toFolderPath, childrenCount) — appends to end — PASS (TreeScreen.test: selecting folder saves moved tree)
+5. Edit opens AddEditBookmarkDialog pre-filled — PASS (TreeScreen.test: edit opens dialog with pre-filled values)
+6. All mutations: compute new tree → SAVE → await → update TreeContext on confirmed response — PASS (handleConfirmDelete + handleMoveSelect both use save())
+7. ConfirmDialog and FolderPicker are reusable shared components — PASS (both in components/shared/, no TreeScreen-specific logic)
+
+### Verification Results
+
+```
+tsc --noEmit: clean (exit 0)
+vitest run: 46 test files, 779 tests passed, 0 failed
+eslint .: clean (exit 0)
+wxt build: success (780.8 KB total uncompressed)
+playwright test popup-bookmarks: 17 passed (1.1m)
 ```

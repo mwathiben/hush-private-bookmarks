@@ -44,3 +44,21 @@ When testing protocol/scheme rejection (e.g., `javascript:`, `data:`), use one t
 ### Deslop: Nested Ternaries
 
 Nested ternaries in JSX (`saving ? 'X' : isEdit ? 'Y' : 'Z'`) violate project conventions. Extract to a helper function (`buttonLabel(saving, isEdit)`) for readability.
+
+## BOOKMARK-003 (2026-03-15)
+
+### Button Nesting in Radix Components
+
+DropdownMenuTrigger renders as `<button>`. Placing it inside AccordionTrigger (also `<button>`) causes a DOM nesting violation. Solution: restructure FolderItem so the dropdown trigger is a sibling of AccordionTrigger inside a flex container, not a child of it. This eliminates the need for `stopPropagation` hacks entirely.
+
+### E2E Strict Mode Violations with `getByLabel`
+
+`getByLabel('Name')` can match both the dialog container (via `aria-labelledby` resolving to title text containing "Name") and the actual input (via `<label htmlFor>`). Use `getByRole('textbox', { name: 'Name' })` to target specifically the input element.
+
+### FolderPicker Design: Emit Path + Count
+
+When `getItemAtPath` doesn't exist in the data model, have `collectPickableFolders` capture folder metadata (path, childrenCount) during the tree walk, so `onSelect` can emit `(folderPath, childrenCount)` directly without needing to look up the folder again.
+
+### DialogState as Single Discriminated Union
+
+Using a single `DialogState` union (7 variants) instead of separate boolean/enum state variables prevents impossible states (e.g., two dialogs open simultaneously) and makes the action→dialog mapping explicit in the switch statement.

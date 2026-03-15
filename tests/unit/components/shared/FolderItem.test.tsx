@@ -4,6 +4,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Accordion } from '@/components/ui/accordion';
 import { FolderItem } from '@/components/shared/FolderItem';
+import type { ItemAction } from '@/components/shared/BookmarkTree';
 import type { Folder } from '@/lib/types';
 
 beforeAll(() => {
@@ -85,5 +86,89 @@ describe('FolderItem', () => {
     // #then
     expect(screen.getByText('GitHub')).toBeInTheDocument();
     expect(screen.getByText('Docs')).toBeInTheDocument();
+  });
+
+  it('renders context menu trigger when onAction provided', () => {
+    // #given
+    const onAction = vi.fn<(action: ItemAction) => void>();
+
+    // #when
+    render(
+      <Accordion type="multiple">
+        <FolderItem folder={TEST_FOLDER} depth={0} path={[1]} onAction={onAction} />
+      </Accordion>,
+    );
+
+    // #then
+    expect(screen.getByLabelText('Folder actions')).toBeInTheDocument();
+  });
+
+  it('Rename calls onAction with edit-folder', async () => {
+    // #given
+    const user = userEvent.setup();
+    const onAction = vi.fn<(action: ItemAction) => void>();
+
+    render(
+      <Accordion type="multiple">
+        <FolderItem folder={TEST_FOLDER} depth={0} path={[1]} onAction={onAction} />
+      </Accordion>,
+    );
+
+    // #when
+    await user.click(screen.getByLabelText('Folder actions'));
+    await user.click(screen.getByText('Rename'));
+
+    // #then
+    expect(onAction).toHaveBeenCalledWith({
+      type: 'edit-folder',
+      path: [1],
+      folder: TEST_FOLDER,
+    });
+  });
+
+  it('Delete calls onAction with delete (destructive)', async () => {
+    // #given
+    const user = userEvent.setup();
+    const onAction = vi.fn<(action: ItemAction) => void>();
+
+    render(
+      <Accordion type="multiple">
+        <FolderItem folder={TEST_FOLDER} depth={0} path={[0]} onAction={onAction} />
+      </Accordion>,
+    );
+
+    // #when
+    await user.click(screen.getByLabelText('Folder actions'));
+    await user.click(screen.getByText('Delete'));
+
+    // #then
+    expect(onAction).toHaveBeenCalledWith({
+      type: 'delete',
+      path: [0],
+      node: TEST_FOLDER,
+    });
+  });
+
+  it('Move calls onAction with move', async () => {
+    // #given
+    const user = userEvent.setup();
+    const onAction = vi.fn<(action: ItemAction) => void>();
+
+    render(
+      <Accordion type="multiple">
+        <FolderItem folder={TEST_FOLDER} depth={0} path={[0]} onAction={onAction} />
+      </Accordion>,
+    );
+
+    // #when
+    await user.click(screen.getByLabelText('Folder actions'));
+    await user.click(screen.getByText('Move to...'));
+
+    // #then
+    expect(onAction).toHaveBeenCalledWith({
+      type: 'move',
+      path: [0],
+      node: TEST_FOLDER,
+    });
   });
 });

@@ -4,31 +4,106 @@ import { BookmarkTree } from '@/components/shared/BookmarkTree';
 import { EmptyTreeState } from '@/components/shared/EmptyTreeState';
 import { AddEditBookmarkDialog } from '@/components/shared/AddEditBookmarkDialog';
 import { AddFolderDialog } from '@/components/shared/AddFolderDialog';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { FolderPicker } from '@/components/shared/FolderPicker';
 import { Button } from '@/components/ui/button';
+import { removeItem, moveItem } from '@/lib/data-model';
 import type { BookmarkDialogMode } from '@/components/shared/AddEditBookmarkDialog';
+import type { FolderDialogMode } from '@/components/shared/AddFolderDialog';
+import type { ItemAction } from '@/components/shared/BookmarkTree';
+import type { Bookmark, BookmarkNode, Folder } from '@/lib/types';
 
-type OpenDialog = 'bookmark' | 'folder' | null;
+type DialogState =
+  | { readonly type: 'none' }
+  | { readonly type: 'add-bookmark' }
+  | { readonly type: 'add-folder' }
+  | { readonly type: 'edit-bookmark'; readonly path: readonly number[]; readonly bookmark: Bookmark }
+  | { readonly type: 'edit-folder'; readonly path: readonly number[]; readonly folder: Folder }
+  | { readonly type: 'confirm-delete'; readonly path: readonly number[]; readonly node: BookmarkNode }
+  | { readonly type: 'move'; readonly path: readonly number[]; readonly node: BookmarkNode };
 
+const DIALOG_NONE: DialogState = { type: 'none' };
 const ROOT_PATH: readonly number[] = [];
 
 export default function TreeScreen(): React.JSX.Element {
   const { tree, error, save } = useTree();
   const hasChildren = tree !== null && tree.children.length > 0;
-  const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
+  const [dialogState, setDialogState] = useState<DialogState>(DIALOG_NONE);
 
-  const openBookmarkDialog = useCallback(() => setOpenDialog('bookmark'), []);
-  const openFolderDialog = useCallback(() => setOpenDialog('folder'), []);
+  const openBookmarkDialog = useCallback(() => setDialogState({ type: 'add-bookmark' }), []);
+  const openFolderDialog = useCallback(() => setDialogState({ type: 'add-folder' }), []);
+  const closeDialog = useCallback(() => setDialogState(DIALOG_NONE), []);
+
   const handleBookmarkOpenChange = useCallback((open: boolean) => {
-    if (!open) setOpenDialog(null);
+    if (!open) setDialogState(DIALOG_NONE);
   }, []);
 
   const handleFolderOpenChange = useCallback((open: boolean) => {
-    if (!open) setOpenDialog(null);
+    if (!open) setDialogState(DIALOG_NONE);
   }, []);
 
-  const addDialogMode = useMemo<BookmarkDialogMode>(() => ({
+  const handleAction = useCallback((action: ItemAction) => {
+    switch (action.type) {
+      case 'delete':
+        setDialogState({ type: 'confirm-delete', path: action.path, node: action.node });
+        break;
+      case 'edit-bookmark':
+        setDialogState({ type: 'edit-bookmark', path: action.path, bookmark: action.bookmark });
+        break;
+      case 'edit-folder':
+        setDialogState({ type: 'edit-folder', path: action.path, folder: action.folder });
+        break;
+      case 'move':
+        setDialogState({ type: 'move', path: action.path, node: action.node });
+        break;
+    }
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (dialogState.type !== 'confirm-delete' || tree === null) return;
+    const result = removeItem(tree, dialogState.path);
+    if (!result.success) return;
+    try {
+      const ok = await save(result.data);
+      if (ok) setDialogState(DIALOG_NONE);
+    } catch {
+      // save failed — dialog stays open
+    }
+  }, [dialogState, tree, save]);
+
+  const handleMoveSelect = useCallback(async (folderPath: readonly number[], childrenCount: number) => {
+    if (dialogState.type !== 'move' || tree === null) return;
+    const result = moveItem(tree, dialogState.path, folderPath, childrenCount);
+    if (!result.success) return;
+    try {
+      const ok = await save(result.data);
+      if (ok) setDialogState(DIALOG_NONE);
+    } catch {
+      // save failed
+    }
+  }, [dialogState, tree, save]);
+
+  const addBookmarkMode = useMemo<BookmarkDialogMode>(() => ({
     mode: 'add', parentPath: ROOT_PATH,
   }), []);
+
+  const bookmarkDialogMode = useMemo<BookmarkDialogMode>(() => {
+    if (dialogState.type === 'edit-bookmark') {
+      return { mode: 'edit', path: dialogState.path, bookmark: dialogState.bookmark };
+    }
+    return addBookmarkMode;
+  }, [dialogState, addBookmarkMode]);
+
+  const addFolderMode = useMemo<FolderDialogMode>(() => ({
+    mode: 'add', parentPath: ROOT_PATH,
+  }), []);
+
+  const folderDialogMode = useMemo<FolderDialogMode>(() => {
+    if (dialogState.type === 'edit-folder') {
+      return { mode: 'edit', path: dialogState.path, folder: dialogState.folder };
+    }
+    return addFolderMode;
+  }, [dialogState, addFolderMode]);
 
   return (
     <div data-testid="tree-screen" className="flex flex-col">
@@ -62,7 +137,7 @@ export default function TreeScreen(): React.JSX.Element {
       )}
       {hasChildren ? (
         <div className="px-2 py-1">
-          <BookmarkTree nodes={tree.children} />
+          <BookmarkTree nodes={tree.children} onAction={handleAction} />
         </div>
       ) : (
         <EmptyTreeState onAddBookmark={tree !== null ? openBookmarkDialog : undefined} />
@@ -70,18 +145,34 @@ export default function TreeScreen(): React.JSX.Element {
       {tree !== null && (
         <>
           <AddEditBookmarkDialog
-            open={openDialog === 'bookmark'}
+            open={dialogState.type === 'add-bookmark' || dialogState.type === 'edit-bookmark'}
             onOpenChange={handleBookmarkOpenChange}
-            dialogMode={addDialogMode}
+            dialogMode={bookmarkDialogMode}
             tree={tree}
             onSave={save}
           />
           <AddFolderDialog
-            open={openDialog === 'folder'}
+            open={dialogState.type === 'add-folder' || dialogState.type === 'edit-folder'}
             onOpenChange={handleFolderOpenChange}
-            parentPath={ROOT_PATH}
+            dialogMode={folderDialogMode}
             tree={tree}
             onSave={save}
+          />
+          <ConfirmDialog
+            open={dialogState.type === 'confirm-delete'}
+            onOpenChange={(open) => { if (!open) closeDialog(); }}
+            title={`Delete "${dialogState.type === 'confirm-delete' ? ('name' in dialogState.node ? dialogState.node.name : dialogState.node.title) : ''}"?`}
+            description="This action cannot be undone."
+            confirmLabel="Delete"
+            variant="destructive"
+            onConfirm={() => void handleConfirmDelete()}
+          />
+          <FolderPicker
+            open={dialogState.type === 'move'}
+            onOpenChange={(open) => { if (!open) closeDialog(); }}
+            tree={tree}
+            excludePath={dialogState.type === 'move' ? dialogState.path : ROOT_PATH}
+            onSelect={(path, count) => void handleMoveSelect(path, count)}
           />
         </>
       )}

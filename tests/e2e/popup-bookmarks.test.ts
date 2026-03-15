@@ -296,3 +296,70 @@ populatedTreeTest.describe(
     );
   },
 );
+
+populatedTreeTest.describe(
+  'Popup bookmarks — context actions (BOOKMARK-003)',
+  () => {
+    populatedTreeTest.setTimeout(120_000);
+
+    populatedTreeTest(
+      'delete bookmark via context menu',
+      async ({ treePage }) => {
+        await treePage.getByLabel('Actions').first().click();
+        await treePage.getByText('Delete').click();
+        await expect(treePage.getByText(/Delete "GitHub"/)).toBeVisible({ timeout: 10_000 });
+        await treePage.getByRole('button', { name: 'Delete' }).click();
+        await expect(treePage.getByRole('button', { name: 'GitHub' })).not.toBeVisible({ timeout: 10_000 });
+      },
+    );
+
+    populatedTreeTest(
+      'cancel delete keeps bookmark',
+      async ({ treePage }) => {
+        await treePage.getByLabel('Actions').first().click();
+        await treePage.getByText('Delete').click();
+        await expect(treePage.getByText(/Delete "GitHub"/)).toBeVisible({ timeout: 10_000 });
+        await treePage.getByRole('button', { name: /cancel/i }).click();
+        await expect(treePage.getByRole('button', { name: 'GitHub' })).toBeVisible();
+      },
+    );
+
+    populatedTreeTest(
+      'edit bookmark via context menu',
+      async ({ treePage }) => {
+        await treePage.getByLabel('Actions').first().click();
+        await treePage.getByText('Edit').click();
+        await expect(treePage.getByLabel('Title')).toHaveValue('GitHub', { timeout: 10_000 });
+        await treePage.getByLabel('Title').fill('GitHub Updated');
+        await treePage.getByRole('button', { name: /save changes/i }).click();
+        await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+        await expect(treePage.getByRole('button', { name: 'GitHub Updated' })).toBeVisible();
+      },
+    );
+
+    populatedTreeTest(
+      'rename folder via context menu',
+      async ({ treePage }) => {
+        await treePage.getByLabel('Folder actions').first().click();
+        await treePage.getByText('Rename').click();
+        await expect(treePage.getByRole('textbox', { name: 'Name' })).toHaveValue('Work', { timeout: 10_000 });
+        await treePage.getByRole('textbox', { name: 'Name' }).fill('Personal');
+        await treePage.getByRole('button', { name: /save changes/i }).click();
+        await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+        await expect(treePage.getByText('Personal')).toBeVisible();
+      },
+    );
+
+    populatedTreeTest(
+      'move bookmark to folder via context menu',
+      async ({ treePage }) => {
+        await treePage.getByLabel('Actions').first().click();
+        await treePage.getByText('Move to...').click();
+        await expect(treePage.getByText('Move to folder')).toBeVisible({ timeout: 10_000 });
+        await treePage.getByRole('button', { name: /work/i }).click();
+        await expect(treePage.getByText('Move to folder')).not.toBeVisible({ timeout: 10_000 });
+        await expect(treePage.getByRole('button', { name: 'GitHub' })).not.toBeVisible();
+      },
+    );
+  },
+);

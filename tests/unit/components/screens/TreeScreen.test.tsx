@@ -218,4 +218,125 @@ describe('TreeScreen', () => {
     // #then
     expect(screen.getByText('Failed to save')).toBeInTheDocument();
   });
+
+  it('delete action opens ConfirmDialog with node title', async () => {
+    // #given
+    const user = userEvent.setup();
+    setupMock();
+    render(<TreeScreen />);
+
+    // #when — click three-dot menu on GitHub bookmark, then Delete
+    const actionBtns = screen.getAllByLabelText('Actions');
+    await user.click(actionBtns[0]!);
+    await user.click(screen.getByText('Delete'));
+
+    // #then
+    expect(screen.getByText(/Delete "GitHub"/)).toBeInTheDocument();
+  });
+
+  it('confirming delete calls save with tree minus item', async () => {
+    // #given
+    const user = userEvent.setup();
+    const saveMock = vi.fn<(tree: BookmarkTree) => Promise<boolean>>().mockResolvedValue(true);
+    setupMock({ save: saveMock });
+    render(<TreeScreen />);
+
+    // #when — open delete confirm for GitHub bookmark
+    const actionBtns = screen.getAllByLabelText('Actions');
+    await user.click(actionBtns[0]!);
+    await user.click(screen.getByText('Delete'));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    // #then
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    const savedTree = saveMock.mock.calls[0]![0];
+    expect(savedTree.children).toHaveLength(1);
+    expect(savedTree.children[0]).toMatchObject({ type: 'folder', name: 'Work' });
+  });
+
+  it('canceling delete closes dialog without saving', async () => {
+    // #given
+    const user = userEvent.setup();
+    const saveMock = vi.fn<(tree: BookmarkTree) => Promise<boolean>>();
+    setupMock({ save: saveMock });
+    render(<TreeScreen />);
+
+    // #when — open delete confirm, then cancel
+    const actionBtns = screen.getAllByLabelText('Actions');
+    await user.click(actionBtns[0]!);
+    await user.click(screen.getByText('Delete'));
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    // #then
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('edit bookmark action opens AddEditBookmarkDialog in edit mode', async () => {
+    // #given
+    const user = userEvent.setup();
+    setupMock();
+    render(<TreeScreen />);
+
+    // #when — click Edit on GitHub bookmark
+    const actionBtns = screen.getAllByLabelText('Actions');
+    await user.click(actionBtns[0]!);
+    await user.click(screen.getByText('Edit'));
+
+    // #then — edit dialog with pre-filled values
+    expect(screen.getByLabelText('Title')).toHaveValue('GitHub');
+    expect(screen.getByLabelText('URL')).toHaveValue('https://github.com');
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
+  });
+
+  it('edit folder action opens AddFolderDialog in edit mode', async () => {
+    // #given
+    const user = userEvent.setup();
+    setupMock();
+    render(<TreeScreen />);
+
+    // #when — click Rename on Work folder
+    const folderActionBtns = screen.getAllByLabelText('Folder actions');
+    await user.click(folderActionBtns[0]!);
+    await user.click(screen.getByText('Rename'));
+
+    // #then — rename dialog with pre-filled name
+    expect(screen.getByLabelText('Name')).toHaveValue('Work');
+    expect(screen.getByText('Rename Folder')).toBeInTheDocument();
+  });
+
+  it('move action opens FolderPicker', async () => {
+    // #given
+    const user = userEvent.setup();
+    setupMock();
+    render(<TreeScreen />);
+
+    // #when — click Move on GitHub bookmark
+    const actionBtns = screen.getAllByLabelText('Actions');
+    await user.click(actionBtns[0]!);
+    await user.click(screen.getByText('Move to...'));
+
+    // #then — FolderPicker with folder destinations
+    expect(screen.getByText('Move to folder')).toBeInTheDocument();
+  });
+
+  it('selecting folder in FolderPicker saves moved tree', async () => {
+    // #given
+    const user = userEvent.setup();
+    const saveMock = vi.fn<(tree: BookmarkTree) => Promise<boolean>>().mockResolvedValue(true);
+    setupMock({ save: saveMock });
+    render(<TreeScreen />);
+
+    // #when — open Move on GitHub bookmark, select Work folder
+    const actionBtns = screen.getAllByLabelText('Actions');
+    await user.click(actionBtns[0]!);
+    await user.click(screen.getByText('Move to...'));
+    await user.click(screen.getByRole('button', { name: /work/i }));
+
+    // #then
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    const savedTree = saveMock.mock.calls[0]![0];
+    const workFolder = savedTree.children[0]!;
+    expect(workFolder).toMatchObject({ type: 'folder', name: 'Work' });
+    expect('children' in workFolder && workFolder.children).toHaveLength(2);
+  });
 });

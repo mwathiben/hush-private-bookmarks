@@ -10,35 +10,56 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { addFolder } from '@/lib/data-model';
-import type { BookmarkTree } from '@/lib/types';
+import { addFolder, renameFolder } from '@/lib/data-model';
+import type { BookmarkTree, Folder } from '@/lib/types';
+
+interface AddFolderMode {
+  readonly mode: 'add';
+  readonly parentPath: readonly number[];
+}
+
+interface EditFolderMode {
+  readonly mode: 'edit';
+  readonly path: readonly number[];
+  readonly folder: Folder;
+}
+
+export type FolderDialogMode = AddFolderMode | EditFolderMode;
 
 export interface AddFolderDialogProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
-  readonly parentPath: readonly number[];
+  readonly dialogMode: FolderDialogMode;
   readonly tree: BookmarkTree;
   readonly onSave: (newTree: BookmarkTree) => Promise<boolean>;
+}
+
+function buttonLabel(saving: boolean, isEdit: boolean): string {
+  if (saving) return isEdit ? 'Saving...' : 'Adding...';
+  if (isEdit) return 'Save Changes';
+  return 'Add Folder';
 }
 
 export function AddFolderDialog({
   open,
   onOpenChange,
-  parentPath,
+  dialogMode,
   tree,
   onSave,
 }: AddFolderDialogProps): React.JSX.Element {
+  const isEdit = dialogMode.mode === 'edit';
+
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      setName('');
+      setName(isEdit ? dialogMode.folder.name : '');
       setError(null);
       setSaving(false);
     }
-  }, [open]);
+  }, [open, isEdit, dialogMode]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -53,16 +74,29 @@ export function AddFolderDialog({
     setError(null);
     setSaving(true);
 
-    const result = addFolder(tree, parentPath, trimmedName);
-    if (!result.success) {
-      setError('Failed to add folder');
-      setSaving(false);
-      return;
+    let newTree: BookmarkTree;
+
+    if (dialogMode.mode === 'add') {
+      const result = addFolder(tree, dialogMode.parentPath, trimmedName);
+      if (!result.success) {
+        setError('Failed to add folder');
+        setSaving(false);
+        return;
+      }
+      newTree = result.data;
+    } else {
+      const result = renameFolder(tree, dialogMode.path, trimmedName);
+      if (!result.success) {
+        setError('Failed to rename folder');
+        setSaving(false);
+        return;
+      }
+      newTree = result.data;
     }
 
     let ok: boolean;
     try {
-      ok = await onSave(result.data);
+      ok = await onSave(newTree);
     } catch {
       ok = false;
     }
@@ -71,17 +105,17 @@ export function AddFolderDialog({
     if (ok) {
       onOpenChange(false);
     } else {
-      setError('Failed to save folder');
+      setError(isEdit ? 'Failed to save folder' : 'Failed to save folder');
     }
-  }, [name, parentPath, tree, onSave, onOpenChange]);
+  }, [name, dialogMode, tree, onSave, onOpenChange, isEdit]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Folder</DialogTitle>
+          <DialogTitle>{isEdit ? 'Rename Folder' : 'Add Folder'}</DialogTitle>
           <DialogDescription>
-            Enter a name for the new folder.
+            {isEdit ? 'Update the folder name.' : 'Enter a name for the new folder.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
@@ -102,7 +136,7 @@ export function AddFolderDialog({
           )}
           <DialogFooter>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Adding...' : 'Add Folder'}
+              {buttonLabel(saving, isEdit)}
             </Button>
           </DialogFooter>
         </form>

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite
 import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BookmarkTree } from '@/components/shared/BookmarkTree';
+import type { ItemAction } from '@/components/shared/BookmarkTree';
 import type { BookmarkNode } from '@/lib/types';
 
 beforeAll(() => {
@@ -101,5 +102,60 @@ describe('BookmarkTree', () => {
     const accordion = container.querySelector('[data-slot="accordion"]');
     expect(accordion).toBeInTheDocument();
     expect(accordion?.children).toHaveLength(0);
+  });
+
+  it('passes correct paths [0], [1] to items', () => {
+    // #given
+    const onAction = vi.fn<(action: ItemAction) => void>();
+
+    // #when
+    render(<BookmarkTree nodes={FLAT_NODES} onAction={onAction} />);
+
+    // #then — both bookmarks should have action triggers
+    const triggers = screen.getAllByLabelText('Actions');
+    expect(triggers).toHaveLength(2);
+  });
+
+  it('nested folders get correct paths via onAction', async () => {
+    // #given
+    const user = userEvent.setup();
+    const onAction = vi.fn<(action: ItemAction) => void>();
+
+    render(<BookmarkTree nodes={NESTED_NODES} onAction={onAction} />);
+
+    // #when — expand Dev Tools folder, click Edit on VSCode bookmark
+    await user.click(screen.getByText('Dev Tools'));
+    const actionButtons = screen.getAllByLabelText('Actions');
+    await user.click(actionButtons[1]!);
+    await user.click(screen.getByText('Edit'));
+
+    // #then
+    expect(onAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'edit-bookmark',
+        path: [1, 0],
+      }),
+    );
+  });
+
+  it('onAction propagates from items through tree', async () => {
+    // #given
+    const user = userEvent.setup();
+    const onAction = vi.fn<(action: ItemAction) => void>();
+
+    render(<BookmarkTree nodes={FLAT_NODES} onAction={onAction} />);
+
+    // #when — click Delete on first bookmark via menu
+    const actionButtons = screen.getAllByLabelText('Actions');
+    await user.click(actionButtons[0]!);
+    await user.click(screen.getByText('Delete'));
+
+    // #then
+    expect(onAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'delete',
+        path: [0],
+      }),
+    );
   });
 });
