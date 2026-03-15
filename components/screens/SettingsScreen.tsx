@@ -2,7 +2,7 @@ import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionDispatch } from '@/hooks/useSessionProvider';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 import { RecoveryPhraseVerify } from '@/components/settings/RecoveryPhraseVerify';
 import { ImportSection } from '@/components/settings/ImportSection';

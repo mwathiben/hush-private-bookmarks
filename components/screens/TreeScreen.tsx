@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Settings } from 'lucide-react';
 import { useTree } from '@/hooks/useTree';
-import { useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionDispatch } from '@/hooks/useSessionProvider';
 import { BookmarkTree } from '@/components/shared/BookmarkTree';
 import { EmptyTreeState } from '@/components/shared/EmptyTreeState';
 import { AddEditBookmarkDialog } from '@/components/shared/AddEditBookmarkDialog';

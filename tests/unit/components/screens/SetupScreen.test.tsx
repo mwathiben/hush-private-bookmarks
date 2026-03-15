@@ -6,7 +6,7 @@ import SetupScreen from '@/components/screens/SetupScreen';
 import type { BackgroundResponse, SessionState } from '@/lib/background-types';
 import type { SendMessageFn } from '@/hooks/useSendMessage';
 
-vi.mock('@/entrypoints/popup/App', () => ({
+vi.mock('@/hooks/useSessionProvider', () => ({
   useSessionState: vi.fn(),
   useSessionDispatch: vi.fn(),
 }));
@@ -21,7 +21,7 @@ vi.mock('@/lib/recovery', () => ({
   ),
 }));
 
-import { useSessionState, useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionState, useSessionDispatch } from '@/hooks/useSessionProvider';
 import { useSendMessage } from '@/hooks/useSendMessage';
 
 beforeAll(() => {

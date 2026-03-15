@@ -10,13 +10,13 @@ vi.mock('@/hooks/useSendMessage', () => ({
   useSendMessage: vi.fn(),
 }));
 
-vi.mock('@/entrypoints/popup/App', () => ({
+vi.mock('@/hooks/useSessionProvider', () => ({
   useSessionState: vi.fn(),
   useSessionDispatch: vi.fn(),
 }));
 
 import { useSendMessage } from '@/hooks/useSendMessage';
-import { useSessionState, useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionState, useSessionDispatch } from '@/hooks/useSessionProvider';
 
 beforeAll(() => {
   globalThis.ResizeObserver = class {
@@ -127,5 +127,126 @@ describe('SetManagement', () => {
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
     const firstDelete = deleteButtons[0]!;
     expect(firstDelete).toBeDisabled();
+  });
+
+  it('rename set sends RENAME_SET and refreshes session', async () => {
+    // #given
+    const refreshedSession = { ...MOCK_SESSION };
+    const { sendMessage, dispatch } = setupMocks({
+      sendMessage: vi.fn<SendMessageFn>()
+        .mockResolvedValueOnce({ success: true, data: null })
+        .mockResolvedValueOnce({ success: true, data: refreshedSession }),
+    });
+    const user = userEvent.setup();
+    render(<SetManagement />);
+
+    // #when
+    const renameButtons = screen.getAllByRole('button', { name: /rename/i });
+    await user.click(renameButtons[1]!);
+    const nameInput = screen.getByPlaceholderText(/new name/i);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Renamed');
+    await user.click(screen.getByRole('button', { name: /^rename$/i }));
+
+    // #then
+    await waitFor(() => {
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'RENAME_SET',
+        setId: 'work',
+        newName: 'Renamed',
+      });
+    });
+    await waitFor(() => {
+      expect(dispatch).toHaveBeenCalledWith({ type: 'SET_SESSION', session: refreshedSession });
+    });
+  });
+
+  it('delete non-default set sends DELETE_SET and refreshes session', async () => {
+    // #given
+    const refreshedSession = { ...MOCK_SESSION, sets: [MOCK_SESSION.sets[0]!] };
+    const { sendMessage, dispatch } = setupMocks({
+      sendMessage: vi.fn<SendMessageFn>()
+        .mockResolvedValueOnce({ success: true, data: null })
+        .mockResolvedValueOnce({ success: true, data: refreshedSession }),
+    });
+    const user = userEvent.setup();
+    render(<SetManagement />);
+
+    // #when
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+    await user.click(deleteButtons[1]!);
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+
+    // #then
+    await waitFor(() => {
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'DELETE_SET',
+        setId: 'work',
+      });
+    });
+    await waitFor(() => {
+      expect(dispatch).toHaveBeenCalledWith({ type: 'SET_SESSION', session: refreshedSession });
+    });
+  });
+
+  it('shows error when create set fails', async () => {
+    // #given
+    setupMocks({
+      sendMessage: vi.fn<SendMessageFn>().mockResolvedValue({ success: false, error: 'Name taken' }),
+    });
+    const user = userEvent.setup();
+    render(<SetManagement />);
+
+    // #when
+    await user.click(screen.getByRole('button', { name: /create set/i }));
+    await user.type(screen.getByPlaceholderText(/set name/i), 'Dup');
+    await user.type(screen.getByPlaceholderText(/password/i), 'pass123');
+    await user.click(screen.getByRole('button', { name: /^create$/i }));
+
+    // #then
+    await waitFor(() => {
+      expect(screen.getByText('Name taken')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error when rename fails', async () => {
+    // #given
+    setupMocks({
+      sendMessage: vi.fn<SendMessageFn>().mockResolvedValue({ success: false, error: 'Rename failed' }),
+    });
+    const user = userEvent.setup();
+    render(<SetManagement />);
+
+    // #when
+    const renameButtons = screen.getAllByRole('button', { name: /rename/i });
+    await user.click(renameButtons[0]!);
+    const nameInput = screen.getByPlaceholderText(/new name/i);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'NewName');
+    await user.click(screen.getByRole('button', { name: /^rename$/i }));
+
+    // #then
+    await waitFor(() => {
+      expect(screen.getByText('Rename failed')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error when delete fails', async () => {
+    // #given
+    setupMocks({
+      sendMessage: vi.fn<SendMessageFn>().mockResolvedValue({ success: false, error: 'Delete failed' }),
+    });
+    const user = userEvent.setup();
+    render(<SetManagement />);
+
+    // #when
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+    await user.click(deleteButtons[1]!);
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+
+    // #then
+    await waitFor(() => {
+      expect(screen.getByText('Delete failed')).toBeInTheDocument();
+    });
   });
 });

@@ -67,6 +67,13 @@ function walkPath(
 
 export const getItemByPath: typeof walkPath = walkPath;
 
+export function getFolderByPath(tree: BookmarkTree, path: readonly number[]): Result<Folder, DataModelError> {
+  const result = walkPath(tree, path);
+  if (!result.success) return result;
+  if (!isFolder(result.data)) return fail('Path does not point to a folder', 'type_mismatch', path);
+  return { success: true, data: result.data };
+}
+
 function searchChildren(
   children: readonly BookmarkNode[], id: string, depth = 0,
 ): readonly number[] | undefined {
@@ -94,13 +101,10 @@ function withReplacedChildren(
   if (parentPath.length === 0) {
     return { success: true, data: { ...tree, children: replacer(tree.children) } };
   }
-
   const ancestors: Array<{ folder: Folder; childIndex: number }> = [];
   let current: BookmarkNode = tree;
-
   for (let i = 0; i < parentPath.length; i++) {
     const index = parentPath[i]!;
-
     if (index < 0) return fail(`Invalid path index at depth ${i}`, 'invalid_path', parentPath);
     if (!isFolder(current)) return fail(`Expected folder at depth ${i}`, 'type_mismatch', parentPath);
     if (index >= current.children.length) return fail(`Index out of bounds at depth ${i}`, 'path_not_found', parentPath);
@@ -110,16 +114,13 @@ function withReplacedChildren(
   }
 
   if (!isFolder(current)) return fail('Target is not a folder', 'type_mismatch', parentPath);
-
   let rebuilt: Folder = { ...current, children: replacer(current.children) };
-
   for (let i = ancestors.length - 1; i >= 0; i--) {
     const { folder, childIndex } = ancestors[i]!;
     const newChildren: BookmarkNode[] = [...folder.children];
     newChildren[childIndex] = rebuilt;
     rebuilt = { ...folder, children: newChildren };
   }
-
   return { success: true, data: rebuilt };
 }
 
@@ -268,7 +269,6 @@ export function findItemPath(
 
   return fail('Item not found in tree', 'path_not_found');
 }
-
 function walkNodes(folder: Folder, visit: (node: BookmarkNode) => void, depth = 0): void {
   if (depth > MAX_TREE_DEPTH) return;
   for (const c of folder.children) { visit(c); if (isFolder(c)) walkNodes(c, visit, depth + 1); }

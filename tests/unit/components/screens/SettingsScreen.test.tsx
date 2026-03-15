@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import SettingsScreen from '@/components/screens/SettingsScreen';
 import type { SendMessageFn } from '@/hooks/useSendMessage';
 
-vi.mock('@/entrypoints/popup/App', () => ({
+vi.mock('@/hooks/useSessionProvider', () => ({
   useSessionDispatch: vi.fn(),
   useSessionState: vi.fn(),
 }));
@@ -22,7 +22,7 @@ vi.mock('@/lib/recovery', () => ({
   validateMnemonic: vi.fn(),
 }));
 
-import { useSessionDispatch, useSessionState } from '@/entrypoints/popup/App';
+import { useSessionDispatch, useSessionState } from '@/hooks/useSessionProvider';
 import { useSendMessage } from '@/hooks/useSendMessage';
 import { useTree } from '@/hooks/useTree';
 

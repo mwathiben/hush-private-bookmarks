@@ -9,12 +9,12 @@ vi.mock('@/hooks/useTree', () => ({
   useTree: vi.fn(),
 }));
 
-vi.mock('@/entrypoints/popup/App', () => ({
+vi.mock('@/hooks/useSessionProvider', () => ({
   useSessionDispatch: vi.fn(),
 }));
 
 import { useTree } from '@/hooks/useTree';
-import { useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionDispatch } from '@/hooks/useSessionProvider';
 import type { UseTreeReturn } from '@/hooks/useTree';
 
 beforeAll(() => {

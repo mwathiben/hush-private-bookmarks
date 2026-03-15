@@ -6,7 +6,7 @@ import LoginScreen from '@/components/screens/LoginScreen';
 import type { BackgroundResponse, SessionState } from '@/lib/background-types';
 import type { SendMessageFn } from '@/hooks/useSendMessage';
 
-vi.mock('@/entrypoints/popup/App', () => ({
+vi.mock('@/hooks/useSessionProvider', () => ({
   useSessionState: vi.fn(),
   useSessionDispatch: vi.fn(),
 }));
@@ -15,7 +15,7 @@ vi.mock('@/hooks/useSendMessage', () => ({
   useSendMessage: vi.fn(),
 }));
 
-import { useSessionState, useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionState, useSessionDispatch } from '@/hooks/useSessionProvider';
 import { useSendMessage } from '@/hooks/useSendMessage';
 
 beforeAll(() => {

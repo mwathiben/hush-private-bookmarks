@@ -10,14 +10,14 @@ vi.mock('@/hooks/useSendMessage', () => ({
   useSendMessage: vi.fn(),
 }));
 
-vi.mock('@/entrypoints/popup/App', () => ({
+vi.mock('@/hooks/useSessionProvider', () => ({
   useSessionState: vi.fn(),
   useSessionDispatch: vi.fn(),
   useTreeContext: vi.fn(),
 }));
 
 import { useSendMessage } from '@/hooks/useSendMessage';
-import { useSessionState } from '@/entrypoints/popup/App';
+import { useSessionState } from '@/hooks/useSessionProvider';
 
 beforeAll(() => {
   globalThis.ResizeObserver = class {

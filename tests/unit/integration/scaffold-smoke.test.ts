@@ -63,6 +63,7 @@ import {
   isFolder,
   generateId,
   createEmptyTree,
+  getFolderByPath,
   getItemByPath,
   findItemPath,
   addBookmark,
@@ -200,6 +201,7 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(typeof isFolder).toBe('function');
     expect(typeof generateId).toBe('function');
     expect(typeof createEmptyTree).toBe('function');
+    expect(typeof getFolderByPath).toBe('function');
     expect(typeof getItemByPath).toBe('function');
     expect(typeof findItemPath).toBe('function');
     expect(typeof addBookmark).toBe('function');

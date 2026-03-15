@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useSendMessage } from '@/hooks/useSendMessage';
-import { useSessionState, useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionState, useSessionDispatch } from '@/hooks/useSessionProvider';
 import { isSessionState } from '@/hooks/useSession';
 import type { PasswordSetInfo } from '@/lib/types';
 

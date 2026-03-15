@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 
-vi.mock('@/entrypoints/popup/App', () => ({
+vi.mock('@/hooks/useSessionProvider', () => ({
   useSessionState: vi.fn(),
   useTreeContext: vi.fn(),
 }));
@@ -11,7 +11,7 @@ vi.mock('@/hooks/useSendMessage', () => ({
   useSendMessage: vi.fn(),
 }));
 
-import { useSessionState, useTreeContext } from '@/entrypoints/popup/App';
+import { useSessionState, useTreeContext } from '@/hooks/useSessionProvider';
 import { useSendMessage } from '@/hooks/useSendMessage';
 import type { SessionState } from '@/lib/background-types';
 import type { SendMessageFn } from '@/hooks/useSendMessage';

@@ -10,12 +10,12 @@ vi.mock('@/hooks/useSendMessage', () => ({
   useSendMessage: vi.fn(),
 }));
 
-vi.mock('@/entrypoints/popup/App', () => ({
+vi.mock('@/hooks/useSessionProvider', () => ({
   useSessionDispatch: vi.fn(),
 }));
 
 import { useSendMessage } from '@/hooks/useSendMessage';
-import { useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionDispatch } from '@/hooks/useSessionProvider';
 
 const CLEARED_SESSION: SessionState = {
   isUnlocked: false,

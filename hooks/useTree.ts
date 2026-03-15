@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSessionState, useTreeContext } from '@/entrypoints/popup/App';
+import { useSessionState, useTreeContext } from '@/hooks/useSessionProvider';
 import { useSendMessage } from '@/hooks/useSendMessage';
 import type { BookmarkTree } from '@/lib/types';
 

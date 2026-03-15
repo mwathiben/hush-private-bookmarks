@@ -6,7 +6,7 @@ interface EmptyTreeStateProps {
 
 export function EmptyTreeState({ onAddBookmark }: EmptyTreeStateProps): React.JSX.Element {
   return (
-    <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground">
+    <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground" data-testid="empty-tree-state">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="48"

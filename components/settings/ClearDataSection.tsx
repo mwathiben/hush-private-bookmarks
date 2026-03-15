@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSendMessage } from '@/hooks/useSendMessage';
-import { useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionDispatch } from '@/hooks/useSessionProvider';
 import { isSessionState } from '@/hooks/useSession';
 
 export function ClearDataSection(): React.JSX.Element {

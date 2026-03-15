@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useSendMessage } from '@/hooks/useSendMessage';
-import { useSessionState } from '@/entrypoints/popup/App';
+import { useSessionState } from '@/hooks/useSessionProvider';
 
 type ExportStatus = 'idle' | 'pending' | 'success';
 

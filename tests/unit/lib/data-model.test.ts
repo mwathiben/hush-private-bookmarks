@@ -15,6 +15,7 @@ import {
   createEmptyTree,
   findItemPath,
   generateId,
+  getFolderByPath,
   getItemByPath,
   isBookmark,
   isFolder,
@@ -235,6 +236,55 @@ describe('DATAMODEL-001: Core reads', () => {
       expect(ids.size).toBe(10);
       for (const id of ids) {
         expect(id).toMatch(uuidRegex);
+      }
+    });
+  });
+
+  describe('getFolderByPath', () => {
+    it('returns root folder for empty path', () => {
+      // #when
+      const result = getFolderByPath(POPULATED_TREE, []);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.type).toBe('folder');
+        expect(result.data.id).toBe('root');
+      }
+    });
+
+    it('returns nested folder for valid path', () => {
+      // #when
+      const result = getFolderByPath(POPULATED_TREE, [0]);
+
+      // #then
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.type).toBe('folder');
+        expect(result.data.id).toBe('f-1');
+      }
+    });
+
+    it('returns not-found error when path points to a bookmark', () => {
+      // #when — path [1] points to MOCK_BOOKMARK (not a folder)
+      const result = getFolderByPath(POPULATED_TREE, [1]);
+
+      // #then
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBeInstanceOf(DataModelError);
+        expect(result.error.context.kind).toBe('type_mismatch');
+      }
+    });
+
+    it('returns not-found error for out-of-bounds path', () => {
+      // #when
+      const result = getFolderByPath(POPULATED_TREE, [99]);
+
+      // #then
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBeInstanceOf(DataModelError);
       }
     });
   });

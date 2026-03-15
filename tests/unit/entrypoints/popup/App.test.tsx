@@ -2,12 +2,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
-import App, {
+import App from '@/entrypoints/popup/App';
+import {
   TRANSITIONS,
   useSessionState,
   useSessionDispatch,
   useTreeContext,
-} from '@/entrypoints/popup/App';
+} from '@/hooks/useSessionProvider';
 import type { SessionState } from '@/lib/background-types';
 
 vi.mock('@/hooks/useSendMessage', () => ({

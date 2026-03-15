@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionDispatch } from '@/hooks/useSessionProvider';
 import { useSendMessage } from '@/hooks/useSendMessage';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { MnemonicDisplay } from '@/components/shared/MnemonicDisplay';
