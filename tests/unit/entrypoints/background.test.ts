@@ -13,32 +13,45 @@ vi.mock('@/lib/password-sets', () => ({
   loadSetData: vi.fn(),
   listSets: vi.fn(),
   saveSetData: vi.fn(),
+  createSet: vi.fn(),
+  deleteSet: vi.fn(),
+  renameSet: vi.fn(),
+  setActiveSetId: vi.fn(),
 }));
 
 vi.mock('@/lib/data-model', () => ({
   addBookmark: vi.fn(),
+  createEmptyTree: vi.fn(),
 }));
 
 vi.mock('@/lib/incognito', () => ({
   determineMode: vi.fn().mockReturnValue('normal_mode'),
 }));
 
+vi.mock('@/lib/bookmark-import', () => ({
+  convertChromeBookmarks: vi.fn(),
+}));
+
+vi.mock('@/lib/bookmark-backup', () => ({
+  exportEncryptedBackup: vi.fn(),
+  importEncryptedBackup: vi.fn(),
+}));
+
 import {
   handleMessage, onAlarmFired, registerContextMenu, onContextMenuClicked,
 } from '@/entrypoints/background';
-import type { BackgroundResponse, MessageType, SessionState } from '@/lib/background-types';
+import type { BackgroundResponse, SessionState } from '@/lib/background-types';
 import type { BookmarkTree, PasswordSetInfo } from '@/lib/types';
-import { getActiveSetId, hasSetData, loadSetData, listSets, saveSetData } from '@/lib/password-sets';
-import { addBookmark } from '@/lib/data-model';
+import {
+  getActiveSetId, hasSetData, loadSetData, listSets, saveSetData,
+  createSet, deleteSet, renameSet, setActiveSetId,
+} from '@/lib/password-sets';
+import { addBookmark, createEmptyTree } from '@/lib/data-model';
 import { captureException } from '@/lib/sentry';
 import { determineMode } from '@/lib/incognito';
-import { InvalidPasswordError, StorageError } from '@/lib/errors';
-
-const UNIMPLEMENTED_TYPES: MessageType[] = [
-  'CHANGE_PASSWORD', 'UPDATE_AUTO_LOCK', 'CREATE_SET', 'RENAME_SET',
-  'DELETE_SET', 'SWITCH_SET', 'CLEAR_ALL',
-  'IMPORT_CHROME_BOOKMARKS', 'IMPORT_BACKUP', 'EXPORT_BACKUP',
-];
+import { InvalidPasswordError, StorageError, ImportError } from '@/lib/errors';
+import { convertChromeBookmarks } from '@/lib/bookmark-import';
+import { exportEncryptedBackup, importEncryptedBackup } from '@/lib/bookmark-backup';
 
 const TEST_TREE: BookmarkTree = { type: 'folder', id: 'r', name: 'Root', children: [], dateAdded: 0 };
 
@@ -54,49 +67,6 @@ function mockSuccessfulUnlock(): void {
   vi.spyOn(browser.extension, 'isAllowedIncognitoAccess')
     .mockImplementation(() => Promise.resolve(false));
 }
-
-function buildMessage(type: MessageType) {
-  const tree: BookmarkTree = TEST_TREE;
-  switch (type) {
-    case 'UNLOCK': return { type, password: 'p' } as const;
-    case 'LOCK': return { type } as const;
-    case 'SAVE': return { type, tree } as const;
-    case 'GET_STATE': return { type } as const;
-    case 'ADD_BOOKMARK': return { type, url: 'https://x.com', title: 't' } as const;
-    case 'GET_INCOGNITO_STATE': return { type } as const;
-    case 'CHANGE_PASSWORD': return { type, currentPassword: 'a', newPassword: 'b' } as const;
-    case 'UPDATE_AUTO_LOCK': return { type, minutes: 5 } as const;
-    case 'CREATE_SET': return { type, name: 'n', password: 'p' } as const;
-    case 'RENAME_SET': return { type, setId: '1', newName: 'n' } as const;
-    case 'DELETE_SET': return { type, setId: '1' } as const;
-    case 'SWITCH_SET': return { type, setId: '1', password: 'p' } as const;
-    case 'CLEAR_ALL': return { type, confirmation: 'DELETE' } as const;
-    case 'IMPORT_CHROME_BOOKMARKS': return { type } as const;
-    case 'IMPORT_BACKUP': return { type, blob: 'b64', password: 'p' } as const;
-    case 'EXPORT_BACKUP': return { type } as const;
-  }
-}
-
-describe('handleMessage — unimplemented types', () => {
-  for (const type of UNIMPLEMENTED_TYPES) {
-    it(`returns NOT_IMPLEMENTED for ${type}`, async () => {
-      // #given
-      const msg = buildMessage(type);
-      // #when
-      const response: BackgroundResponse = await handleMessage(msg);
-      // #then
-      expect(response.success).toBe(false);
-      if (!response.success) {
-        expect(response.error).toBe('NOT_IMPLEMENTED');
-        expect(response.code).toBe(type);
-      }
-    });
-  }
-
-  it('covers all 10 unimplemented message types', () => {
-    expect(UNIMPLEMENTED_TYPES).toHaveLength(10);
-  });
-});
 
 describe('handleMessage — UNLOCK', () => {
   beforeEach(() => {
@@ -660,5 +630,423 @@ describe('Sentry error wiring', () => {
     // #then
     expect(captureException).toHaveBeenCalledWith(expect.any(Error));
     expect(response).toEqual({ success: false, error: 'Internal error', code: 'INTERNAL_ERROR' });
+  });
+});
+
+describe('handleMessage — CHANGE_PASSWORD', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await handleMessage({ type: 'LOCK' });
+  });
+
+  it('decrypts with old password and re-encrypts with new', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    await handleMessage({ type: 'UNLOCK', password: 'old-pw' });
+    vi.mocked(loadSetData).mockResolvedValue({ success: true, data: '{"tree":"data"}' });
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    // #when
+    const response = await handleMessage({
+      type: 'CHANGE_PASSWORD', currentPassword: 'old-pw', newPassword: 'new-pw',
+    });
+    // #then
+    expect(response.success).toBe(true);
+    expect(vi.mocked(loadSetData)).toHaveBeenCalledWith('default', 'old-pw');
+    expect(vi.mocked(saveSetData)).toHaveBeenCalledWith('default', '{"tree":"data"}', 'new-pw');
+  });
+
+  it('returns INVALID_PASSWORD for wrong current password', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    await handleMessage({ type: 'UNLOCK', password: 'pw' });
+    vi.mocked(loadSetData).mockResolvedValue({
+      success: false, error: new InvalidPasswordError('wrong'),
+    });
+    // #when
+    const response = await handleMessage({
+      type: 'CHANGE_PASSWORD', currentPassword: 'wrong', newPassword: 'new',
+    });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_PASSWORD');
+    }
+  });
+
+  it('returns NOT_UNLOCKED when locked', async () => {
+    // #when
+    const response = await handleMessage({
+      type: 'CHANGE_PASSWORD', currentPassword: 'a', newPassword: 'b',
+    });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
+    }
+  });
+
+  it('returns STORAGE_ERROR when re-encrypt fails', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    await handleMessage({ type: 'UNLOCK', password: 'old-pw' });
+    vi.mocked(loadSetData).mockResolvedValue({ success: true, data: '{"tree":"data"}' });
+    vi.mocked(saveSetData).mockResolvedValue({
+      success: false,
+      error: new StorageError('write_failed', { operation: 'write', reason: 'write_failed' }),
+    });
+    // #when
+    const response = await handleMessage({
+      type: 'CHANGE_PASSWORD', currentPassword: 'old-pw', newPassword: 'new-pw',
+    });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('STORAGE_ERROR');
+    }
+  });
+});
+
+describe('handleMessage — UPDATE_AUTO_LOCK', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('clears and recreates alarm with new minutes', async () => {
+    // #when
+    const response = await handleMessage({ type: 'UPDATE_AUTO_LOCK', minutes: 5 });
+    // #then
+    expect(response.success).toBe(true);
+    const alarm = await browser.alarms.get('hush_auto_lock');
+    expect(alarm).toBeDefined();
+  });
+
+  it('rejects 0 minutes', async () => {
+    // #when
+    const response = await handleMessage({ type: 'UPDATE_AUTO_LOCK', minutes: 0 });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_INPUT');
+    }
+  });
+
+  it('rejects negative minutes', async () => {
+    // #when
+    const response = await handleMessage({ type: 'UPDATE_AUTO_LOCK', minutes: -5 });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_INPUT');
+    }
+  });
+
+  it('rejects float minutes', async () => {
+    // #when
+    const response = await handleMessage({ type: 'UPDATE_AUTO_LOCK', minutes: 5.5 });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_INPUT');
+    }
+  });
+});
+
+describe('handleMessage — CREATE_SET', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('creates set in manifest and saves empty tree encrypted', async () => {
+    // #given
+    const newSet = { id: 'new-id', name: 'Work', createdAt: 1, lastAccessedAt: 1, isDefault: false };
+    vi.mocked(createSet).mockResolvedValue({ success: true, data: newSet });
+    vi.mocked(createEmptyTree).mockReturnValue(TEST_TREE);
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    // #when
+    const response = await handleMessage({ type: 'CREATE_SET', name: 'Work', password: 'pw' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      expect(response.data).toEqual({ setId: 'new-id' });
+    }
+    expect(vi.mocked(createSet)).toHaveBeenCalledWith('Work');
+    expect(vi.mocked(saveSetData)).toHaveBeenCalledWith('new-id', JSON.stringify(TEST_TREE), 'pw');
+  });
+
+  it('returns STORAGE_ERROR when createSet fails', async () => {
+    // #given
+    vi.mocked(createSet).mockResolvedValue({
+      success: false,
+      error: new StorageError('write_failed', { operation: 'write', reason: 'write_failed' }),
+    });
+    // #when
+    const response = await handleMessage({ type: 'CREATE_SET', name: 'X', password: 'pw' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('STORAGE_ERROR');
+    }
+  });
+
+  it('returns STORAGE_ERROR when saveSetData fails after set creation', async () => {
+    // #given
+    const newSet = { id: 'new-id', name: 'Work', createdAt: 1, lastAccessedAt: 1, isDefault: false };
+    vi.mocked(createSet).mockResolvedValue({ success: true, data: newSet });
+    vi.mocked(createEmptyTree).mockReturnValue(TEST_TREE);
+    vi.mocked(saveSetData).mockResolvedValue({
+      success: false,
+      error: new StorageError('write_failed', { operation: 'write', reason: 'write_failed' }),
+    });
+    // #when
+    const response = await handleMessage({ type: 'CREATE_SET', name: 'Work', password: 'pw' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('STORAGE_ERROR');
+    }
+  });
+});
+
+describe('handleMessage — RENAME_SET', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('renames set in manifest', async () => {
+    // #given
+    vi.mocked(renameSet).mockResolvedValue({ success: true, data: undefined });
+    // #when
+    const response = await handleMessage({ type: 'RENAME_SET', setId: 's1', newName: 'Personal' });
+    // #then
+    expect(response.success).toBe(true);
+    expect(vi.mocked(renameSet)).toHaveBeenCalledWith('s1', 'Personal');
+  });
+});
+
+describe('handleMessage — DELETE_SET', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('removes set from manifest and deletes storage key', async () => {
+    // #given
+    vi.mocked(deleteSet).mockResolvedValue({ success: true, data: undefined });
+    // #when
+    const response = await handleMessage({ type: 'DELETE_SET', setId: 's1' });
+    // #then
+    expect(response.success).toBe(true);
+    expect(vi.mocked(deleteSet)).toHaveBeenCalledWith('s1');
+  });
+});
+
+describe('handleMessage — SWITCH_SET', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await handleMessage({ type: 'LOCK' });
+  });
+
+  it('locks current set and loads new set returning SessionState', async () => {
+    // #given — unlock first to have an active session
+    mockSuccessfulUnlock();
+    await handleMessage({ type: 'UNLOCK', password: 'pw1' });
+    vi.mocked(setActiveSetId).mockResolvedValue({ success: true, data: undefined });
+    vi.mocked(loadSetData).mockResolvedValue({ success: true, data: JSON.stringify(TEST_TREE) });
+    vi.mocked(listSets).mockResolvedValue({ success: true, data: TEST_SETS });
+    vi.spyOn(browser.extension, 'isAllowedIncognitoAccess')
+      .mockImplementation(() => Promise.resolve(false));
+    // #when
+    const response = await handleMessage({ type: 'SWITCH_SET', setId: 'new-set', password: 'pw2' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      const state = response.data as SessionState;
+      expect(state.isUnlocked).toBe(true);
+      expect(state.activeSetId).toBe('new-set');
+      expect(state.tree).toEqual(TEST_TREE);
+    }
+    expect(vi.mocked(setActiveSetId)).toHaveBeenCalledWith('new-set');
+    expect(vi.mocked(loadSetData)).toHaveBeenCalledWith('new-set', 'pw2');
+  });
+
+  it('returns INVALID_PASSWORD for wrong password', async () => {
+    // #given
+    vi.mocked(setActiveSetId).mockResolvedValue({ success: true, data: undefined });
+    vi.mocked(loadSetData).mockResolvedValue({
+      success: false, error: new InvalidPasswordError('wrong'),
+    });
+    // #when
+    const response = await handleMessage({ type: 'SWITCH_SET', setId: 's1', password: 'wrong' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_PASSWORD');
+    }
+  });
+});
+
+describe('handleMessage — CLEAR_ALL', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('with confirmation DELETE clears all storage and locks session', async () => {
+    // #given — unlock first
+    mockSuccessfulUnlock();
+    await handleMessage({ type: 'UNLOCK', password: 'pw' });
+    // #when
+    const response = await handleMessage({ type: 'CLEAR_ALL', confirmation: 'DELETE' });
+    // #then
+    expect(response.success).toBe(true);
+    const stateResponse = await handleMessage({ type: 'GET_STATE' });
+    if (stateResponse.success) {
+      const state = stateResponse.data as SessionState;
+      expect(state.isUnlocked).toBe(false);
+    }
+  });
+
+  it('rejects if confirmation is not DELETE', async () => {
+    // #when — cast to bypass TypeScript literal type
+    const response = await handleMessage(
+      { type: 'CLEAR_ALL', confirmation: 'WRONG' as 'DELETE' },
+    );
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_INPUT');
+    }
+  });
+});
+
+describe('handleMessage — IMPORT_CHROME_BOOKMARKS', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('calls getTree, extracts children, and converts', async () => {
+    // #given
+    const chromeChildren = [{ id: '1', title: 'Bar', url: 'https://bar.com' }];
+    vi.spyOn(browser.bookmarks, 'getTree').mockResolvedValue([
+      { id: '0', title: '', children: chromeChildren },
+    ] as unknown as ReturnType<typeof browser.bookmarks.getTree> extends Promise<infer U> ? U : never);
+    const importedTree: BookmarkTree = { ...TEST_TREE, name: 'Imported' };
+    vi.mocked(convertChromeBookmarks).mockReturnValue({
+      success: true,
+      data: { tree: importedTree, stats: { bookmarksImported: 1, foldersImported: 0, errors: [] } },
+    });
+    // #when
+    const response = await handleMessage({ type: 'IMPORT_CHROME_BOOKMARKS' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      const data = response.data as { tree: BookmarkTree; stats: unknown };
+      expect(data.tree).toEqual(importedTree);
+    }
+    expect(vi.mocked(convertChromeBookmarks)).toHaveBeenCalledWith(chromeChildren);
+  });
+});
+
+describe('handleMessage — IMPORT_BACKUP', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('calls importEncryptedBackup with blob and password', async () => {
+    // #given
+    vi.mocked(importEncryptedBackup).mockResolvedValue({
+      success: true, data: TEST_TREE,
+    });
+    // #when
+    const response = await handleMessage({ type: 'IMPORT_BACKUP', blob: 'b64data', password: 'pw' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      const data = response.data as { tree: BookmarkTree };
+      expect(data.tree).toEqual(TEST_TREE);
+    }
+    expect(vi.mocked(importEncryptedBackup)).toHaveBeenCalledWith('b64data', 'pw');
+  });
+
+  it('returns INVALID_PASSWORD when backup password is wrong', async () => {
+    // #given
+    vi.mocked(importEncryptedBackup).mockResolvedValue({
+      success: false, error: new InvalidPasswordError('wrong password'),
+    });
+    // #when
+    const response = await handleMessage({ type: 'IMPORT_BACKUP', blob: 'b64', password: 'wrong' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_PASSWORD');
+    }
+  });
+
+  it('returns IMPORT_ERROR for corrupted backup', async () => {
+    // #given
+    vi.mocked(importEncryptedBackup).mockResolvedValue({
+      success: false,
+      error: new ImportError('corrupted', { source: 'backup', format: 'hush-backup' }),
+    });
+    // #when
+    const response = await handleMessage({ type: 'IMPORT_BACKUP', blob: 'bad', password: 'pw' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('IMPORT_ERROR');
+    }
+  });
+});
+
+describe('handleMessage — EXPORT_BACKUP', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await handleMessage({ type: 'LOCK' });
+  });
+
+  it('calls exportEncryptedBackup with cached tree and password', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    vi.mocked(saveSetData).mockResolvedValue({ success: true, data: undefined });
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    vi.mocked(exportEncryptedBackup).mockResolvedValue('encrypted-blob');
+    // #when
+    const response = await handleMessage({ type: 'EXPORT_BACKUP' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      const data = response.data as { blob: string };
+      expect(data.blob).toBe('encrypted-blob');
+    }
+    expect(vi.mocked(exportEncryptedBackup)).toHaveBeenCalledWith(TEST_TREE, 'test-pw');
+  });
+
+  it('returns NOT_UNLOCKED when session is locked', async () => {
+    // #when
+    const response = await handleMessage({ type: 'EXPORT_BACKUP' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
+    }
   });
 });

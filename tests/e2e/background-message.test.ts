@@ -191,7 +191,7 @@ test.describe('Background service worker: BG-003/BG-004', () => {
     await page.close();
   });
 
-  test('NOT_IMPLEMENTED handler returns correct shape', async ({ context, extensionId }) => {
+  test('CHANGE_PASSWORD without unlock returns NOT_UNLOCKED', async ({ context, extensionId }) => {
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
@@ -205,8 +205,7 @@ test.describe('Background service worker: BG-003/BG-004', () => {
 
     expect(response.success).toBe(false);
     if (!response.success) {
-      expect(response.error).toBe('NOT_IMPLEMENTED');
-      expect(response.code).toBe('CHANGE_PASSWORD');
+      expect(response.code).toBe('NOT_UNLOCKED');
     }
     await page.close();
   });
@@ -251,24 +250,17 @@ test.describe('Background service worker: BG-005', () => {
     await page.close();
   });
 
-  test('multiple NOT_IMPLEMENTED handlers respond consistently', async ({ context, extensionId }) => {
+  test('EXPORT_BACKUP without unlock returns NOT_UNLOCKED', async ({ context, extensionId }) => {
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
-    const results = await page.evaluate<BackgroundResponse[]>(async () => {
-      const r1 = await chrome.runtime.sendMessage({ type: 'EXPORT_BACKUP' });
-      const r2 = await chrome.runtime.sendMessage({ type: 'IMPORT_CHROME_BOOKMARKS' });
-      return [r1, r2];
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({ type: 'EXPORT_BACKUP' });
     });
 
-    expect(results).toHaveLength(2);
-    for (const [i, expectedCode] of (['EXPORT_BACKUP', 'IMPORT_CHROME_BOOKMARKS'] as const).entries()) {
-      const r = results[i]!;
-      expect(r.success).toBe(false);
-      if (!r.success) {
-        expect(r.error).toBe('NOT_IMPLEMENTED');
-        expect(r.code).toBe(expectedCode);
-      }
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('NOT_UNLOCKED');
     }
     await page.close();
   });
@@ -292,6 +284,67 @@ test.describe('Background service worker: BG-005', () => {
         const state = r.data as { isUnlocked: boolean };
         expect(state.isUnlocked).toBe(false);
       }
+    }
+    await page.close();
+  });
+});
+
+test.describe('Background service worker: SETTINGS-001a', () => {
+  test('UPDATE_AUTO_LOCK with valid minutes returns success', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({ type: 'UPDATE_AUTO_LOCK', minutes: 5 });
+    });
+
+    expect(response.success).toBe(true);
+    await page.close();
+  });
+
+  test('UPDATE_AUTO_LOCK with invalid minutes returns INVALID_INPUT', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({ type: 'UPDATE_AUTO_LOCK', minutes: -1 });
+    });
+
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_INPUT');
+    }
+    await page.close();
+  });
+
+  test('CLEAR_ALL with wrong confirmation returns INVALID_INPUT', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({ type: 'CLEAR_ALL', confirmation: 'WRONG' });
+    });
+
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_INPUT');
+    }
+    await page.close();
+  });
+
+  test('IMPORT_BACKUP with invalid blob returns error', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({
+        type: 'IMPORT_BACKUP', blob: 'not-valid-json', password: 'pw',
+      });
+    });
+
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('IMPORT_ERROR');
     }
     await page.close();
   });
