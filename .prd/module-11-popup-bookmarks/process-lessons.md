@@ -100,6 +100,20 @@ Lifecycle tests (add → edit → delete → verify empty state) complement gran
 
 When a code review flags a pattern (e.g., `satisfies never` over `_exhaustive: never`), grep the entire codebase for all instances — don't fix only the file under review. background.ts had the same `const _exhaustive: never` pattern that BookmarkTree.tsx was fixed for. Fix all canonical instances in one pass.
 
+## CodeRabbit VSC Post-Review (2026-03-15)
+
+### Silent Failures Are Bugs
+
+`if (!result.success) return` with no user feedback and `catch { // save failed }` empty catch blocks are production bugs, not acceptable shortcuts. TreeScreen had both. Fix: `setActionError(...)` state + `console.error` with structured context. `console.error` for actual errors is NOT a violation of "Zero console.log" — that rule targets debug logging, not error logging.
+
+### shadcn Upstream Bugs: Fix In-Place, Document Why
+
+CLAUDE.md says "Never modify `components/ui/` directly." But when `shadcn add --diff` confirms our file IS the latest upstream and the upstream ships a broken selector (`*:[svg]` — attribute selector, not element selector), leaving it unfixed is worse than the rule violation. Fix it, commit message documents the upstream bug, move on. Re-installing via `shadcn add` won't help when upstream is the source of the bug.
+
+### Progress.md Corrections Need Traceability
+
+When correcting clearly wrong data in an append-only audit log (vitest count 39 was impossible given BOOKMARK-001 already had 42), add a traceability note referencing the commit SHAs that prove the correction. Don't silently change numbers.
+
 ### E2E Fixture Deduplication
 
 When multiple test groups share identical fixture setup (same steps, different seed data), extract a factory function: `makeTreeTest(treeData)` returns the extended test with parameterized data. Eliminates copy-paste divergence risk.
