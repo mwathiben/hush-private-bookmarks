@@ -6,6 +6,12 @@ type Theme = 'light' | 'dark' | 'system';
 
 const STORAGE_KEY = 'hush-theme';
 
+const THEME_OPTIONS: readonly { readonly value: Theme; readonly label: string; readonly icon: typeof Sun }[] = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
+];
+
 function applyTheme(t: Theme): void {
   if (t === 'dark') {
     document.documentElement.classList.add('dark');
@@ -28,15 +34,9 @@ export function ThemeToggle(): React.JSX.Element {
     setTheme(t);
   }, []);
 
-  const options: readonly { readonly value: Theme; readonly label: string; readonly icon: typeof Sun }[] = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-  ];
-
   return (
     <div className="flex gap-2">
-      {options.map(({ value, label, icon: Icon }) => (
+      {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
         <Button
           key={value}
           variant={theme === value ? 'default' : 'outline'}

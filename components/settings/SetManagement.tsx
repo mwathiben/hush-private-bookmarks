@@ -48,7 +48,6 @@ export function SetManagement(): React.JSX.Element {
       const response = await sendMessage({ type: 'CREATE_SET', name: newSetName, password: newSetPassword });
       if (!response.success) {
         setError(response.error);
-        setPending(false);
         return;
       }
       if (isSessionState(response.data)) {
@@ -59,8 +58,9 @@ export function SetManagement(): React.JSX.Element {
       setNewSetPassword('');
     } catch {
       setError('Failed to create set');
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }, [newSetName, newSetPassword, sendMessage, dispatch]);
 
   const handleRename = useCallback(async (): Promise<void> => {
@@ -71,7 +71,6 @@ export function SetManagement(): React.JSX.Element {
       const response = await sendMessage({ type: 'RENAME_SET', setId: renameTarget.id, newName: renameName });
       if (!response.success) {
         setError(response.error);
-        setPending(false);
         return;
       }
       await refreshSession();
@@ -79,8 +78,9 @@ export function SetManagement(): React.JSX.Element {
       setRenameName('');
     } catch {
       setError('Failed to rename set');
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }, [renameTarget, renameName, sendMessage, refreshSession]);
 
   const handleDelete = useCallback(async (): Promise<void> => {
@@ -91,15 +91,15 @@ export function SetManagement(): React.JSX.Element {
       const response = await sendMessage({ type: 'DELETE_SET', setId: deleteTarget.id });
       if (!response.success) {
         setError(response.error);
-        setPending(false);
         return;
       }
       await refreshSession();
       setDeleteTarget(null);
     } catch {
       setError('Failed to delete set');
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }, [deleteTarget, sendMessage, refreshSession]);
 
   return (
@@ -148,7 +148,7 @@ export function SetManagement(): React.JSX.Element {
         <p className="text-sm text-destructive" role="alert">{error}</p>
       )}
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) { setNewSetName(''); setNewSetPassword(''); } setCreateOpen(open); }}>
         <DialogContent className="sm:max-w-[360px]">
           <DialogHeader>
             <DialogTitle>Create New Set</DialogTitle>

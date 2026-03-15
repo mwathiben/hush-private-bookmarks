@@ -62,7 +62,7 @@ export function AutoLockConfig(): React.JSX.Element {
         <p className="text-sm text-destructive" role="alert">{error}</p>
       )}
       {status === 'success' && (
-        <p className="text-sm text-green-600" role="status">Auto-lock updated</p>
+        <p className="text-sm text-primary" role="status">Auto-lock updated</p>
       )}
     </div>
   );

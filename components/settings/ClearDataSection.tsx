@@ -21,7 +21,6 @@ export function ClearDataSection(): React.JSX.Element {
       const response = await sendMessage({ type: 'CLEAR_ALL', confirmation: 'DELETE' });
       if (!response.success) {
         setError(response.error);
-        setPending(false);
         return;
       }
 
@@ -31,6 +30,7 @@ export function ClearDataSection(): React.JSX.Element {
       }
     } catch {
       setError('Failed to clear data');
+    } finally {
       setPending(false);
     }
   }, [sendMessage, dispatch]);
