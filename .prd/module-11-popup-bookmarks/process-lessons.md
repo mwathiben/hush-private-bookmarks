@@ -36,3 +36,11 @@ Default to headed locally, headless only in CI. Implementation: `headless: !!pro
 ### TDD Vertical Slices
 
 Horizontal slicing (all tests first) produces tests that test imagined behavior. Vertical slicing (one test → one impl → repeat) produces tests that verify actual behavior. The difference is significant — vertical slice tests survived all refactoring unchanged.
+
+### Security Test Isolation
+
+When testing protocol/scheme rejection (e.g., `javascript:`, `data:`), use one test per scheme. A combined test title like "rejects javascript: and data: URLs" that only exercises one scheme is misleading — split into isolated tests for independent failure reporting.
+
+### Deslop: Nested Ternaries
+
+Nested ternaries in JSX (`saving ? 'X' : isEdit ? 'Y' : 'Z'`) violate project conventions. Extract to a helper function (`buttonLabel(saving, isEdit)`) for readability.
