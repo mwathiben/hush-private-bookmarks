@@ -183,7 +183,7 @@ export function SetManagement(): React.JSX.Element {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={renameTarget !== null} onOpenChange={(open) => { if (!open) setRenameTarget(null); }}>
+      <Dialog open={renameTarget !== null} onOpenChange={(open) => { if (!open) { setRenameTarget(null); setRenameName(''); } }}>
         <DialogContent className="sm:max-w-[360px]">
           <DialogHeader>
             <DialogTitle>Rename Set</DialogTitle>

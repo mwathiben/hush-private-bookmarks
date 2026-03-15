@@ -34,12 +34,12 @@ export function RecoveryPhraseVerify(): React.JSX.Element {
         aria-label="Recovery phrase"
       />
       {result === 'valid' && (
-        <p className="text-sm text-green-600" role="status">Valid recovery phrase</p>
+        <p className="text-sm text-primary" role="status">Valid recovery phrase</p>
       )}
       {result === 'invalid' && (
         <p className="text-sm text-destructive" role="alert">Invalid recovery phrase</p>
       )}
-      <Button type="button" size="sm" variant="outline" onClick={handleVerify}>
+      <Button type="button" size="sm" variant="outline" onClick={handleVerify} disabled={!normalizePhrase(phrase)}>
         Verify
       </Button>
     </div>

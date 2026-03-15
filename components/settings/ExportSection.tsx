@@ -77,7 +77,7 @@ export function ExportSection(): React.JSX.Element {
         <p className="text-sm text-destructive" role="alert">{error}</p>
       )}
       {status === 'success' && (
-        <p className="text-sm text-green-600" role="status">Backup exported</p>
+        <p className="text-sm text-primary" role="status">Backup exported</p>
       )}
     </div>
   );

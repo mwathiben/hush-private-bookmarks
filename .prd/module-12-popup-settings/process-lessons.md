@@ -138,3 +138,33 @@ Use semantic tokens (`text-primary`, `text-destructive`, `text-muted-foreground`
 ### Context Session Continuation: Re-verify After Compaction
 
 When a conversation is continued from compacted context, ALL verification must be re-run in the new session before claiming completion. Compacted summaries say "tests passed" but that's a claim from a previous session — not evidence. The verification-before-completion skill applies per-session, not per-lifetime.
+
+## SETTINGS-004 (2026-03-15)
+
+### Scope Dialog Locators to Avoid Ambiguity
+
+When a page has multiple password inputs (settings screen has current/new/confirm), `getByPlaceholder('Password')` in a dialog will resolve to ALL matching elements across the page. Always scope to the dialog first: `const dialog = page.getByRole('dialog'); dialog.getByPlaceholder('Password')`. This prevents strict mode violations.
+
+### CREATE_SET Auto-Switches and Navigates Away
+
+`CREATE_SET` handler calls `activateSession` which updates the session state, causing `deriveScreen()` in App.tsx to navigate from settings to tree screen. E2E tests must account for this: after creating a set, wait for tree screen, then navigate back to settings to verify the set appears in the list.
+
+### Service Worker Can't Self-Message
+
+`chrome.runtime.sendMessage()` from within a service worker's `evaluate()` context fails with "Receiving end does not exist" — the SW can't message itself. To send messages like `LOCK`, use a page context instead: `page.evaluate(() => chrome.runtime.sendMessage({ type: 'LOCK' }))`.
+
+### Backup Blob Structure Verification
+
+The export backup blob structure is `{ version, store: { salt, iv, encrypted, iterations } }` — not flat. E2E tests that verify backup content must navigate into `parsed.store` before checking for crypto fields.
+
+### Tracer Bullet Analysis Catches Pre-existing Issues
+
+Reading all touched files before writing tests revealed 6 pre-existing issues across 6 files (4 semantic color violations, 1 state cleanup bug, 1 missing input validation, 1 missing timeout). Fix these during the quality gate story — they're part of the "zero regressions" acceptance criterion.
+
+### Fixture Duplication vs Shared Extraction
+
+The settingsPage fixture (86 lines of crypto seeding + login + navigation) is duplicated between `popup-settings.test.ts` and `popup-settings-flows.test.ts`. For 2 consumers, duplication is acceptable — shared extraction adds coupling and makes each test file harder to understand in isolation. Extract only when 3+ files share the same fixture.
+
+### E2E Timeout Strategy for PBKDF2 Operations
+
+PBKDF2 with 600K iterations takes 30-60s per crypto operation. Tests involving multiple crypto ops (password change = 2x, create set = 1x) need `test.setTimeout(180_000)`. Individual assertions that wait for crypto results need 60-120s timeouts. Under-estimating timeouts causes flaky CI failures that are hard to reproduce locally.

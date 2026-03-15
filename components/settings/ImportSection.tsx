@@ -242,7 +242,7 @@ export function ImportSection(): React.JSX.Element {
         <p className="text-sm text-destructive" role="alert">{error}</p>
       )}
       {stats && (
-        <p className="text-sm text-green-600" role="status">
+        <p className="text-sm text-primary" role="status">
           Imported {stats.bookmarksImported} bookmarks, {stats.foldersImported} {stats.foldersImported === 1 ? 'folder' : 'folders'}
         </p>
       )}

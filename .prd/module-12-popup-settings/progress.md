@@ -8,7 +8,7 @@
 | SETTINGS-001b | SettingsScreen shell with password change and recovery verification | PASSED | 1 |
 | SETTINGS-002 | Import/Export: Chrome bookmarks, HTML file, encrypted backup | PASSED | 1 |
 | SETTINGS-003 | Set management, auto-lock, theme, and clear data | PASSED | 1 |
-| SETTINGS-004 | E2E settings flows and integration verification | NOT STARTED | 0 |
+| SETTINGS-004 | E2E settings flows and integration verification | PASSED | 1 |
 
 **Critical Path**: 001a → 001b → 002/003 → 004
 
@@ -269,3 +269,82 @@ wxt build: success (812.63 KB uncompressed)
 Module boundaries: zero browser.* or console.* in components/settings/
 File line counts: ThemeToggle 53, AutoLockConfig 69, ClearDataSection 89, SetManagement 225, SettingsScreen 99 (all under 300)
 ```
+
+---
+
+## Session: 2026-03-15T22:00:00Z
+**Task**: SETTINGS-004 - E2E settings flows and integration verification
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created `tests/e2e/popup-settings-flows.test.ts` with 4 integration-level E2E flow tests
+- Fixed 4 semantic color violations: `text-green-600` → `text-primary` in ExportSection, PasswordChangeForm, ImportSection, RecoveryPhraseVerify
+- Fixed SetManagement rename dialog state cleanup: `renameName` not cleared on dialog dismiss
+- Fixed RecoveryPhraseVerify: Verify button now disabled on empty/whitespace-only input
+- Fixed popup-settings.test.ts: added explicit timeout to `waitForEvent('download')`
+- Ran full verification suite: tsc, eslint, vitest (820/820), wxt build, Playwright (174/174)
+- Verified zero NOT_IMPLEMENTED in entrypoints/background/
+- Self-review with CodeRabbit + deslop agents: no actionable findings
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| tests/e2e/popup-settings-flows.test.ts | 4 flow tests: theme persistence, create/delete set lifecycle, export/import round-trip, password change + re-login (317 lines) |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| components/settings/ExportSection.tsx | `text-green-600` → `text-primary` (line 80) |
+| components/settings/PasswordChangeForm.tsx | `text-green-600` → `text-primary` (line 100) |
+| components/settings/ImportSection.tsx | `text-green-600` → `text-primary` (line 245) |
+| components/settings/RecoveryPhraseVerify.tsx | `text-green-600` → `text-primary` (line 37), disabled button on empty phrase (line 42) |
+| components/settings/SetManagement.tsx | Added `setRenameName('')` to rename dialog onOpenChange cleanup (line 186) |
+| tests/e2e/popup-settings.test.ts | Added `{ timeout: 30_000 }` to download waitForEvent (line 142) |
+
+### Acceptance Criteria Verification
+
+1. [PASS] E2E settings flows pass — 4/4 new flow tests passing
+2. [PASS] Zero NOT_IMPLEMENTED in background — `grep NOT_IMPLEMENTED entrypoints/background/` returns 0
+3. [PASS] Zero regressions — 820/820 unit tests, 174/174 E2E tests
+4. [PASS] All components ≤ 300 lines — max is ImportSection at 251
+5. [PASS] components/settings/ directory confirmed intentional — 8 files
+
+### Verification Results
+
+```
+tsc --noEmit: clean (zero errors)
+vitest run: 820/820 passed
+eslint: clean on changed files
+Playwright E2E: 174/174 passed (4 new SETTINGS-004 + 170 existing)
+wxt build: success (812.69 KB uncompressed)
+grep NOT_IMPLEMENTED entrypoints/background/: 0 results
+File line counts: all settings components under 300 lines
+```
+
+### Pre-existing Issues Fixed
+
+| Issue | File | Fix |
+|-------|------|-----|
+| Semantic color violation (×4) | ExportSection, PasswordChangeForm, ImportSection, RecoveryPhraseVerify | `text-green-600` → `text-primary` |
+| Stale rename dialog state | SetManagement.tsx:186 | Added `setRenameName('')` to onOpenChange |
+| Empty input not disabled | RecoveryPhraseVerify.tsx:42 | Added `disabled={!normalizePhrase(phrase)}` |
+| Missing timeout on download wait | popup-settings.test.ts:142 | Added `{ timeout: 30_000 }` |
+
+---
+
+## Module Summary
+
+**All 5 stories PASSED on first attempt.**
+
+| Story | Tests Added | Files Created | Files Modified |
+|-------|------------|---------------|----------------|
+| SETTINGS-001a | 22 unit + 4 E2E | 2 | 3 |
+| SETTINGS-001b | 9 unit + 5 E2E | 7 | 5 |
+| SETTINGS-002 | 7 unit + 7 E2E | 6 | 4 |
+| SETTINGS-003 | 13 unit + 6 E2E | 8 | 5 |
+| SETTINGS-004 | 4 E2E | 1 | 6 |
+
+**Total**: 51 unit tests + 26 E2E tests = 77 new tests
+**Final verification**: 820 unit + 174 E2E = 994 total tests passing

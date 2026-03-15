@@ -139,7 +139,7 @@ test.describe('SettingsScreen E2E (SETTINGS-002)', () => {
   });
 
   test('export backup triggers download', async ({ settingsPage }) => {
-    const downloadPromise = settingsPage.waitForEvent('download');
+    const downloadPromise = settingsPage.waitForEvent('download', { timeout: 30_000 });
     await settingsPage.getByRole('button', { name: /export backup/i }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(

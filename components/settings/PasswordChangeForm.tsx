@@ -97,7 +97,7 @@ export function PasswordChangeForm(): React.JSX.Element {
         <p className="text-sm text-destructive" role="alert">{error}</p>
       )}
       {status === 'success' && (
-        <p className="text-sm text-green-600" role="status">Password changed successfully</p>
+        <p className="text-sm text-primary" role="status">Password changed successfully</p>
       )}
       <Button type="submit" size="sm" className="w-full" disabled={isPending}>
         {isPending ? 'Changing...' : 'Change Password'}
