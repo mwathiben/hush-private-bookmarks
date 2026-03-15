@@ -89,9 +89,21 @@ Both enforce compile-time exhaustive type checking. `satisfies never` doesn't de
 
 ### eslint-plugin-react-hooks Overrides
 
-- `set-state-in-effect`: OFF for `components/shared/**/*.tsx` — dialog reset pattern (setState in useEffect on `open` change) is legitimate
-- `rules-of-hooks` + `exhaustive-deps`: OFF for `tests/**` — Playwright fixture `use()` function is falsely flagged as React Hook `use`
+- `set-state-in-effect`: Use targeted `/* eslint-disable/enable */` block comments around each useEffect, not blanket file-level overrides in eslint.config.js. `eslint-disable-next-line` only covers the immediate next line and misses setState calls inside the useEffect body.
+- `rules-of-hooks` + `exhaustive-deps`: OFF for `tests/e2e/**/*.ts` only — Playwright fixture `use()` function is falsely flagged as React Hook `use`
 
 ### Lifecycle Tests vs Granular Tests
 
 Lifecycle tests (add → edit → delete → verify empty state) complement granular tests but don't replace them. Granular tests isolate failures; lifecycle tests catch state transition bugs across operations. Both are needed.
+
+### Apply Flagged Patterns Codebase-Wide
+
+When a code review flags a pattern (e.g., `satisfies never` over `_exhaustive: never`), grep the entire codebase for all instances — don't fix only the file under review. background.ts had the same `const _exhaustive: never` pattern that BookmarkTree.tsx was fixed for. Fix all canonical instances in one pass.
+
+### E2E Fixture Deduplication
+
+When multiple test groups share identical fixture setup (same steps, different seed data), extract a factory function: `makeTreeTest(treeData)` returns the extended test with parameterized data. Eliminates copy-paste divergence risk.
+
+### Cross-Folder Move Testing
+
+Single-folder move tests (root → Work) don't exercise the code path where a bookmark moves between two non-root folders. Add cross-folder tests (root → Work → Personal) to cover `getByLabel('Actions', { exact: true })` selector disambiguation when multiple folder action buttons exist.
