@@ -122,3 +122,19 @@ The manager entrypoint (`entrypoints/manager/main.tsx`, built in Module 13) will
 ### Radix DialogDescription Accessibility
 
 Radix Dialog warns when `DialogContent` lacks a `DialogDescription` or explicit `aria-describedby={undefined}`. Always include `DialogDescription` with meaningful text in Dialog-based modals. Discovered during E2E — console warning doesn't break tests but indicates accessibility gap.
+
+### CodeRabbit Review: Always Use finally for setPending
+
+When async handlers use `setPending(true)` at the top and have multiple exit paths (early return on error, catch block, success path), use `finally { setPending(false) }` instead of placing `setPending(false)` after the try/catch or inside each branch. This prevents: (1) pending never resetting on success when the component unmounts (e.g., CLEAR_ALL navigates away), (2) double `setPending(false)` calls (once in catch, once after try/catch). Found in ClearDataSection and all 3 SetManagement handlers.
+
+### CodeRabbit Review: Clear Sensitive State on Dialog Dismiss
+
+When a Dialog contains password or sensitive inputs, clear them on ANY close path — not just on Cancel button click or successful submit. The `onOpenChange` handler fires when the user clicks the overlay or presses ESC, bypassing the Cancel button. Pattern: `onOpenChange={(open) => { if (!open) { clearSensitiveState(); } setOpen(open); }}`.
+
+### Semantic Color Tokens Over Raw Colors
+
+Use semantic tokens (`text-primary`, `text-destructive`, `text-muted-foreground`) instead of raw Tailwind colors (`text-green-600`). Raw colors bypass the theme system and won't adapt to dark mode or theme changes. If no semantic success token exists, `text-primary` is acceptable for positive status messages.
+
+### Context Session Continuation: Re-verify After Compaction
+
+When a conversation is continued from compacted context, ALL verification must be re-run in the new session before claiming completion. Compacted summaries say "tests passed" but that's a claim from a previous session — not evidence. The verification-before-completion skill applies per-session, not per-lifetime.
