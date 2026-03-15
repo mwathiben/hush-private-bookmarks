@@ -85,8 +85,12 @@ export function ImportSection(): React.JSX.Element {
   }, [sendMessage, tree, save]);
 
   const handleHtmlFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const file = e.target.files?.[0];
-    if (!file || !tree) return;
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    if (!file || !tree) {
+      input.value = '';
+      return;
+    }
 
     setError(null);
     setStats(null);
@@ -115,12 +119,18 @@ export function ImportSection(): React.JSX.Element {
     } catch {
       setError('Failed to import HTML file');
       setStatus('idle');
+    } finally {
+      input.value = '';
     }
   }, [tree, save]);
 
   const handleBackupFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    if (!file) {
+      input.value = '';
+      return;
+    }
 
     try {
       const blob = await file.text();
@@ -130,6 +140,8 @@ export function ImportSection(): React.JSX.Element {
       setStats(null);
     } catch {
       setError('Failed to read backup file');
+    } finally {
+      input.value = '';
     }
   }, []);
 

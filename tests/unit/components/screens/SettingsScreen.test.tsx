@@ -8,7 +8,6 @@ import type { SendMessageFn } from '@/hooks/useSendMessage';
 vi.mock('@/entrypoints/popup/App', () => ({
   useSessionDispatch: vi.fn(),
   useSessionState: vi.fn(),
-  useTreeContext: vi.fn(),
 }));
 
 vi.mock('@/hooks/useSendMessage', () => ({

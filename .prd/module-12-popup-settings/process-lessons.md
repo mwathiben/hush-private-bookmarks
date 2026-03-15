@@ -75,7 +75,7 @@ shadcn CLI resolves `@/` alias via `.wxt/` directory and places generated files 
 
 ### happy-dom File Upload Workaround
 
-`userEvent.upload()` fails in happy-dom (testing-library/user-event#940). Use `fireEvent.change(input, { target: { files: [file] } })` with manually constructed `File` objects. Access hidden file inputs via `document.querySelector('input[accept="..."]')` since they have no accessible role.
+`userEvent.upload()` fails in happy-dom (https://github.com/testing-library/user-event/issues/940). Use `fireEvent.change(input, { target: { files: [file] } })` with manually constructed `File` objects. Access hidden file inputs via `document.querySelector('input[accept="..."]')` since they have no accessible role.
 
 ### Type Guards for BackgroundResponse.data
 
@@ -84,3 +84,15 @@ shadcn CLI resolves `@/` alias via `.wxt/` directory and places generated files 
 ### Immutable Tree Merge
 
 `BookmarkTree.children` is `readonly BookmarkNode[]`. Merging requires spread: `{ ...current, children: [...current.children, imported] }`. The "Imported" wrapper folder from `parseHtmlBookmarks`/`convertChromeBookmarks` is appended whole — don't flatten its children.
+
+### File Input Reset for Re-selection
+
+Hidden `<input type="file">` elements must have `.value` reset after the handler finishes (success or failure). Otherwise selecting the same file again won't trigger `onChange` because the browser sees the value hasn't changed. Use `e.currentTarget` (stable reference) and reset in a `finally` block.
+
+### sr-only Labels for Accessibility Without Visual Noise
+
+When a section heading (e.g., "Change Password") already provides visual context, visible `<Label>` elements on each field duplicate the information and create cramped UI in popup-width layouts. Use `<Label className="sr-only">` to maintain screen reader accessibility (`htmlFor` + `id` association) while keeping the visual UI clean. The `aria-label` on PasswordInput provides a fallback, but explicit Label association is the WCAG-preferred pattern.
+
+### Unused Mock Cleanup
+
+When mocking context providers in test files, verify the component actually uses each mocked export. SettingsScreen doesn't use `useTreeContext` — its children (ImportSection, ExportSection) use `useTree` which is mocked separately. Stale mock entries are harmless but confusing during review.
