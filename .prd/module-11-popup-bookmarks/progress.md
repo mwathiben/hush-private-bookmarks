@@ -127,7 +127,8 @@ playwright test popup-bookmarks: 5 passed (18.3s)
 
 ```
 tsc --noEmit: clean (exit 0)
-vitest run --coverage: 39 test files passed, coverage thresholds met
+vitest run --coverage: 46 test files passed, coverage thresholds met
+  - Traceability: reconciled against BOOKMARK-001 (d7d7dd3) and BOOKMARK-003 (fc99ca5) commit diffs; both add tests and no test-file deletions were found.
   - AddEditBookmarkDialog: 88.23% stmts, 93.33% branches
   - AddFolderDialog: 90.32% stmts, 91.66% branches
   - TreeScreen: 100% stmts, 85.71% branches

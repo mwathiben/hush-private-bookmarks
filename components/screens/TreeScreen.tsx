@@ -25,14 +25,30 @@ type DialogState =
 const DIALOG_NONE: DialogState = { type: 'none' };
 const ROOT_PATH: readonly number[] = [];
 
+function formatPath(path: readonly number[]): string {
+  return path.length === 0 ? 'root' : path.join(' > ');
+}
+
 export default function TreeScreen(): React.JSX.Element {
   const { tree, error, save } = useTree();
   const hasChildren = tree !== null && tree.children.length > 0;
   const [dialogState, setDialogState] = useState<DialogState>(DIALOG_NONE);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const openBookmarkDialog = useCallback(() => setDialogState({ type: 'add-bookmark' }), []);
-  const openFolderDialog = useCallback(() => setDialogState({ type: 'add-folder' }), []);
-  const closeDialog = useCallback(() => setDialogState(DIALOG_NONE), []);
+  const openBookmarkDialog = useCallback(() => {
+    setActionError(null);
+    setDialogState({ type: 'add-bookmark' });
+  }, []);
+
+  const openFolderDialog = useCallback(() => {
+    setActionError(null);
+    setDialogState({ type: 'add-folder' });
+  }, []);
+
+  const closeDialog = useCallback(() => {
+    setActionError(null);
+    setDialogState(DIALOG_NONE);
+  }, []);
 
   const handleBookmarkOpenChange = useCallback((open: boolean) => {
     if (!open) setDialogState(DIALOG_NONE);
@@ -43,6 +59,7 @@ export default function TreeScreen(): React.JSX.Element {
   }, []);
 
   const handleAction = useCallback((action: ItemAction) => {
+    setActionError(null);
     switch (action.type) {
       case 'delete':
         setDialogState({ type: 'confirm-delete', path: action.path, node: action.node });
@@ -61,25 +78,66 @@ export default function TreeScreen(): React.JSX.Element {
 
   const handleConfirmDelete = useCallback(async () => {
     if (dialogState.type !== 'confirm-delete' || tree === null) return;
+
+    const sourcePath = formatPath(dialogState.path);
     const result = removeItem(tree, dialogState.path);
-    if (!result.success) return;
+
+    if (!result.success) {
+      console.error('Delete action failed before save', { path: dialogState.path, result });
+      setActionError(`Failed to delete item at path ${sourcePath}`);
+      return;
+    }
+
     try {
       const ok = await save(result.data);
-      if (ok) setDialogState(DIALOG_NONE);
-    } catch {
-      // save failed — dialog stays open
+      if (ok) {
+        setActionError(null);
+        setDialogState(DIALOG_NONE);
+        return;
+      }
+
+      setActionError('Failed to save changes');
+    } catch (caughtError) {
+      console.error('Failed to save changes after delete action', {
+        path: dialogState.path,
+        error: caughtError,
+      });
+      setActionError('Failed to save changes');
     }
   }, [dialogState, tree, save]);
 
   const handleMoveSelect = useCallback(async (folderPath: readonly number[], childrenCount: number) => {
     if (dialogState.type !== 'move' || tree === null) return;
+
+    const sourcePath = formatPath(dialogState.path);
     const result = moveItem(tree, dialogState.path, folderPath, childrenCount);
-    if (!result.success) return;
+
+    if (!result.success) {
+      console.error('Move action failed before save', {
+        fromPath: dialogState.path,
+        toPath: folderPath,
+        result,
+      });
+      setActionError(`Failed to move item from path ${sourcePath}`);
+      return;
+    }
+
     try {
       const ok = await save(result.data);
-      if (ok) setDialogState(DIALOG_NONE);
-    } catch {
-      // save failed
+      if (ok) {
+        setActionError(null);
+        setDialogState(DIALOG_NONE);
+        return;
+      }
+
+      setActionError('Failed to save changes');
+    } catch (caughtError) {
+      console.error('Failed to save changes after move action', {
+        fromPath: dialogState.path,
+        toPath: folderPath,
+        error: caughtError,
+      });
+      setActionError('Failed to save changes');
     }
   }, [dialogState, tree, save]);
 
@@ -133,6 +191,11 @@ export default function TreeScreen(): React.JSX.Element {
       {error && (
         <p className="px-4 py-2 text-sm text-destructive" role="alert">
           {error}
+        </p>
+      )}
+      {actionError && (
+        <p className="px-4 py-2 text-sm text-destructive" role="alert">
+          {actionError}
         </p>
       )}
       {hasChildren ? (
