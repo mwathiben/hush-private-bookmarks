@@ -9,7 +9,12 @@ vi.mock('@/hooks/useTree', () => ({
   useTree: vi.fn(),
 }));
 
+vi.mock('@/entrypoints/popup/App', () => ({
+  useSessionDispatch: vi.fn(),
+}));
+
 import { useTree } from '@/hooks/useTree';
+import { useSessionDispatch } from '@/entrypoints/popup/App';
 import type { UseTreeReturn } from '@/hooks/useTree';
 
 beforeAll(() => {
@@ -48,6 +53,7 @@ function setupMock(overrides?: Partial<UseTreeReturn>): void {
     ...overrides,
   };
   vi.mocked(useTree).mockReturnValue(defaults);
+  vi.mocked(useSessionDispatch).mockReturnValue(vi.fn());
 }
 
 describe('TreeScreen', () => {

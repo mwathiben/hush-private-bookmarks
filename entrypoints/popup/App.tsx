@@ -14,6 +14,7 @@ import type { BookmarkTree } from '@/lib/types';
 import LoginScreen from '@/components/screens/LoginScreen';
 import SetupScreen from '@/components/screens/SetupScreen';
 import TreeScreen from '@/components/screens/TreeScreen';
+import SettingsScreen from '@/components/screens/SettingsScreen';
 
 type Screen = 'login' | 'setup' | 'tree' | 'settings' | 'import';
 
@@ -98,7 +99,7 @@ const SCREEN_MAP: Record<Screen, ComponentType> = {
   login: LoginScreen,
   setup: SetupScreen,
   tree: TreeScreen,
-  settings: TreeScreen,
+  settings: SettingsScreen,
   import: TreeScreen,
 };
 

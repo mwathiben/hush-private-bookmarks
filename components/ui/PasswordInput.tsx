@@ -10,6 +10,7 @@ interface PasswordInputProps {
   readonly disabled?: boolean;
   readonly placeholder?: string;
   readonly autoFocus?: boolean;
+  readonly autocomplete?: string;
 }
 
 export function PasswordInput({
@@ -19,6 +20,7 @@ export function PasswordInput({
   disabled = false,
   placeholder = 'Password',
   autoFocus = false,
+  autocomplete,
 }: PasswordInputProps): React.JSX.Element {
   const [visible, setVisible] = useState(false);
 
@@ -34,6 +36,7 @@ export function PasswordInput({
         disabled={disabled}
         placeholder={placeholder}
         autoFocus={autoFocus}
+        autoComplete={autocomplete}
         aria-label={placeholder}
         className="pr-9"
       />

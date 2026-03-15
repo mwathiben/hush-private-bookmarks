@@ -28,3 +28,33 @@ When restructuring entrypoint files, update the scaffold smoke test that checks 
 ### E2E Test Updates After Handler Wiring
 
 Existing E2E tests that checked NOT_IMPLEMENTED responses need updating to check actual behavior. Plan for this when wiring handlers — it's not just unit tests that change.
+
+## SETTINGS-001b (2026-03-15)
+
+### TDD Vertical Slices for UI Components
+
+7 RED→GREEN cycles across 3 phases (PasswordChangeForm 3, RecoveryPhraseVerify 2, SettingsScreen 2). Each cycle verified independently before moving on. Key: start with rendering tests, then add behavior tests incrementally. Don't write all tests first.
+
+### Pre-existing Problems Are Still Problems
+
+Fix pre-existing violations found during analysis — 4 `console.error` calls in TreeScreen.tsx violated CLAUDE.md's zero-console-log rule. Also fix stale E2E assertions (popup-setup.test.ts expected NOT_IMPLEMENTED but handler was already implemented in 001a). Don't leave known-broken tests passing for the wrong reason.
+
+### Playwright `exact: true` for Substring Placeholders
+
+`getByPlaceholder('New password')` matches both "New password" and "Confirm new password" in strict mode. Use `{ exact: true }` to disambiguate. Similarly, `getByText('Change Password')` matches both `<h4>` headings and `<button>` text — use `getByRole('heading', { name: 'Change Password' })` instead.
+
+### React.FormEvent Generic Parameter
+
+React 19 deprecates bare `React.FormEvent`. Use `React.FormEvent<HTMLFormElement>` to match existing codebase pattern (AddFolderDialog, AddEditBookmarkDialog). Consistent typing prevents deprecation warnings.
+
+### useSessionDispatch Mock Propagation
+
+Adding `useSessionDispatch()` to an existing component (TreeScreen) breaks all its tests if the mock isn't added. When modifying a component to use a new context hook, immediately update its test file's mock setup.
+
+### PasswordInput autocomplete Prop
+
+Adding optional props to shared UI components (PasswordInput) is safe — existing callers are unaffected. But do it as a prerequisite step before the component that needs it, not as a drive-by change mid-implementation.
+
+### CREATE_SET / SetupScreen Contract Mismatch
+
+CREATE_SET handler returns `{ setId }` but SetupScreen expects `SessionState` (checked via `isSessionState()`). This causes "Invalid session data from background" error in the full setup flow. Documented as known issue — fix in a future story that aligns the CREATE_SET response with SetupScreen expectations.

@@ -1,0 +1,173 @@
+import { test as extensionTest, expect } from './fixtures/extension';
+import type { Page } from '@playwright/test';
+
+const SEED_PASSWORD = 'testpass123';
+const EMPTY_TREE = JSON.stringify({
+  type: 'folder',
+  id: 'root',
+  name: 'Root',
+  children: [],
+  dateAdded: 0,
+});
+
+const test = extensionTest.extend<{ settingsPage: Page }>({
+  settingsPage: async ({ context, extensionId }, use) => {
+    let sw = context.serviceWorkers()[0];
+    if (!sw) sw = await context.waitForEvent('serviceworker');
+
+    await sw.evaluate(
+      async ([password, plaintext]: readonly [string, string]) => {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+
+        const encoder = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+          'raw',
+          encoder.encode(password),
+          'PBKDF2',
+          false,
+          ['deriveKey'],
+        );
+        const key = await crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt, iterations: 600_000, hash: 'SHA-256' },
+          keyMaterial,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt'],
+        );
+        const encrypted = await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv, tagLength: 128 },
+          key,
+          encoder.encode(plaintext),
+        );
+
+        function toBase64(bytes: Uint8Array): string {
+          let binary = '';
+          for (let i = 0; i < bytes.length; i++)
+            binary += String.fromCharCode(bytes[i]!);
+          return btoa(binary);
+        }
+
+        const store = {
+          salt: toBase64(salt),
+          iv: toBase64(iv),
+          encrypted: toBase64(new Uint8Array(encrypted)),
+          iterations: 600_000,
+        };
+
+        const setId = 'default';
+        const manifest = {
+          version: 1,
+          activeSetId: setId,
+          sets: [
+            {
+              id: setId,
+              name: 'Default',
+              createdAt: Date.now(),
+              lastAccessedAt: Date.now(),
+              isDefault: true,
+            },
+          ],
+        };
+
+        await chrome.storage.local.set({
+          hush_manifest: manifest,
+          holyPrivateData: store,
+        });
+      },
+      [SEED_PASSWORD, EMPTY_TREE] as const,
+    );
+
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    await expect(page.getByTestId('login-screen')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const input = page.getByPlaceholder('Password');
+    await input.click();
+    await input.pressSequentially(SEED_PASSWORD, { delay: 50 });
+    await page.getByRole('button', { name: /unlock/i }).click();
+
+    await expect(page.getByTestId('tree-screen')).toBeVisible({
+      timeout: 60_000,
+    });
+
+    await page.getByRole('button', { name: /settings/i }).click();
+    await expect(page.getByTestId('settings-screen')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await use(page);
+    await page.close();
+  },
+});
+
+test.describe('SettingsScreen E2E (SETTINGS-001b)', () => {
+  test.setTimeout(120_000);
+
+  test('settings screen is reachable from tree', async ({ settingsPage }) => {
+    await expect(settingsPage.getByText('Account')).toBeVisible();
+    await expect(settingsPage.getByRole('heading', { name: 'Change Password' })).toBeVisible();
+    await expect(settingsPage.getByRole('heading', { name: 'Verify Recovery Phrase' })).toBeVisible();
+  });
+
+  test('back button returns to tree', async ({ settingsPage }) => {
+    await settingsPage.getByRole('button', { name: /back/i }).click();
+    await expect(settingsPage.getByTestId('tree-screen')).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
+  test('password change with mismatched passwords shows client error', async ({
+    settingsPage,
+  }) => {
+    const currentInput = settingsPage.getByPlaceholder('Current password');
+    await currentInput.click();
+    await currentInput.pressSequentially('anything', { delay: 30 });
+
+    const newInput = settingsPage.getByPlaceholder('New password', { exact: true });
+    await newInput.click();
+    await newInput.pressSequentially('pass1', { delay: 30 });
+
+    const confirmInput = settingsPage.getByPlaceholder('Confirm new password');
+    await confirmInput.click();
+    await confirmInput.pressSequentially('pass2', { delay: 30 });
+
+    await settingsPage.getByRole('button', { name: /change password/i }).click();
+    await expect(settingsPage.getByText('Passwords do not match')).toBeVisible();
+  });
+
+  test('password change with wrong current password shows error', async ({
+    settingsPage,
+  }) => {
+    const currentInput = settingsPage.getByPlaceholder('Current password');
+    await currentInput.click();
+    await currentInput.pressSequentially('wrongpassword', { delay: 30 });
+
+    const newInput = settingsPage.getByPlaceholder('New password', { exact: true });
+    await newInput.click();
+    await newInput.pressSequentially('newpass123', { delay: 30 });
+
+    const confirmInput = settingsPage.getByPlaceholder('Confirm new password');
+    await confirmInput.click();
+    await confirmInput.pressSequentially('newpass123', { delay: 30 });
+
+    await settingsPage.getByRole('button', { name: /change password/i }).click();
+
+    await expect(settingsPage.getByText(/invalid password/i)).toBeVisible({
+      timeout: 60_000,
+    });
+  });
+
+  test('recovery phrase verify shows invalid for wrong phrase', async ({
+    settingsPage,
+  }) => {
+    const textarea = settingsPage.getByPlaceholder('Enter your recovery phrase');
+    await textarea.click();
+    await textarea.fill('this is not a valid recovery phrase at all');
+
+    await settingsPage.getByRole('button', { name: /verify/i }).click();
+    await expect(settingsPage.getByText('Invalid recovery phrase')).toBeVisible();
+  });
+});

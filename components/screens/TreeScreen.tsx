@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
+import { Settings } from 'lucide-react';
 import { useTree } from '@/hooks/useTree';
+import { useSessionDispatch } from '@/entrypoints/popup/App';
 import { BookmarkTree } from '@/components/shared/BookmarkTree';
 import { EmptyTreeState } from '@/components/shared/EmptyTreeState';
 import { AddEditBookmarkDialog } from '@/components/shared/AddEditBookmarkDialog';
@@ -30,6 +32,7 @@ function formatPath(path: readonly number[]): string {
 }
 
 export default function TreeScreen(): React.JSX.Element {
+  const dispatch = useSessionDispatch();
   const { tree, error, save } = useTree();
   const hasChildren = tree !== null && tree.children.length > 0;
   const [dialogState, setDialogState] = useState<DialogState>(DIALOG_NONE);
@@ -83,7 +86,6 @@ export default function TreeScreen(): React.JSX.Element {
     const result = removeItem(tree, dialogState.path);
 
     if (!result.success) {
-      console.error('Delete action failed before save', { path: dialogState.path, result });
       setActionError(`Failed to delete item at path ${sourcePath}`);
       return;
     }
@@ -97,11 +99,7 @@ export default function TreeScreen(): React.JSX.Element {
       }
 
       setActionError('Failed to save changes');
-    } catch (caughtError) {
-      console.error('Failed to save changes after delete action', {
-        path: dialogState.path,
-        error: caughtError,
-      });
+    } catch {
       setActionError('Failed to save changes');
     }
   }, [dialogState, tree, save]);
@@ -113,11 +111,6 @@ export default function TreeScreen(): React.JSX.Element {
     const result = moveItem(tree, dialogState.path, folderPath, childrenCount);
 
     if (!result.success) {
-      console.error('Move action failed before save', {
-        fromPath: dialogState.path,
-        toPath: folderPath,
-        result,
-      });
       setActionError(`Failed to move item from path ${sourcePath}`);
       return;
     }
@@ -131,12 +124,7 @@ export default function TreeScreen(): React.JSX.Element {
       }
 
       setActionError('Failed to save changes');
-    } catch (caughtError) {
-      console.error('Failed to save changes after move action', {
-        fromPath: dialogState.path,
-        toPath: folderPath,
-        error: caughtError,
-      });
+    } catch {
       setActionError('Failed to save changes');
     }
   }, [dialogState, tree, save]);
@@ -185,6 +173,14 @@ export default function TreeScreen(): React.JSX.Element {
             onClick={openFolderDialog}
           >
             + Folder
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Settings"
+            onClick={() => dispatch({ type: 'NAVIGATE', to: 'settings' })}
+          >
+            <Settings />
           </Button>
         </div>
       </div>

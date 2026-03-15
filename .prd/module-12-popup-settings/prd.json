@@ -108,7 +108,7 @@
             ],
             "definition_of_done": ["All 7 settings tests pass", "tsc clean"],
             "verification": "npx vitest run tests/unit/components/ && npx tsc --noEmit",
-            "estimated_effort": "medium", "passes": false, "attempt_count": 0, "depends_on": ["SETTINGS-001a"]
+            "estimated_effort": "medium", "passes": true, "attempt_count": 1, "depends_on": ["SETTINGS-001a"]
         },
         {
             "id": "SETTINGS-002", "category": "core", "priority": "HIGH",
@@ -245,6 +245,6 @@
     "critical_path": "001a -> 001b -> 002/003 -> 004",
     "total_story_points": 31, "total_stories": 5,
     "progress_log": { "format_rules": { "file": "progress.md in .prd/module-12-popup-settings/", "format": "Append-only. ## SETTINGS-XXX — <title>", "update_trigger": "After each story", "max_attempts_per_story": 3 } },
-    "metadata": { "passing_stories": 1, "build_plan_day": "Day 4", "estimated_test_count": "~14 handler tests + ~20 UI tests = ~34 total", "session_protocol": "One Claude Code session. Wire background handlers FIRST (001a), then build UI (001b+). Test in wxt dev.", "quality_gate": "All 16 handlers functional. Zero NOT_IMPLEMENTED. Settings UI works. Password change works. Import/export works. Recovery verify uses textarea. Export disabled when locked.", "human_review_required": "Walk through: password change, Chrome import (verify 'Imported' folder preserved), HTML import, backup export/import, set management, clear data, theme toggle. Grep NOT_IMPLEMENTED — expect zero." },
+    "metadata": { "passing_stories": 2, "build_plan_day": "Day 4", "estimated_test_count": "~14 handler tests + ~20 UI tests = ~34 total", "session_protocol": "One Claude Code session. Wire background handlers FIRST (001a), then build UI (001b+). Test in wxt dev.", "quality_gate": "All 16 handlers functional. Zero NOT_IMPLEMENTED. Settings UI works. Password change works. Import/export works. Recovery verify uses textarea. Export disabled when locked.", "human_review_required": "Walk through: password change, Chrome import (verify 'Imported' folder preserved), HTML import, backup export/import, set management, clear data, theme toggle. Grep NOT_IMPLEMENTED — expect zero." },
     "execution_rules": { "execution_order": "SETTINGS-001a → 001b → 002/003 → 004", "clarifying_questions": "Encouraged. Key: Chrome root node extraction, theme localStorage coordination, handler file organization.", "prd_scope": "Module 12 of 18.", "commit_protocol": "feat(popup-settings): SETTINGS-XXX — <title>", "failure_protocol": "Max 3 attempts." }
 }
