@@ -135,7 +135,7 @@ describe('AddEditBookmarkDialog', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it('rejects javascript: and data: URLs', async () => {
+  it('rejects javascript: URLs', async () => {
     // #given
     const user = userEvent.setup();
     const onSave = vi.fn<(tree: BookmarkTree) => Promise<boolean>>();
@@ -154,6 +154,32 @@ describe('AddEditBookmarkDialog', () => {
     // #when — javascript: URL
     await user.type(screen.getByLabelText('Title'), 'XSS');
     await user.type(screen.getByLabelText('URL'), 'javascript:alert(1)');
+    await user.click(screen.getByRole('button', { name: /add bookmark/i }));
+
+    // #then
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('rejects data: URLs', async () => {
+    // #given
+    const user = userEvent.setup();
+    const onSave = vi.fn<(tree: BookmarkTree) => Promise<boolean>>();
+    const onOpenChange = vi.fn();
+
+    render(
+      <AddEditBookmarkDialog
+        open={true}
+        onOpenChange={onOpenChange}
+        dialogMode={{ mode: 'add', parentPath: [] }}
+        tree={TEST_TREE}
+        onSave={onSave}
+      />,
+    );
+
+    // #when — data: URL
+    await user.type(screen.getByLabelText('Title'), 'XSS');
+    await user.type(screen.getByLabelText('URL'), 'data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==');
     await user.click(screen.getByRole('button', { name: /add bookmark/i }));
 
     // #then
