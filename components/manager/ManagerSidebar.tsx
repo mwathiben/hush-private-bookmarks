@@ -38,30 +38,35 @@ function FolderNavItem({ name, path, children, depth, selectedPath, onSelectFold
 
   return (
     <div>
-      <button
-        type="button"
-        className={`flex w-full items-center gap-1 rounded-md px-2 py-1 text-sm ${
-          isSelected ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'
-        }`}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
-        onClick={() => onSelectFolder(path)}
-      >
+      <div className="flex items-center">
         {hasSubfolders ? (
-          <span
-            role="button"
-            tabIndex={-1}
-            className="shrink-0"
-            onClick={(e) => { e.stopPropagation(); toggle(); }}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); toggle(); } }}
+          <button
+            type="button"
+            aria-label={`Toggle ${name}`}
+            aria-expanded={expanded}
+            className="shrink-0 rounded-md p-1 hover:bg-sidebar-accent/50"
+            style={{ marginLeft: `${depth * 16 + 8}px` }}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle();
+            }}
           >
             {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-          </span>
+          </button>
         ) : (
-          <span className="w-3.5 shrink-0" />
+          <span className="w-5 shrink-0" style={{ marginLeft: `${depth * 16 + 8}px` }} />
         )}
-        <FolderIcon className="size-3.5 shrink-0" />
-        <span className="truncate">{name}</span>
-      </button>
+        <button
+          type="button"
+          className={`flex min-w-0 flex-1 items-center gap-1 rounded-md px-2 py-1 text-sm ${
+            isSelected ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'
+          }`}
+          onClick={() => onSelectFolder(path)}
+        >
+          <FolderIcon className="size-3.5 shrink-0" />
+          <span className="truncate">{name}</span>
+        </button>
+      </div>
       {expanded && children.map((child, i) => isFolder(child) ? (
         <FolderNavItem
           key={child.id}

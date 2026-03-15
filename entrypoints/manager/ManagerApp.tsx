@@ -19,12 +19,12 @@ import { AddFolderDialog } from '@/components/shared/AddFolderDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { FolderPicker } from '@/components/shared/FolderPicker';
 import { Button } from '@/components/ui/button';
+import { isSessionState } from '@/hooks/useSession';
 import { removeItem, moveItem, isFolder, getFolderByPath } from '@/lib/data-model';
 import type { BookmarkDialogMode } from '@/components/shared/AddEditBookmarkDialog';
 import type { FolderDialogMode } from '@/components/shared/AddFolderDialog';
 import type { ItemAction } from '@/components/shared/BookmarkTree';
 import type { Bookmark, BookmarkNode, Folder } from '@/lib/types';
-import type { SessionState } from '@/lib/background-types';
 
 type DialogState =
   | { readonly type: 'none' }
@@ -128,10 +128,16 @@ function ManagerTreePanel(): React.JSX.Element {
   }, [dialogState, parentPath]);
 
   const handleLock = useCallback(async () => {
-    await sendMessage({ type: 'LOCK' });
-    const response = await sendMessage({ type: 'GET_STATE' });
-    if (response.success && response.data) {
-      dispatch({ type: 'SET_SESSION', session: response.data as SessionState });
+    try {
+      await sendMessage({ type: 'LOCK' });
+      const response = await sendMessage({ type: 'GET_STATE' });
+      if (response.success && isSessionState(response.data)) {
+        dispatch({ type: 'SET_SESSION', session: response.data });
+        return;
+      }
+      setActionError('Failed to lock session');
+    } catch {
+      setActionError('Failed to lock session');
     }
   }, [sendMessage, dispatch]);
 
@@ -243,7 +249,7 @@ export default function ManagerApp(): React.JSX.Element {
 
   if (state.error && !state.session) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background p-6 text-destructive">
+      <div className="flex h-screen items-center justify-center bg-background p-6 text-destructive" role="alert">
         {state.error}
       </div>
     );

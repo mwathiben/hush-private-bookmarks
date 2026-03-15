@@ -244,7 +244,7 @@ describe('ManagerApp', () => {
     expect(screen.getByTestId('empty-tree-state')).toBeInTheDocument();
   });
 
-  it('lock button sends LOCK and returns to login', async () => {
+  it('lock button sends LOCK', async () => {
     // #given
     const lockedSession = { ...BASE_STATE, isUnlocked: false, hasData: true };
     const mockSend = vi.fn()

@@ -35,3 +35,11 @@
 - ManagerApp.tsx at 270 lines exceeds the 200-line target. The `ManagerTreePanel` inner component contains dialog handling (~80 lines of callbacks). If this grows further, extract a `useBookmarkDialogs` hook.
 - `DialogState` discriminated union with `DIALOG_NONE` constant prevents re-renders from reference identity changes. Same pattern as TreeScreen.
 - `CENTERED_SCREENS` record lookup eliminates if-else chains for screen routing.
+
+## CodeRabbit Review Findings (Post-MANAGER-001)
+
+- Nested interactive elements (button inside button) are invalid HTML — refactor chevron toggle into a sibling `<button>` with `aria-label="Toggle folder"` and `aria-expanded`.
+- `role="alert"` must be consistent on all error containers for screen reader announcements. The top-level ManagerApp error div was missing it.
+- Never use `as SessionState` casts on `unknown` — use `isSessionState()` type guard for runtime validation before dispatching to context.
+- Reducers must never throw — return unchanged state on invalid transitions. `console.warn` is also forbidden per project rules; silently ignore instead.
+- Test names must match what the test actually asserts. "sends LOCK and returns to login" was renamed to "sends LOCK" since the test only checks the message call.
