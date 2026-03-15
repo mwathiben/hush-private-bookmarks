@@ -163,16 +163,106 @@ emptyTreeTest.describe('Popup bookmarks — empty tree (BOOKMARK-001)', () => {
   });
 
   emptyTreeTest(
-    'shows disabled add bookmark button',
+    'shows enabled toolbar add buttons',
     async ({ treePage }) => {
-      const addButtons = treePage.getByRole('button', {
-        name: /add bookmark/i,
-      });
-      const count = await addButtons.count();
-      expect(count).toBeGreaterThan(0);
+      await expect(
+        treePage.getByLabel('Add bookmark'),
+      ).toBeEnabled();
+      await expect(
+        treePage.getByLabel('Add folder'),
+      ).toBeEnabled();
+    },
+  );
+
+  emptyTreeTest(
+    'shows enabled add bookmark button in empty state',
+    async ({ treePage }) => {
+      const buttons = treePage.getByRole('button', { name: /add bookmark/i });
+      const count = await buttons.count();
+      expect(count).toBe(2);
       for (let i = 0; i < count; i++) {
-        await expect(addButtons.nth(i)).toBeDisabled();
+        await expect(buttons.nth(i)).toBeEnabled();
       }
+    },
+  );
+});
+
+emptyTreeTest.describe('Popup bookmarks — add bookmark dialog (BOOKMARK-002)', () => {
+  emptyTreeTest.setTimeout(120_000);
+
+  emptyTreeTest(
+    'toolbar Add Bookmark opens dialog',
+    async ({ treePage }) => {
+      await treePage.getByLabel('Add bookmark').click();
+      await expect(treePage.getByRole('dialog')).toBeVisible();
+      await expect(treePage.getByLabel('Title')).toBeVisible();
+      await expect(treePage.getByLabel('URL')).toBeVisible();
+    },
+  );
+
+  emptyTreeTest(
+    'empty state Add Bookmark opens dialog',
+    async ({ treePage }) => {
+      await treePage.getByRole('button', { name: 'Add Bookmark', exact: true }).click();
+      await expect(treePage.getByRole('dialog')).toBeVisible();
+      await expect(treePage.getByLabel('Title')).toBeVisible();
+    },
+  );
+
+  emptyTreeTest(
+    'adds bookmark to empty tree',
+    async ({ treePage }) => {
+      await treePage.getByLabel('Add bookmark').click();
+      await treePage.getByLabel('Title').fill('Example');
+      await treePage.getByLabel('URL').fill('https://example.com');
+      await treePage.getByRole('dialog').getByRole('button', { name: /add bookmark/i }).click();
+
+      await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+      await expect(treePage.getByRole('button', { name: 'Example' })).toBeVisible();
+      await expect(treePage.getByText('No bookmarks yet')).not.toBeVisible();
+    },
+  );
+
+  emptyTreeTest(
+    'validates URL — invalid URL shows error',
+    async ({ treePage }) => {
+      await treePage.getByLabel('Add bookmark').click();
+      await treePage.getByLabel('Title').fill('Bad Site');
+      await treePage.getByLabel('URL').fill('not-a-url');
+      await treePage.getByRole('dialog').getByRole('button', { name: /add bookmark/i }).click();
+
+      await expect(treePage.getByRole('alert')).toBeVisible();
+      await expect(treePage.getByRole('dialog')).toBeVisible();
+    },
+  );
+});
+
+populatedTreeTest.describe('Popup bookmarks — add folder dialog (BOOKMARK-002)', () => {
+  populatedTreeTest.setTimeout(120_000);
+
+  populatedTreeTest(
+    'Add Folder button opens dialog and creates folder',
+    async ({ treePage }) => {
+      await treePage.getByRole('button', { name: 'Add folder' }).click();
+      await expect(treePage.getByRole('dialog')).toBeVisible();
+      await treePage.getByLabel('Name').fill('Research');
+      await treePage.getByRole('button', { name: /add folder/i }).click();
+
+      await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
+      await expect(treePage.getByText('Research')).toBeVisible();
+    },
+  );
+
+  populatedTreeTest(
+    'dialog cancel closes without changes',
+    async ({ treePage }) => {
+      await treePage.getByRole('button', { name: 'Add bookmark' }).click();
+      await expect(treePage.getByRole('dialog')).toBeVisible();
+      await treePage.getByLabel('Title').fill('Temp');
+      await treePage.keyboard.press('Escape');
+
+      await expect(treePage.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 });
+      await expect(treePage.getByRole('button', { name: 'GitHub' })).toBeVisible();
     },
   );
 });

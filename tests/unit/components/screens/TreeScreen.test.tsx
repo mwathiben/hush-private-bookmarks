@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TreeScreen from '@/components/screens/TreeScreen';
 import type { BookmarkTree } from '@/lib/types';
 
@@ -121,7 +122,7 @@ describe('TreeScreen', () => {
     expect(screen.getByText('No bookmarks yet')).toBeInTheDocument();
   });
 
-  it('renders disabled add buttons in toolbar', () => {
+  it('renders enabled add buttons when tree exists', () => {
     // #given
     setupMock();
 
@@ -131,8 +132,80 @@ describe('TreeScreen', () => {
     // #then
     const addBookmarkBtn = screen.getByRole('button', { name: /add bookmark/i });
     const addFolderBtn = screen.getByRole('button', { name: /add folder/i });
+    expect(addBookmarkBtn).toBeEnabled();
+    expect(addFolderBtn).toBeEnabled();
+  });
+
+  it('renders disabled add buttons when tree is null', () => {
+    // #given
+    setupMock({ tree: null });
+
+    // #when
+    render(<TreeScreen />);
+
+    // #then
+    const addBookmarkBtn = screen.getByRole('button', { name: 'Add bookmark' });
+    const addFolderBtn = screen.getByRole('button', { name: 'Add folder' });
     expect(addBookmarkBtn).toBeDisabled();
     expect(addFolderBtn).toBeDisabled();
+  });
+
+  it('clicking Add Bookmark opens dialog', async () => {
+    // #given
+    const user = userEvent.setup();
+    setupMock();
+    render(<TreeScreen />);
+
+    // #when
+    await user.click(screen.getByRole('button', { name: 'Add bookmark' }));
+
+    // #then
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Title')).toBeInTheDocument();
+  });
+
+  it('clicking Add Folder opens dialog', async () => {
+    // #given
+    const user = userEvent.setup();
+    setupMock();
+    render(<TreeScreen />);
+
+    // #when
+    await user.click(screen.getByRole('button', { name: 'Add folder' }));
+
+    // #then
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toBeInTheDocument();
+  });
+
+  it('closing bookmark dialog resets openDialog state', async () => {
+    // #given
+    const user = userEvent.setup();
+    setupMock();
+    render(<TreeScreen />);
+    await user.click(screen.getByRole('button', { name: 'Add bookmark' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // #when — press Escape to close
+    await user.keyboard('{Escape}');
+
+    // #then — dialog gone, can re-open folder dialog
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('closing folder dialog resets openDialog state', async () => {
+    // #given
+    const user = userEvent.setup();
+    setupMock();
+    render(<TreeScreen />);
+    await user.click(screen.getByRole('button', { name: 'Add folder' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // #when — press Escape to close
+    await user.keyboard('{Escape}');
+
+    // #then — dialog gone
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('shows error message when useTree has error', () => {

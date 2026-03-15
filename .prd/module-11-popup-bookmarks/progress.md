@@ -5,7 +5,7 @@
 | ID | Title | Status | Attempts |
 | --- | --- | --- | --- |
 | BOOKMARK-001 | TreeScreen, BookmarkTree, and TreeContext integration | PASSED | 1 |
-| BOOKMARK-002 | Add/Edit bookmark and folder dialogs | NOT STARTED | 0 |
+| BOOKMARK-002 | Add/Edit bookmark and folder dialogs | PASSED | 1 |
 | BOOKMARK-003 | Context actions: delete, move, edit with confirmation dialogs | NOT STARTED | 0 |
 | BOOKMARK-004 | E2E bookmark flows and integration verification | NOT STARTED | 0 |
 
@@ -74,4 +74,66 @@ vitest run: 42 test files, 726 tests passed, 0 failed
 eslint .: clean (exit 0)
 wxt build: success (736.71 KB total)
 playwright test popup-bookmarks: 5 passed (18.3s)
+```
+
+---
+
+## Session: 2026-03-15T12:55:00Z
+**Task**: BOOKMARK-002 - Add/Edit bookmark and folder dialogs
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created AddEditBookmarkDialog with discriminated union mode (add/edit), URL validation, loading state, error handling
+- Created AddFolderDialog with name validation, loading state, error handling
+- Wired TreeScreen: dialog open state, enabled toolbar buttons when tree exists, renders both dialogs
+- Added onAddBookmark callback to EmptyTreeState (button enabled when callback provided)
+- Added try/catch around onSave calls in both dialogs (CodeRabbit finding)
+- Extracted stable refs: useCallback for handlers, useMemo for dialog mode, module-level ROOT_PATH constant
+- Wrote 15 unit tests (9 AddEditBookmarkDialog, 6 AddFolderDialog) + 12 TreeScreen tests + 6 E2E tests
+- Fixed E2E selector ambiguity: aria-label-based selectors for toolbar vs text-based for EmptyTreeState
+- Headed mode default for E2E: `headless: !!process.env.CI`
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| components/shared/AddEditBookmarkDialog.tsx | Add/edit bookmark dialog with discriminated union mode |
+| components/shared/AddFolderDialog.tsx | Add folder dialog with name validation |
+| tests/unit/components/shared/AddEditBookmarkDialog.test.tsx | 9 unit tests: render, add, edit, validate, loading, error, throw |
+| tests/unit/components/shared/AddFolderDialog.test.tsx | 6 unit tests: render, create, validate, failure, throw, loading |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| components/screens/TreeScreen.tsx | Added dialog state, enabled buttons, renders dialogs, useCallback/useMemo refs |
+| components/shared/EmptyTreeState.tsx | Added optional onAddBookmark callback prop |
+| tests/unit/components/screens/TreeScreen.test.tsx | 12 tests: split enabled/disabled buttons, dialog open/close tests |
+| tests/e2e/popup-bookmarks.test.ts | 12 tests: added BOOKMARK-002 dialog CRUD E2E tests |
+| tests/e2e/fixtures/extension.ts | Changed to headed mode default (headless only in CI) |
+
+### Acceptance Criteria Verification
+
+1. AddEditBookmarkDialog: add mode (empty) and edit mode (pre-filled) — PASS
+2. Add mode constructs bookmark with type, title, url, dateAdded — PASS
+3. Title required, URL validated (http/https only, blocks javascript:/data:) — PASS
+4. AddFolderDialog: name required, addFolder handles id/children/dateAdded — PASS
+5. MUTATION PATTERN: compute tree → SAVE → await → loading → close on success / error on failure — PASS
+6. No optimistic rendering: TreeContext NOT updated until SAVE confirms — PASS
+7. Dialog stays open with error on SAVE failure — PASS
+8. Dialog closes and TreeContext updates on SAVE success — PASS
+
+### Verification Results
+
+```
+tsc --noEmit: clean (exit 0)
+vitest run --coverage: 39 test files passed, coverage thresholds met
+  - AddEditBookmarkDialog: 88.23% stmts, 93.33% branches
+  - AddFolderDialog: 90.32% stmts, 91.66% branches
+  - TreeScreen: 100% stmts, 85.71% branches
+  - EmptyTreeState: 100% all metrics
+  - lib/**: 93.08% stmts, 84.75% branches (above 80% threshold)
+eslint .: clean (exit 0)
+wxt build --analyze: success (750.34 KB total uncompressed)
+playwright test popup-bookmarks: 12 passed (42.0s, headed mode)
 ```

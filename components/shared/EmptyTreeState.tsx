@@ -1,6 +1,10 @@
 import { Button } from '@/components/ui/button';
 
-export function EmptyTreeState(): React.JSX.Element {
+interface EmptyTreeStateProps {
+  readonly onAddBookmark?: () => void;
+}
+
+export function EmptyTreeState({ onAddBookmark }: EmptyTreeStateProps): React.JSX.Element {
   return (
     <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground">
       <svg
@@ -19,7 +23,7 @@ export function EmptyTreeState(): React.JSX.Element {
         <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
       </svg>
       <p className="text-sm">No bookmarks yet</p>
-      <Button variant="outline" size="sm" disabled>
+      <Button variant="outline" size="sm" disabled={!onAddBookmark} onClick={onAddBookmark}>
         Add Bookmark
       </Button>
     </div>
