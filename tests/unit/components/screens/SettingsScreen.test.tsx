@@ -7,18 +7,25 @@ import type { SendMessageFn } from '@/hooks/useSendMessage';
 
 vi.mock('@/entrypoints/popup/App', () => ({
   useSessionDispatch: vi.fn(),
+  useSessionState: vi.fn(),
+  useTreeContext: vi.fn(),
 }));
 
 vi.mock('@/hooks/useSendMessage', () => ({
   useSendMessage: vi.fn(),
 }));
 
+vi.mock('@/hooks/useTree', () => ({
+  useTree: vi.fn(),
+}));
+
 vi.mock('@/lib/recovery', () => ({
   validateMnemonic: vi.fn(),
 }));
 
-import { useSessionDispatch } from '@/entrypoints/popup/App';
+import { useSessionDispatch, useSessionState } from '@/entrypoints/popup/App';
 import { useSendMessage } from '@/hooks/useSendMessage';
+import { useTree } from '@/hooks/useTree';
 
 beforeAll(() => {
   globalThis.ResizeObserver = class {
@@ -32,6 +39,18 @@ function setupMocks(): { dispatch: ReturnType<typeof vi.fn> } {
   const dispatch = vi.fn();
   vi.mocked(useSessionDispatch).mockReturnValue(dispatch);
   vi.mocked(useSendMessage).mockReturnValue(vi.fn<SendMessageFn>());
+  vi.mocked(useSessionState).mockReturnValue({
+    screen: 'settings',
+    session: { isUnlocked: true, activeSetId: 'default', sets: [], tree: { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 }, incognitoMode: 'normal_mode', hasData: true },
+    loading: false,
+    error: null,
+  });
+  vi.mocked(useTree).mockReturnValue({
+    tree: { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 },
+    saving: false,
+    error: null,
+    save: vi.fn().mockResolvedValue(true),
+  });
   return { dispatch };
 }
 
@@ -54,6 +73,7 @@ describe('SettingsScreen', () => {
     // #then
     expect(screen.getByText('Settings')).toBeInTheDocument();
     expect(screen.getByText('Account')).toBeInTheDocument();
+    expect(screen.getByText('Import / Export')).toBeInTheDocument();
   });
 
   it('dispatches NAVIGATE to tree when back button is clicked', async () => {
@@ -63,7 +83,7 @@ describe('SettingsScreen', () => {
     render(<SettingsScreen />);
 
     // #when
-    await user.click(screen.getByRole('button', { name: /back/i }));
+    await user.click(screen.getByRole('button', { name: 'Back' }));
 
     // #then
     expect(dispatch).toHaveBeenCalledWith({ type: 'NAVIGATE', to: 'tree' });

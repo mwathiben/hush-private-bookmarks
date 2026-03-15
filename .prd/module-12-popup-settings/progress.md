@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | SETTINGS-001a | Wire all 10 NOT_IMPLEMENTED background handlers | PASSED | 1 |
 | SETTINGS-001b | SettingsScreen shell with password change and recovery verification | PASSED | 1 |
-| SETTINGS-002 | Import/Export: Chrome bookmarks, HTML file, encrypted backup | NOT STARTED | 0 |
+| SETTINGS-002 | Import/Export: Chrome bookmarks, HTML file, encrypted backup | PASSED | 1 |
 | SETTINGS-003 | Set management, auto-lock, theme, and clear data | NOT STARTED | 0 |
 | SETTINGS-004 | E2E settings flows and integration verification | NOT STARTED | 0 |
 
@@ -139,4 +139,61 @@ grep console.error components/screens/TreeScreen.tsx: 0 results
 PasswordChangeForm.tsx: 96 lines (under 200)
 RecoveryPhraseVerify.tsx: 46 lines (under 200)
 SettingsScreen.tsx: 40 lines (under 300)
+```
+
+---
+
+## Session: 2026-03-15T16:50:00Z
+**Task**: SETTINGS-002 - Import/Export: Chrome bookmarks, HTML file, encrypted backup
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created ImportSection with 3 distinct import flows: Chrome (IMPORT_CHROME_BOOKMARKS), HTML (parseHtmlBookmarks), backup (IMPORT_BACKUP with password prompt)
+- Created ExportSection with download trigger and locked-state disabling
+- Wired both into SettingsScreen with shadcn Card + Separator for visual structure
+- TDD: wrote all tests RED first, then GREEN implementation
+- 7 Playwright E2E tests for SETTINGS-002 flows
+- Fixed "Back" button selector collision (Restore Backup contains "back" — use exact match)
+- Deslop review: fixed fragile mock.calls access, removed unused style property
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| components/settings/ImportSection.tsx | 3 import flows: Chrome, HTML, backup |
+| components/settings/ExportSection.tsx | Export backup with download |
+| components/ui/card.tsx | shadcn Card component |
+| components/ui/separator.tsx | shadcn Separator component |
+| tests/unit/components/settings/ImportSection.test.tsx | 5 unit tests for imports |
+| tests/unit/components/settings/ExportSection.test.tsx | 2 unit tests for export |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| components/screens/SettingsScreen.tsx | Added Import/Export section with Card wrapping |
+| tests/unit/components/screens/SettingsScreen.test.tsx | Added mocks for useTree, useSessionState; assert Import/Export heading |
+| tests/e2e/popup-settings.test.ts | Added 7 SETTINGS-002 E2E tests; fixed "Back" button selector |
+| package.json | Added radix-ui dependency (for Separator) |
+
+### Acceptance Criteria Verification
+
+1. [PASS] 3 distinct import flows: Chrome, HTML, backup
+2. [PASS] Chrome/HTML import appends "Imported" wrapper folder to root.children
+3. [PASS] Backup import prompts for password and replaces entire tree
+4. [PASS] Export sends EXPORT_BACKUP → blob → download
+5. [PASS] Export button disabled when session is locked
+6. [PASS] Import stats displayed after success
+7. [PASS] Merge strategy: result.data.tree appended whole to root.children
+
+### Verification Results
+
+```
+tsc --noEmit: clean
+eslint: clean (0 errors, 0 warnings)
+vitest run: 807 tests passed (51 files)
+Playwright E2E: 12 passed (7 new SETTINGS-002 + 5 existing SETTINGS-001b)
+wxt build: 803.99 KB uncompressed (under budget)
+Module boundaries: zero violations
+Security: password cleared on unmount, revokeObjectURL called, no PII in errors
 ```

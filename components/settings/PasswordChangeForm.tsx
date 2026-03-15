@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { useSendMessage } from '@/hooks/useSendMessage';
 
@@ -59,40 +58,31 @@ export function PasswordChangeForm(): React.JSX.Element {
   const isPending = status === 'pending';
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
-      <div className="space-y-1">
-        <Label htmlFor="current-password">Current password</Label>
-        <PasswordInput
-          id="current-password"
-          value={currentPassword}
-          onChange={setCurrentPassword}
-          placeholder="Current password"
-          autocomplete="current-password"
-          disabled={isPending}
-        />
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor="new-password">New password</Label>
-        <PasswordInput
-          id="new-password"
-          value={newPassword}
-          onChange={setNewPassword}
-          placeholder="New password"
-          autocomplete="new-password"
-          disabled={isPending}
-        />
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor="confirm-password">Confirm new password</Label>
-        <PasswordInput
-          id="confirm-password"
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          placeholder="Confirm new password"
-          autocomplete="new-password"
-          disabled={isPending}
-        />
-      </div>
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-2">
+      <PasswordInput
+        id="current-password"
+        value={currentPassword}
+        onChange={setCurrentPassword}
+        placeholder="Current password"
+        autocomplete="current-password"
+        disabled={isPending}
+      />
+      <PasswordInput
+        id="new-password"
+        value={newPassword}
+        onChange={setNewPassword}
+        placeholder="New password"
+        autocomplete="new-password"
+        disabled={isPending}
+      />
+      <PasswordInput
+        id="confirm-password"
+        value={confirmPassword}
+        onChange={setConfirmPassword}
+        placeholder="Confirm new password"
+        autocomplete="new-password"
+        disabled={isPending}
+      />
       {error && (
         <p className="text-sm text-destructive" role="alert">{error}</p>
       )}

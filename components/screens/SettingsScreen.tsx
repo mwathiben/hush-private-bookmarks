@@ -1,8 +1,12 @@
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { useSessionDispatch } from '@/entrypoints/popup/App';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 import { RecoveryPhraseVerify } from '@/components/settings/RecoveryPhraseVerify';
+import { ImportSection } from '@/components/settings/ImportSection';
+import { ExportSection } from '@/components/settings/ExportSection';
 
 export default function SettingsScreen(): React.JSX.Element {
   const dispatch = useSessionDispatch();
@@ -20,20 +24,39 @@ export default function SettingsScreen(): React.JSX.Element {
         </Button>
         <h2 className="ml-1 text-sm font-semibold">Settings</h2>
       </div>
-      <div className="space-y-6 px-4 py-3">
-        <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Account</h3>
-          <div className="space-y-4">
+      <div className="space-y-3 px-4 py-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-semibold uppercase text-muted-foreground">Account</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
-              <h4 className="mb-1 text-sm font-medium">Change Password</h4>
+              <h4 className="mb-2 text-sm font-medium">Change Password</h4>
               <PasswordChangeForm />
             </div>
+            <Separator />
             <div>
-              <h4 className="mb-1 text-sm font-medium">Verify Recovery Phrase</h4>
+              <h4 className="mb-2 text-sm font-medium">Verify Recovery Phrase</h4>
               <RecoveryPhraseVerify />
             </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-semibold uppercase text-muted-foreground">Import / Export</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Import</h4>
+              <ImportSection />
+            </div>
+            <Separator />
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Export</h4>
+              <ExportSection />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

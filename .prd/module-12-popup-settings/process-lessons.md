@@ -62,3 +62,25 @@ CREATE_SET handler originally returned `{ setId }` but SetupScreen expects `Sess
 ### CodeRabbit VSC Auto-Review: Verify Blast Radius
 
 CodeRabbit on VSC correctly identified the CREATE_SET contract mismatch and fixed it, but the fix duplicated 20 lines from `loadAndActivateSet` into `handleCreateSet`, pushing handlers.ts to 319 lines (over the 300-line limit). Always check: (1) does the fix duplicate existing code? (2) does it push any file over line limits? Extract shared logic into helpers before committing.
+
+## SETTINGS-002 (2026-03-15)
+
+### "Back" Button Selector Collision
+
+Adding "Restore Backup" and "Export Backup" buttons caused `/back/i` regex to match 3 buttons instead of 1. Playwright's `getByRole('button', { name: 'Back' })` also matches substrings. Fix: use `{ name: 'Back', exact: true }` in Playwright, or exact string `'Back'` in testing-library (which is exact by default for string matchers).
+
+### shadcn CLI Path Resolution on WXT Projects
+
+shadcn CLI resolves `@/` alias via `.wxt/` directory and places generated files one directory up from expected. Always verify output location after running `shadcn add` and move files if needed. Also: `npm_config_legacy_peer_deps=true` env var works when shadcn's internal `npm install` hits ESLint peer dep conflicts.
+
+### happy-dom File Upload Workaround
+
+`userEvent.upload()` fails in happy-dom (testing-library/user-event#940). Use `fireEvent.change(input, { target: { files: [file] } })` with manually constructed `File` objects. Access hidden file inputs via `document.querySelector('input[accept="..."]')` since they have no accessible role.
+
+### Type Guards for BackgroundResponse.data
+
+`BackgroundResponse.data` is `unknown`. Each consumer needs a runtime type guard. Pattern: check `data !== null && typeof data === 'object'`, then verify expected properties exist and have correct types. Avoid `as any` — the type guard is small and makes the narrowing explicit.
+
+### Immutable Tree Merge
+
+`BookmarkTree.children` is `readonly BookmarkNode[]`. Merging requires spread: `{ ...current, children: [...current.children, imported] }`. The "Imported" wrapper folder from `parseHtmlBookmarks`/`convertChromeBookmarks` is appended whole — don't flatten its children.

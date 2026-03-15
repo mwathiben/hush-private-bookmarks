@@ -103,6 +103,70 @@ const test = extensionTest.extend<{ settingsPage: Page }>({
   },
 });
 
+test.describe('SettingsScreen E2E (SETTINGS-002)', () => {
+  test.setTimeout(120_000);
+
+  test('settings screen shows Import / Export section', async ({ settingsPage }) => {
+    await expect(settingsPage.getByText('Import / Export')).toBeVisible();
+    await expect(settingsPage.getByText('Import', { exact: true })).toBeVisible();
+    await expect(settingsPage.getByText('Export', { exact: true })).toBeVisible();
+  });
+
+  test('export backup button is visible and enabled when unlocked', async ({
+    settingsPage,
+  }) => {
+    const exportBtn = settingsPage.getByRole('button', { name: /export backup/i });
+    await expect(exportBtn).toBeVisible();
+    await expect(exportBtn).toBeEnabled();
+  });
+
+  test('import chrome bookmarks button is visible', async ({ settingsPage }) => {
+    await expect(
+      settingsPage.getByRole('button', { name: /import chrome bookmarks/i }),
+    ).toBeVisible();
+  });
+
+  test('import HTML file button is visible', async ({ settingsPage }) => {
+    await expect(
+      settingsPage.getByRole('button', { name: /import html file/i }),
+    ).toBeVisible();
+  });
+
+  test('restore backup button is visible', async ({ settingsPage }) => {
+    await expect(
+      settingsPage.getByRole('button', { name: /restore backup/i }),
+    ).toBeVisible();
+  });
+
+  test('export backup triggers download', async ({ settingsPage }) => {
+    const downloadPromise = settingsPage.waitForEvent('download');
+    await settingsPage.getByRole('button', { name: /export backup/i }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(
+      /^hush-backup-\d{4}-\d{2}-\d{2}\.json$/,
+    );
+  });
+
+  test('restore backup shows password prompt after file select', async ({
+    settingsPage,
+  }) => {
+    const backupInput = settingsPage.locator('input[type="file"][accept=".json"]');
+    const backupContent = JSON.stringify({ version: 1, store: {} });
+    await backupInput.setInputFiles({
+      name: 'backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(backupContent),
+    });
+
+    await expect(settingsPage.getByPlaceholder('Backup password')).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(
+      settingsPage.getByRole('button', { name: /^import$/i }),
+    ).toBeVisible();
+  });
+});
+
 test.describe('SettingsScreen E2E (SETTINGS-001b)', () => {
   test.setTimeout(120_000);
 
@@ -113,7 +177,7 @@ test.describe('SettingsScreen E2E (SETTINGS-001b)', () => {
   });
 
   test('back button returns to tree', async ({ settingsPage }) => {
-    await settingsPage.getByRole('button', { name: /back/i }).click();
+    await settingsPage.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(settingsPage.getByTestId('tree-screen')).toBeVisible({
       timeout: 10_000,
     });
@@ -163,7 +227,7 @@ test.describe('SettingsScreen E2E (SETTINGS-001b)', () => {
   test('recovery phrase verify shows invalid for wrong phrase', async ({
     settingsPage,
   }) => {
-    const textarea = settingsPage.getByPlaceholder('Enter your recovery phrase');
+    const textarea = settingsPage.getByPlaceholder('Enter your 12-word recovery phrase');
     await textarea.click();
     await textarea.fill('this is not a valid recovery phrase at all');
 

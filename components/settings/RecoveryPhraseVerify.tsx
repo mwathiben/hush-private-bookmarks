@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { validateMnemonic } from '@/lib/recovery';
 
@@ -25,17 +24,15 @@ export function RecoveryPhraseVerify(): React.JSX.Element {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <Label htmlFor="recovery-phrase">Recovery phrase</Label>
-        <Textarea
-          id="recovery-phrase"
-          value={phrase}
-          onChange={(e) => setPhrase(e.target.value)}
-          placeholder="Enter your recovery phrase"
-          rows={3}
-        />
-      </div>
+    <div className="space-y-2">
+      <Textarea
+        id="recovery-phrase"
+        value={phrase}
+        onChange={(e) => setPhrase(e.target.value)}
+        placeholder="Enter your 12-word recovery phrase"
+        rows={2}
+        aria-label="Recovery phrase"
+      />
       {result === 'valid' && (
         <p className="text-sm text-green-600" role="status">Valid recovery phrase</p>
       )}

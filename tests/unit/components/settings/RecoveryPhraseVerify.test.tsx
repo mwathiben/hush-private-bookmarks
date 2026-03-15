@@ -24,7 +24,7 @@ describe('RecoveryPhraseVerify', () => {
     render(<RecoveryPhraseVerify />);
 
     // #then
-    expect(screen.getByPlaceholderText('Enter your recovery phrase')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter your 12-word recovery phrase')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /verify/i })).toBeInTheDocument();
   });
 
@@ -36,7 +36,7 @@ describe('RecoveryPhraseVerify', () => {
 
     // #when
     await user.type(
-      screen.getByPlaceholderText('Enter your recovery phrase'),
+      screen.getByPlaceholderText('Enter your 12-word recovery phrase'),
       '  ABANDON  Ability  ABLE  ',
     );
     await user.click(screen.getByRole('button', { name: /verify/i }));
@@ -56,7 +56,7 @@ describe('RecoveryPhraseVerify', () => {
 
     // #when
     await user.type(
-      screen.getByPlaceholderText('Enter your recovery phrase'),
+      screen.getByPlaceholderText('Enter your 12-word recovery phrase'),
       'not a valid phrase',
     );
     await user.click(screen.getByRole('button', { name: /verify/i }));
