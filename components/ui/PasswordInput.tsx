@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 interface PasswordInputProps {
+  readonly id?: string;
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly onSubmit?: () => void;
@@ -14,6 +15,7 @@ interface PasswordInputProps {
 }
 
 export function PasswordInput({
+  id,
   value,
   onChange,
   onSubmit,
@@ -27,6 +29,7 @@ export function PasswordInput({
   return (
     <div className="relative">
       <Input
+        id={id}
         type={visible ? 'text' : 'password'}
         value={value}
         onChange={(e) => onChange(e.target.value)}

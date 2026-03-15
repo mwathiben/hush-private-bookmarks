@@ -14,7 +14,7 @@ export function PasswordChangeForm(): React.JSX.Element {
   const [status, setStatus] = useState<FormStatus>('idle');
   const sendMessage = useSendMessage();
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
     setError(null);
 
@@ -46,7 +46,7 @@ export function PasswordChangeForm(): React.JSX.Element {
       setError('Failed to change password');
       setStatus('idle');
     }
-  };
+  }
 
   const isPending = status === 'pending';
 
@@ -55,6 +55,7 @@ export function PasswordChangeForm(): React.JSX.Element {
       <div className="space-y-1">
         <Label htmlFor="current-password">Current password</Label>
         <PasswordInput
+          id="current-password"
           value={currentPassword}
           onChange={setCurrentPassword}
           placeholder="Current password"
@@ -65,6 +66,7 @@ export function PasswordChangeForm(): React.JSX.Element {
       <div className="space-y-1">
         <Label htmlFor="new-password">New password</Label>
         <PasswordInput
+          id="new-password"
           value={newPassword}
           onChange={setNewPassword}
           placeholder="New password"
@@ -75,6 +77,7 @@ export function PasswordChangeForm(): React.JSX.Element {
       <div className="space-y-1">
         <Label htmlFor="confirm-password">Confirm new password</Label>
         <PasswordInput
+          id="confirm-password"
           value={confirmPassword}
           onChange={setConfirmPassword}
           placeholder="Confirm new password"
@@ -82,7 +85,7 @@ export function PasswordChangeForm(): React.JSX.Element {
           disabled={isPending}
         />
       </div>
-      {error !== null && (
+      {error && (
         <p className="text-sm text-destructive" role="alert">{error}</p>
       )}
       {status === 'success' && (

@@ -27,10 +27,6 @@ type DialogState =
 const DIALOG_NONE: DialogState = { type: 'none' };
 const ROOT_PATH: readonly number[] = [];
 
-function formatPath(path: readonly number[]): string {
-  return path.length === 0 ? 'root' : path.join(' > ');
-}
-
 export default function TreeScreen(): React.JSX.Element {
   const dispatch = useSessionDispatch();
   const { tree, error, save } = useTree();
@@ -82,18 +78,16 @@ export default function TreeScreen(): React.JSX.Element {
   const handleConfirmDelete = useCallback(async () => {
     if (dialogState.type !== 'confirm-delete' || tree === null) return;
 
-    const sourcePath = formatPath(dialogState.path);
     const result = removeItem(tree, dialogState.path);
 
     if (!result.success) {
-      setActionError(`Failed to delete item at path ${sourcePath}`);
+      setActionError('Failed to delete item');
       return;
     }
 
     try {
       const ok = await save(result.data);
       if (ok) {
-        setActionError(null);
         setDialogState(DIALOG_NONE);
         return;
       }
@@ -107,18 +101,16 @@ export default function TreeScreen(): React.JSX.Element {
   const handleMoveSelect = useCallback(async (folderPath: readonly number[], childrenCount: number) => {
     if (dialogState.type !== 'move' || tree === null) return;
 
-    const sourcePath = formatPath(dialogState.path);
     const result = moveItem(tree, dialogState.path, folderPath, childrenCount);
 
     if (!result.success) {
-      setActionError(`Failed to move item from path ${sourcePath}`);
+      setActionError('Failed to move item');
       return;
     }
 
     try {
       const ok = await save(result.data);
       if (ok) {
-        setActionError(null);
         setDialogState(DIALOG_NONE);
         return;
       }
