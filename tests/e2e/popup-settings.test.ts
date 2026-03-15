@@ -235,3 +235,49 @@ test.describe('SettingsScreen E2E (SETTINGS-001b)', () => {
     await expect(settingsPage.getByText('Invalid recovery phrase')).toBeVisible();
   });
 });
+
+test.describe('SettingsScreen E2E (SETTINGS-003)', () => {
+  test.setTimeout(120_000);
+
+  test('settings screen shows new sections', async ({ settingsPage }) => {
+    await expect(settingsPage.getByText('Data Management')).toBeVisible();
+    await expect(settingsPage.getByText('Preferences')).toBeVisible();
+    await expect(settingsPage.getByText('Danger Zone')).toBeVisible();
+  });
+
+  test('theme toggle shows three theme buttons', async ({ settingsPage }) => {
+    await expect(settingsPage.getByRole('button', { name: /light/i })).toBeVisible();
+    await expect(settingsPage.getByRole('button', { name: /dark/i })).toBeVisible();
+    await expect(settingsPage.getByRole('button', { name: /system/i })).toBeVisible();
+  });
+
+  test('clicking dark theme adds dark class', async ({ settingsPage }) => {
+    await settingsPage.getByRole('button', { name: /dark/i }).click();
+    const hasDark = await settingsPage.evaluate(() =>
+      document.documentElement.classList.contains('dark'),
+    );
+    expect(hasDark).toBe(true);
+  });
+
+  test('auto-lock config accepts valid minutes', async ({ settingsPage }) => {
+    const input = settingsPage.getByRole('spinbutton');
+    await input.clear();
+    await input.fill('5');
+    await settingsPage.getByRole('button', { name: /update auto-lock/i }).click();
+    await expect(settingsPage.getByText(/auto-lock updated/i)).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
+  test('set management section shows default set', async ({ settingsPage }) => {
+    await expect(settingsPage.getByText('Default', { exact: true })).toBeVisible();
+  });
+
+  test('clear data requires typing DELETE', async ({ settingsPage }) => {
+    await settingsPage.getByRole('button', { name: /delete all data/i }).click();
+    const confirmBtn = settingsPage.getByRole('button', { name: /confirm delete/i });
+    await expect(confirmBtn).toBeDisabled();
+    await settingsPage.getByPlaceholder(/type delete/i).fill('DELETE');
+    await expect(confirmBtn).toBeEnabled();
+  });
+});

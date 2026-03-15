@@ -7,6 +7,10 @@ import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 import { RecoveryPhraseVerify } from '@/components/settings/RecoveryPhraseVerify';
 import { ImportSection } from '@/components/settings/ImportSection';
 import { ExportSection } from '@/components/settings/ExportSection';
+import { SetManagement } from '@/components/settings/SetManagement';
+import { AutoLockConfig } from '@/components/settings/AutoLockConfig';
+import { ThemeToggle } from '@/components/settings/ThemeToggle';
+import { ClearDataSection } from '@/components/settings/ClearDataSection';
 
 export default function SettingsScreen(): React.JSX.Element {
   const dispatch = useSessionDispatch();
@@ -55,6 +59,38 @@ export default function SettingsScreen(): React.JSX.Element {
               <h4 className="mb-2 text-sm font-medium">Export</h4>
               <ExportSection />
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-semibold uppercase text-muted-foreground">Data Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SetManagement />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-semibold uppercase text-muted-foreground">Preferences</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Auto-Lock Timer</h4>
+              <AutoLockConfig />
+            </div>
+            <Separator />
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Theme</h4>
+              <ThemeToggle />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-semibold uppercase text-muted-foreground">Danger Zone</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ClearDataSection />
           </CardContent>
         </Card>
       </div>

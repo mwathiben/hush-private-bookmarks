@@ -39,7 +39,7 @@ export const TRANSITIONS: Record<Screen, readonly Screen[]> = {
   login: ['tree', 'setup'],
   setup: ['tree'],
   tree: ['settings', 'login'],
-  settings: ['tree', 'import', 'login'],
+  settings: ['tree', 'import', 'login', 'setup'],
   import: ['settings', 'tree'],
 };
 

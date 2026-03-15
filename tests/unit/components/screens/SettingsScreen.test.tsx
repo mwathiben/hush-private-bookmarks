@@ -73,6 +73,9 @@ describe('SettingsScreen', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument();
     expect(screen.getByText('Account')).toBeInTheDocument();
     expect(screen.getByText('Import / Export')).toBeInTheDocument();
+    expect(screen.getByText('Data Management')).toBeInTheDocument();
+    expect(screen.getByText('Preferences')).toBeInTheDocument();
+    expect(screen.getByText('Danger Zone')).toBeInTheDocument();
   });
 
   it('dispatches NAVIGATE to tree when back button is clicked', async () => {

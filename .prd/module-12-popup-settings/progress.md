@@ -7,7 +7,7 @@
 | SETTINGS-001a | Wire all 10 NOT_IMPLEMENTED background handlers | PASSED | 1 |
 | SETTINGS-001b | SettingsScreen shell with password change and recovery verification | PASSED | 1 |
 | SETTINGS-002 | Import/Export: Chrome bookmarks, HTML file, encrypted backup | PASSED | 1 |
-| SETTINGS-003 | Set management, auto-lock, theme, and clear data | NOT STARTED | 0 |
+| SETTINGS-003 | Set management, auto-lock, theme, and clear data | PASSED | 1 |
 | SETTINGS-004 | E2E settings flows and integration verification | NOT STARTED | 0 |
 
 **Critical Path**: 001a → 001b → 002/003 → 004
@@ -196,4 +196,76 @@ Playwright E2E: 12 passed (7 new SETTINGS-002 + 5 existing SETTINGS-001b)
 wxt build: 803.99 KB uncompressed (under budget)
 Module boundaries: zero violations
 Security: password cleared on unmount, revokeObjectURL called, no PII in errors
+```
+
+---
+
+## Session: 2026-03-15T20:30:00Z
+**Task**: SETTINGS-003 - Set management, auto-lock, theme, and clear data
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created ThemeToggle: 3-way toggle (light/dark/system) with localStorage persistence, `aria-pressed` accessibility, lucide-react icons (53 lines)
+- Created AutoLockConfig: number input with UPDATE_AUTO_LOCK message, client-side validation, status states matching ExportSection pattern (69 lines)
+- Created ClearDataSection: type-to-confirm 'DELETE' double confirmation, two-phase UI, CLEAR_ALL → GET_STATE → SET_SESSION dispatch chain (89 lines)
+- Created SetManagement: list/create/rename/delete password sets via Dialog/ConfirmDialog, Badge for default, disabled delete on default set (225 lines)
+- Modified main.tsx: localStorage-first theme init BEFORE React mount to prevent FOUC, guarded media query listener
+- Fixed TRANSITIONS table: added 'setup' to `TRANSITIONS.settings` for CLEAR_ALL → setup transition
+- Wired 3 new Card sections into SettingsScreen (Data Management, Preferences, Danger Zone)
+- TDD vertical slices: RED→GREEN cycles for all 4 components
+- 13 new unit tests, 6 new E2E tests
+- Added DialogDescription to SetManagement dialogs (Radix accessibility fix)
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| components/settings/ThemeToggle.tsx | 3-way theme toggle: light/dark/system with localStorage (53 lines) |
+| components/settings/AutoLockConfig.tsx | Number input for auto-lock minutes with UPDATE_AUTO_LOCK (69 lines) |
+| components/settings/ClearDataSection.tsx | Type-to-confirm DELETE → CLEAR_ALL double confirmation (89 lines) |
+| components/settings/SetManagement.tsx | List/create/rename/delete password sets with Dialog/ConfirmDialog (225 lines) |
+| tests/unit/components/settings/ThemeToggle.test.tsx | 3 unit tests: renders buttons, dark writes localStorage, system sets localStorage |
+| tests/unit/components/settings/AutoLockConfig.test.tsx | 2 unit tests: renders input, sends UPDATE_AUTO_LOCK |
+| tests/unit/components/settings/ClearDataSection.test.tsx | 4 unit tests: renders button, shows confirm, enables on DELETE, sends CLEAR_ALL |
+| tests/unit/components/settings/SetManagement.test.tsx | 4 unit tests: lists sets, shows badge, create sends message, delete disabled for default |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| entrypoints/popup/App.tsx | Added 'setup' to TRANSITIONS.settings array |
+| entrypoints/popup/main.tsx | localStorage-first theme init with system fallback, guarded media query listener |
+| components/screens/SettingsScreen.tsx | Added 4 imports + 3 Card sections (Data Management, Preferences, Danger Zone) — grew from 63 to 99 lines |
+| tests/unit/components/screens/SettingsScreen.test.tsx | Added assertions for 3 new section headings |
+| tests/e2e/popup-settings.test.ts | Added SETTINGS-003 describe block with 6 E2E tests |
+
+### Acceptance Criteria Verification
+
+1. [PASS] Set Management: lists sets from session context with names
+2. [PASS] Set Management: create set sends CREATE_SET with name + password, dispatches SET_SESSION
+3. [PASS] Set Management: rename set sends RENAME_SET, refreshes via GET_STATE
+4. [PASS] Set Management: delete set shows ConfirmDialog, sends DELETE_SET
+5. [PASS] Set Management: cannot delete default set (button disabled)
+6. [PASS] Set Management: shows Default badge on default set
+7. [PASS] Auto-Lock: accepts valid positive integer minutes
+8. [PASS] Auto-Lock: sends UPDATE_AUTO_LOCK message
+9. [PASS] Auto-Lock: rejects non-positive or non-integer values
+10. [PASS] Theme Toggle: shows three buttons (Light, Dark, System)
+11. [PASS] Theme Toggle: clicking Dark adds .dark class to documentElement
+12. [PASS] Theme Toggle: persists to localStorage
+13. [PASS] Theme init: localStorage read before React mount (FOUC prevention)
+14. [PASS] Clear Data: double confirmation — button → type DELETE → confirm
+15. [PASS] Clear Data: sends CLEAR_ALL with confirmation, refreshes state via GET_STATE
+16. [PASS] TRANSITIONS fix: settings → setup valid after CLEAR_ALL
+
+### Verification Results
+
+```
+tsc --noEmit: clean (zero errors)
+vitest run: 820/820 passed (55 test files)
+eslint: 0 errors on changed files (2 pre-existing warnings)
+Playwright E2E: 18/18 passed (6 new SETTINGS-003 + 12 existing)
+wxt build: success (812.63 KB uncompressed)
+Module boundaries: zero browser.* or console.* in components/settings/
+File line counts: ThemeToggle 53, AutoLockConfig 69, ClearDataSection 89, SetManagement 225, SettingsScreen 99 (all under 300)
 ```

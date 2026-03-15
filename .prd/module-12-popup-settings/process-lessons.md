@@ -96,3 +96,29 @@ When a section heading (e.g., "Change Password") already provides visual context
 ### Unused Mock Cleanup
 
 When mocking context providers in test files, verify the component actually uses each mocked export. SettingsScreen doesn't use `useTreeContext` — its children (ImportSection, ExportSection) use `useTree` which is mocked separately. Stale mock entries are harmless but confusing during review.
+
+## SETTINGS-003 (2026-03-15)
+
+### Type-to-Confirm Pattern for Double Confirmation
+
+When `ConfirmDialog` (button-only confirm) is insufficient for destructive actions requiring double confirmation, implement inline type-to-confirm in the component rather than modifying the shared `ConfirmDialog`. Two-phase UI: initial destructive button reveals input + disabled confirm button → button enables only when exact text matches. Keeps the shared component simple while meeting stronger confirmation requirements.
+
+### TRANSITIONS Table Maintenance
+
+Always check the TRANSITIONS state machine in App.tsx when adding operations that could route to new screens. CLEAR_ALL causes `deriveScreen()` to return `'setup'` (when `!session.hasData`), but `settings → setup` wasn't in the TRANSITIONS table — would throw "Invalid transition" at runtime. Audit TRANSITIONS for every new state-changing background message.
+
+### Theme Init Timing (FOUC Prevention)
+
+localStorage read for theme preference MUST happen synchronously in `main.tsx` BEFORE `ReactDOM.createRoot().render()`. If deferred to a React component (e.g., ThemeToggle's `useEffect`), users see a flash of the wrong theme on every page load. Guard the `prefers-color-scheme` media query listener with a localStorage check so it doesn't override explicit user choice.
+
+### Session Refresh After Set Operations
+
+CREATE_SET returns full `SessionState` in `response.data` — dispatch `SET_SESSION` directly. RENAME_SET and DELETE_SET return `{ success: true }` without session data — must send follow-up `GET_STATE`, validate with `isSessionState()`, then dispatch `SET_SESSION`. Inline helper `refreshSession()` is appropriate for 3 call sites (not worth extracting to a shared hook).
+
+### Module 13 Coordination: Manager Theme Init
+
+The manager entrypoint (`entrypoints/manager/main.tsx`, built in Module 13) will need identical localStorage-first theme init code. Document this dependency so the Module 13 implementer doesn't miss it — otherwise the manager page will have FOUC while the popup doesn't.
+
+### Radix DialogDescription Accessibility
+
+Radix Dialog warns when `DialogContent` lacks a `DialogDescription` or explicit `aria-describedby={undefined}`. Always include `DialogDescription` with meaningful text in Dialog-based modals. Discovered during E2E — console warning doesn't break tests but indicates accessibility gap.

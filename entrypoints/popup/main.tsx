@@ -7,10 +7,20 @@ import '@/app.css';
 
 initSentry();
 
+const saved = localStorage.getItem('hush-theme');
 const mq = window.matchMedia('(prefers-color-scheme: dark)');
-document.documentElement.classList.toggle('dark', mq.matches);
+if (saved === 'dark') {
+  document.documentElement.classList.add('dark');
+} else if (saved === 'light') {
+  document.documentElement.classList.remove('dark');
+} else {
+  document.documentElement.classList.toggle('dark', mq.matches);
+}
 mq.addEventListener('change', (e) => {
-  document.documentElement.classList.toggle('dark', e.matches);
+  const current = localStorage.getItem('hush-theme');
+  if (!current || current === 'system') {
+    document.documentElement.classList.toggle('dark', e.matches);
+  }
 });
 
 function TestErrorTrigger() {
