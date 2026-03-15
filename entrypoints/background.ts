@@ -238,10 +238,9 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
     case 'IMPORT_BACKUP':
     case 'EXPORT_BACKUP':
       return Promise.resolve({ success: false, error: 'NOT_IMPLEMENTED', code: msg.type });
-    default: {
-      const _exhaustive: never = msg;
-      return _exhaustive;
-    }
+    default:
+      msg satisfies never;
+      return msg;
   }
 }
 

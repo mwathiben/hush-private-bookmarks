@@ -149,59 +149,29 @@ async function unlockPopup(page: Page, password: string): Promise<void> {
   });
 }
 
-const emptyTreeTest = extensionTest.extend<{ treePage: Page }>({
-  treePage: async ({ context, extensionId }, use) => {
-    let sw = context.serviceWorkers()[0];
-    if (!sw) sw = await context.waitForEvent('serviceworker');
+function makeTreeTest(treeData: string) {
+  return extensionTest.extend<{ treePage: Page }>({
+    treePage: async ({ context, extensionId }, use) => {
+      let sw = context.serviceWorkers()[0];
+      if (!sw) sw = await context.waitForEvent('serviceworker');
 
-    await sw.evaluate(
-      seedStorage(),
-      [SEED_PASSWORD, EMPTY_TREE] as const,
-    );
+      await sw.evaluate(
+        seedStorage(),
+        [SEED_PASSWORD, treeData] as const,
+      );
 
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
-    await unlockPopup(page, SEED_PASSWORD);
-    await use(page);
-    await page.close();
-  },
-});
+      const page = await context.newPage();
+      await page.goto(`chrome-extension://${extensionId}/popup.html`);
+      await unlockPopup(page, SEED_PASSWORD);
+      await use(page);
+      await page.close();
+    },
+  });
+}
 
-const populatedTreeTest = extensionTest.extend<{ treePage: Page }>({
-  treePage: async ({ context, extensionId }, use) => {
-    let sw = context.serviceWorkers()[0];
-    if (!sw) sw = await context.waitForEvent('serviceworker');
-
-    await sw.evaluate(
-      seedStorage(),
-      [SEED_PASSWORD, POPULATED_TREE] as const,
-    );
-
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
-    await unlockPopup(page, SEED_PASSWORD);
-    await use(page);
-    await page.close();
-  },
-});
-
-const twoFolderTest = extensionTest.extend<{ treePage: Page }>({
-  treePage: async ({ context, extensionId }, use) => {
-    let sw = context.serviceWorkers()[0];
-    if (!sw) sw = await context.waitForEvent('serviceworker');
-
-    await sw.evaluate(
-      seedStorage(),
-      [SEED_PASSWORD, TWO_FOLDER_TREE] as const,
-    );
-
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
-    await unlockPopup(page, SEED_PASSWORD);
-    await use(page);
-    await page.close();
-  },
-});
+const emptyTreeTest = makeTreeTest(EMPTY_TREE);
+const populatedTreeTest = makeTreeTest(POPULATED_TREE);
+const twoFolderTest = makeTreeTest(TWO_FOLDER_TREE);
 
 emptyTreeTest.describe('Popup bookmarks — empty tree (BOOKMARK-001)', () => {
   emptyTreeTest.setTimeout(120_000);
@@ -519,9 +489,9 @@ twoFolderTest.describe(
     twoFolderTest.setTimeout(120_000);
 
     twoFolderTest(
-      'move bookmark to folder and verify destination',
+      'move bookmark to Work, then move again to Personal',
       async ({ treePage }) => {
-        await twoFolderTest.step('move GitHub to Work folder', async () => {
+        await twoFolderTest.step('move GitHub from root to Work', async () => {
           await treePage.getByLabel('Actions').first().click();
           await treePage.getByText('Move to...').click();
           await expect(treePage.getByText('Move to folder')).toBeVisible({ timeout: 10_000 });
@@ -529,12 +499,26 @@ twoFolderTest.describe(
           await expect(treePage.getByText('Move to folder')).not.toBeVisible({ timeout: 10_000 });
         });
 
-        await twoFolderTest.step('verify bookmark removed from root', async () => {
+        await twoFolderTest.step('expand Work and verify GitHub inside', async () => {
           await expect(treePage.getByRole('button', { name: 'GitHub' })).not.toBeVisible();
+          await treePage.getByText('Work').click();
+          await expect(treePage.getByRole('button', { name: 'GitHub' })).toBeVisible({ timeout: 10_000 });
         });
 
-        await twoFolderTest.step('verify bookmark exists in Work folder', async () => {
+        await twoFolderTest.step('move GitHub from Work to Personal', async () => {
+          await treePage.getByLabel('Actions', { exact: true }).click();
+          await treePage.getByText('Move to...').click();
+          await expect(treePage.getByText('Move to folder')).toBeVisible({ timeout: 10_000 });
+          await treePage.getByRole('button', { name: /personal/i }).click();
+          await expect(treePage.getByText('Move to folder')).not.toBeVisible({ timeout: 10_000 });
+        });
+
+        await twoFolderTest.step('collapse Work and expand Personal', async () => {
           await treePage.getByText('Work').click();
+          await treePage.getByText('Personal').click();
+        });
+
+        await twoFolderTest.step('verify GitHub in Personal folder', async () => {
           await expect(treePage.getByRole('button', { name: 'GitHub' })).toBeVisible({ timeout: 10_000 });
         });
       },

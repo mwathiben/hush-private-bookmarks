@@ -63,6 +63,7 @@ export function AddEditBookmarkDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- dialog form reset on open/close is a controlled-dialog pattern, not cascading state */
   useEffect(() => {
     if (open) {
       setTitle(isEdit ? dialogMode.bookmark.title : '');
@@ -71,6 +72,7 @@ export function AddEditBookmarkDialog({
       setSaving(false);
     }
   }, [open, isEdit, dialogMode]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();

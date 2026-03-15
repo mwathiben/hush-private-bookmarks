@@ -49,7 +49,6 @@ export default [
     files: ['components/shared/**/*.tsx'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
-      'react-hooks/set-state-in-effect': 'off',
     },
   },
 
