@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -13,6 +13,14 @@ export function PasswordChangeForm(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<FormStatus>('idle');
   const sendMessage = useSendMessage();
+
+  useEffect(() => {
+    return () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -89,7 +97,7 @@ export function PasswordChangeForm(): React.JSX.Element {
         <p className="text-sm text-destructive" role="alert">{error}</p>
       )}
       {status === 'success' && (
-        <p className="text-sm text-green-600">Password changed successfully</p>
+        <p className="text-sm text-green-600" role="status">Password changed successfully</p>
       )}
       <Button type="submit" size="sm" className="w-full" disabled={isPending}>
         {isPending ? 'Changing...' : 'Change Password'}

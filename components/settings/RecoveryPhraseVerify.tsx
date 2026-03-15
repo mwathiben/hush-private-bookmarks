@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,11 +14,15 @@ export function RecoveryPhraseVerify(): React.JSX.Element {
   const [phrase, setPhrase] = useState('');
   const [result, setResult] = useState<VerifyResult>('idle');
 
-  const handleVerify = (): void => {
+  useEffect(() => {
+    return () => setPhrase('');
+  }, []);
+
+  function handleVerify(): void {
     const normalized = normalizePhrase(phrase);
     const isValid = validateMnemonic(normalized);
     setResult(isValid ? 'valid' : 'invalid');
-  };
+  }
 
   return (
     <div className="space-y-3">
@@ -33,7 +37,7 @@ export function RecoveryPhraseVerify(): React.JSX.Element {
         />
       </div>
       {result === 'valid' && (
-        <p className="text-sm text-green-600">Valid recovery phrase</p>
+        <p className="text-sm text-green-600" role="status">Valid recovery phrase</p>
       )}
       {result === 'invalid' && (
         <p className="text-sm text-destructive" role="alert">Invalid recovery phrase</p>
