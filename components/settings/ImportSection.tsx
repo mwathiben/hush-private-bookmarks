@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { useSendMessage } from '@/hooks/useSendMessage';
 import { useTree } from '@/hooks/useTree';
@@ -228,7 +229,9 @@ export function ImportSection(): React.JSX.Element {
       </div>
       {backupPrompt && (
         <form onSubmit={(e) => void handleBackupSubmit(e)} className="space-y-2">
+          <Label htmlFor="backup-password" className="sr-only">Backup password</Label>
           <PasswordInput
+            id="backup-password"
             value={backupPassword}
             onChange={setBackupPassword}
             placeholder="Backup password"

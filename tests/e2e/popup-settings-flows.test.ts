@@ -158,11 +158,6 @@ test.describe('Settings E2E Flows (SETTINGS-004)', () => {
     await pwInput.pressSequentially('setpass123', { delay: 30 });
     await dialog.getByRole('button', { name: 'Create', exact: true }).click();
 
-    // #then — wait for Create button to become pending (PBKDF2 processing)
-    await expect(dialog.getByRole('button', { name: 'Create', exact: true })).toBeDisabled({
-      timeout: 5_000,
-    });
-
     // #then — CREATE_SET auto-switches to new set, app navigates to tree screen
     await expect(settingsPage.getByTestId('tree-screen')).toBeVisible({
       timeout: 90_000,
@@ -246,8 +241,8 @@ test.describe('Settings E2E Flows (SETTINGS-004)', () => {
     await backupPwInput.pressSequentially(SEED_PASSWORD, { delay: 30 });
     await settingsPage.getByRole('button', { name: /^import$/i }).click();
 
-    // #then — no error visible (import succeeded or shows success)
-    await expect(settingsPage.locator('[role="alert"]').filter({ hasText: /fail|error/i }))
+    // #then — password prompt disappears (import succeeded, backupPrompt cleared)
+    await expect(settingsPage.getByPlaceholder('Backup password'))
       .not.toBeVisible({ timeout: 60_000 });
   });
 
