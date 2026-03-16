@@ -41,7 +41,7 @@
 - Nested interactive elements (button inside button) are invalid HTML — refactor chevron toggle into a sibling `<button>` with `aria-label="Toggle folder"` and `aria-expanded`.
 - `role="alert"` must be consistent on all error containers for screen reader announcements. The top-level ManagerApp error div was missing it.
 - Never use `as SessionState` casts on `unknown` — use `isSessionState()` type guard for runtime validation before dispatching to context.
-- Reducers must never throw — return unchanged state on invalid transitions. Do not use `console.warn`; instead of silently ignore with no signal, use non-console telemetry: dev-only logs behind a DEV/feature-flag check during local debugging, metrics counters for expected-but-interesting invalid transitions, and error-tracking breadcrumbs/exceptions for unexpected integrity/state issues.
+- Reducers must never throw — return unchanged state on invalid transitions. Do not use `console.warn` or silently ignore errors; instead, use non-console telemetry: dev-only logs behind a DEV/feature-flag check during local debugging, metrics counters for expected-but-interesting invalid transitions, and error-tracking breadcrumbs/exceptions for unexpected integrity/state issues.
 - Test names must match what the test actually asserts. "sends LOCK and returns to login" was renamed to "sends LOCK" since the test only checks the message call.
 
 ## MANAGER-002: Search Hook & Toolbar (2026-03-16)

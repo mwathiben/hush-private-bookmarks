@@ -58,7 +58,9 @@ test.describe('Hush Import UI (HUSH-003)', () => {
     await settingsPage.getByRole('button', { name: /import from hush/i }).click();
 
     // #then
-    await expect(settingsPage.getByRole('alert')).toBeVisible({ timeout: 30_000 });
+    const alert = settingsPage.getByRole('alert');
+    await expect(alert).toBeVisible({ timeout: 30_000 });
+    await expect(alert).toContainText('Invalid password');
   });
 
   test('correct password shows success stats', async ({ settingsPage }) => {

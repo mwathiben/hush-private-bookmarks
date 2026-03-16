@@ -63,7 +63,7 @@ test.describe('Hush Import E2E Integration (HUSH-004)', () => {
     // #then — "Test Folder" subfolder is visible (Trash folder was filtered out)
     const testFolderTrigger = settingsPage.getByRole('button', { name: /Test Folder/i });
     await expect(testFolderTrigger).toBeVisible({ timeout: 5_000 });
-    await expect(settingsPage.getByRole('button', { name: /Trash/i })).toBeHidden();
+    await expect(settingsPage.getByRole('button', { name: /Trash/i })).not.toBeVisible();
 
     // #when — expand "Test Folder" accordion
     await testFolderTrigger.click();
@@ -71,7 +71,8 @@ test.describe('Hush Import E2E Integration (HUSH-004)', () => {
     // #then — imported bookmarks are visible (excluding Trash bookmark)
     await expect(settingsPage.getByRole('button', { name: 'Example' })).toBeVisible({ timeout: 5_000 });
     await expect(settingsPage.getByRole('button', { name: 'GitHub' })).toBeVisible();
-    await expect(settingsPage.getByRole('button', { name: 'Deleted' })).toBeHidden();
+    const deletedBookmark = settingsPage.getByRole('button', { name: 'Deleted' });
+    await expect(deletedBookmark).toHaveCount(0);
   });
 
   test('malformed blob shows user-friendly error without crypto internals', async ({ settingsPage }) => {

@@ -203,3 +203,14 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 - Uncovered: empty data path (line 166), unexpected error wrapping (lines 198-201), malformed blob import path
 - Three targeted tests raised coverage to 80%+ without over-testing
 - Lesson: When coverage is close to threshold, check uncovered lines first — usually 2-3 targeted tests suffice
+
+### CodeRabbit VSC post-commit review cycle (HUSH-004)
+
+- CodeRabbit VSC flagged 4 issues after the HUSH-004 commit; Copilot auto-fixed them
+- All 4 changes were legitimate improvements after confirmation-bias-zero review:
+  - `toBeHidden()` → `not.toBeVisible()`: canonical Playwright negative assertion
+  - `toBeHidden()` → `toHaveCount(0)`: stronger — asserts element absent from DOM, not just hidden
+  - Added `toContainText('Invalid password')`: test previously only checked alert visibility, not content
+  - Grammar fix in process-lessons.md: garbled sentence corrected
+- Copilot could NOT run Playwright to verify (PowerShell constraints) — always run tests after accepting Copilot changes
+- Lesson: `toBeHidden()` is ambiguous (passes for both hidden-but-present AND absent). Use `not.toBeVisible()` for "shouldn't be showing" and `toHaveCount(0)` for "shouldn't exist in DOM"
