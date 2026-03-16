@@ -124,7 +124,7 @@
                 "Update buildLockedState and handleGetState to include proStatus.",
                 "RED: Unit: 'CHECK_PRO_STATUS handler returns ProStatus'",
                 "RED: Unit: 'SessionState includes proStatus field'",
-                "RED: Unit: 'buildLockedState includes proStatus with default values (isPro: false, canTrial: true)'",
+                "RED: Unit: 'buildLockedState includes proStatus with default values ({ isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true })'",
                 "GREEN: Implement handler. Update session state construction. Wire unit tests.",
                 "Update scaffold-smoke.test.ts to verify SessionState includes proStatus field.",
                 "Run full verification: tsc + eslint + vitest + wxt build"
@@ -140,7 +140,7 @@
                 "CHECK_PRO_STATUS message type added to protocol",
                 "SessionState includes proStatus: ProStatus field",
                 "Handler calls checkProStatus() and returns result",
-                "buildLockedState includes proStatus (default: isPro false, canTrial true)",
+                "buildLockedState includes proStatus (default: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true })",
                 "Smoke test updated to verify SessionState includes proStatus field",
                 "UpgradePrompt visual E2E deferred to Module 16c (first consumer — no Pro feature area exists yet)",
                 "Full verification passes",

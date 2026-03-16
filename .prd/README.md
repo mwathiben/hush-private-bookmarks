@@ -17,7 +17,7 @@
 | 11 | Popup UI — Bookmark Management | 1 | ✅ Complete | 4/4 | 31/31 |
 | 12 | Popup UI — Settings & Utilities | 1 | ✅ Complete | 5/5 | 31/31 |
 | 13 | Full-Page Manager | 1 | ✅ Complete | 3/3 | 18/18 |
-| 14 | Hush 1.0 Import | 1 | 🔄 In Progress | 0/4 | 0/23 |
+| 14 | Hush 1.0 Import | 1 | 🔄 In Progress | 3/4 | 18/23 |
 | 15a | Cloud Sync Client | 1 | ⬜ Not Started | 0/4 | 0/21 |
 | 16a | Payment Integration (ProGate) | 1 | ⬜ Not Started | 0/3 | 0/18 |
 | 16b | Folder Locking (Free) | 1 | ⬜ Not Started | 0/4 | 0/25 |
