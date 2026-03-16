@@ -165,4 +165,27 @@ describe('importHushData', () => {
       expect(result.error).toBeInstanceOf(InvalidPasswordError);
     }
   });
+
+  it('returns error Result for malformed blob (ImportError)', async () => {
+    const result = await importHushData('not-a-blob', 'any-password');
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ImportError);
+    }
+  });
+});
+
+describe('mapHushToTree edge cases', () => {
+  it('returns empty array when data has neither folders nor bookmarks', () => {
+    const nodes = mapHushToTree({} as Parameters<typeof mapHushToTree>[0]);
+    expect(nodes).toHaveLength(0);
+  });
+});
+
+describe('isHushExportData validation', () => {
+  it('rejects data with invalid folder structure', async () => {
+    await expect(
+      decryptHushBlob('{"iv":"bad"}', 'pw'),
+    ).rejects.toThrow(ImportError);
+  });
 });

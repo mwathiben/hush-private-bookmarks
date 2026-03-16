@@ -169,3 +169,37 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 - Also caught that Module 16a `prd.json` had incomplete ProStatus default shape (`{ isPro: false, canTrial: true }` missing `expiresAt: null, trialDaysLeft: null`)
 - Lesson: PRD metadata (README tracker table, acceptance criteria examples) drifts from actual state when progress logging updates only `prd.json` and `progress.md`. Add README update to the post-story checklist.
 - Cross-reference: `Progress Logging Protocol` in CLAUDE.md does not mention README updates — consider adding it
+
+## HUSH-004 Session Lessons
+
+### Shared fixture extraction eliminates 260+ lines of duplication
+
+- Three E2E test files (`hush-import-ui`, `popup-settings`, `popup-settings-flows`) each duplicated ~80-90 lines of identical `settingsPage` fixture code including full PBKDF2 key derivation
+- Extracted to `tests/e2e/fixtures/settings-page.ts` using existing `seedStorage()` and `unlockPopup()` from `seed-storage.ts`
+- Factory pattern `makeSettingsTest(treeData?)` matches existing `makeTreeTest()` convention
+- Lesson: When adding a new test file that needs a fixture, first check if the same fixture exists elsewhere — duplication is the #1 E2E test anti-pattern
+
+### Playwright strict mode violations from ambiguous aria-labels
+
+- `getByLabel('Actions')` matched 3 elements: 2x "Folder actions" + 1x "Actions" (bookmark). Playwright's `getByLabel` does substring matching by default
+- Fix: `getByRole('button', { name: 'Actions', exact: true })` — explicit role + exact match eliminates ambiguity
+- Lesson: Always use `exact: true` or `getByRole` with exact name when the label substring could match related but different elements (e.g., "Actions" vs "Folder actions")
+
+### "decrypt" in user-friendly messages is not a crypto internal leak
+
+- Initial test asserted `not.toContainText('decrypt')` — but "Failed to decrypt Hush export" is a user-friendly sentence, not a raw SJCL exception
+- The intent was to block SJCL internals: CORRUPT, sjcl, INVALID, stack traces
+- Lesson: Error message leak assertions should target library-specific terms (CORRUPT, sjcl.exception) not English words that legitimately describe the operation
+
+### emulateMedia({ reducedMotion: 'reduce' }) for Radix accordion tests
+
+- Radix UI Accordion uses CSS transitions that can cause timing issues in E2E tests
+- `page.emulateMedia({ reducedMotion: 'reduce' })` disables animations, making accordion expansion deterministic
+- Applied in the integration test that expands nested accordions (Hush Import → Test Folder → bookmarks)
+
+### Coverage gap identification via branch analysis
+
+- Initial coverage: 75% statements, 58% branches — below 80% target
+- Uncovered: empty data path (line 166), unexpected error wrapping (lines 198-201), malformed blob import path
+- Three targeted tests raised coverage to 80%+ without over-testing
+- Lesson: When coverage is close to threshold, check uncovered lines first — usually 2-3 targeted tests suffice

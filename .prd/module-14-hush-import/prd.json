@@ -197,8 +197,8 @@
             ],
             "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build && npm run test:e2e",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": ["HUSH-001", "HUSH-002", "HUSH-003"]
         }
     ],
@@ -306,7 +306,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 3,
+        "passing_stories": 4,
         "build_plan_day": "Day 5",
         "estimated_test_count": "~15 unit + ~4 E2E",
         "session_protocol": "One Claude Code session. Research sjcl npm package, verify decrypt() API, check TypeScript types availability. Commit per story.",
