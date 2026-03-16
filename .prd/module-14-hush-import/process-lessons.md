@@ -141,3 +141,21 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 - E2E test file duplicates the full settingsPage fixture (storage seeding, unlock, navigate) from popup-settings.test.ts
 - Playwright fixtures can't be shared across separate test files without a shared fixture file
 - If more settings E2E test files are added, extract settingsPage fixture to `tests/e2e/fixtures/settings-page.ts`
+
+### Deslop review must be scoped correctly
+
+- Running deslop on `git diff main...HEAD` includes ALL branch changes — findings may be from previous stories, not the current one
+- Fix: scope deslop to `git diff HEAD~1...HEAD` for single-story review, or list only the files changed in the current story
+- Lesson: always scope reviews to the work being verified, not the entire branch
+
+### Redundant type checks after type guards
+
+- `mapBookmarks` had `typeof b.url !== 'string'` despite `isHushBookmark` already validating `url` is a string
+- Type guards that validate at the boundary should be trusted by downstream code — re-checking is defensive slop
+- This is the same lesson as the CodeRabbit HUSH-001 finding about redundant `Array.isArray` checks
+
+### BDD section spacing in E2E tests
+
+- HUSH-002 E2E tests were missing blank lines between `#given`, `#when`, `#then` sections
+- Project convention (per testing.md rules): BDD sections should be visually separated with blank lines
+- Applied consistently across all 3 HUSH-002 E2E test cases
