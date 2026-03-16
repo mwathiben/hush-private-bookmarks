@@ -24,8 +24,8 @@ export function useSearch(
   }, [query, delay]);
 
   const results = useMemo<readonly Bookmark[]>(() => {
-    if (tree === null || debouncedQuery.trim() === '') return [];
-    const q = debouncedQuery.toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
+    if (tree === null || q === '') return [];
     return flattenTree(tree)
       .filter(isBookmark)
       .filter((b) => b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q));

@@ -204,7 +204,8 @@ managerTest.describe('Manager search (MANAGER-002)', () => {
     const main = managerPage.getByTestId('manager-main');
     await main.getByPlaceholder('Search bookmarks...').fill('GitHub');
     await expect(main.getByText('GitHub', { exact: true })).toBeVisible({ timeout: 5_000 });
-    await expect(main.getByText('Jira', { exact: true })).not.toBeVisible();
+    const jira = main.getByText('Jira', { exact: true });
+    await expect(jira).not.toBeVisible({ timeout: 5_000 });
   });
 
   managerTest('search filters bookmarks by URL', async ({ managerPage }) => {
@@ -214,12 +215,21 @@ managerTest.describe('Manager search (MANAGER-002)', () => {
   });
 
   managerTest('clearing search restores folder view', async ({ managerPage }) => {
+    const sidebar = managerPage.getByTestId('manager-sidebar');
     const main = managerPage.getByTestId('manager-main');
     const searchInput = main.getByPlaceholder('Search bookmarks...');
+    const workFolder = main.getByText('Work', { exact: true });
+
+    await sidebar.getByText('Work', { exact: true }).click();
+    await expect(main.getByText('Jira', { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(main.getByText('GitHub', { exact: true })).not.toBeVisible({ timeout: 5_000 });
+
     await searchInput.fill('GitHub');
     await expect(main.getByText('GitHub', { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(main.getByText('Jira', { exact: true })).not.toBeVisible({ timeout: 5_000 });
+
     await searchInput.fill('');
-    await expect(main.getByText('GitHub', { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(workFolder).toBeVisible({ timeout: 5_000 });
   });
 
   managerTest('search excludes folders from results', async ({ managerPage }) => {

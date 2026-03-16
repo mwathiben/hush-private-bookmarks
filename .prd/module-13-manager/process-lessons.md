@@ -41,7 +41,7 @@
 - Nested interactive elements (button inside button) are invalid HTML — refactor chevron toggle into a sibling `<button>` with `aria-label="Toggle folder"` and `aria-expanded`.
 - `role="alert"` must be consistent on all error containers for screen reader announcements. The top-level ManagerApp error div was missing it.
 - Never use `as SessionState` casts on `unknown` — use `isSessionState()` type guard for runtime validation before dispatching to context.
-- Reducers must never throw — return unchanged state on invalid transitions. `console.warn` is also forbidden per project rules; silently ignore instead.
+- Reducers must never throw — return unchanged state on invalid transitions. Do not use `console.warn`; instead of silently ignore with no signal, use non-console telemetry: dev-only logs behind a DEV/feature-flag check during local debugging, metrics counters for expected-but-interesting invalid transitions, and error-tracking breadcrumbs/exceptions for unexpected integrity/state issues.
 - Test names must match what the test actually asserts. "sends LOCK and returns to login" was renamed to "sends LOCK" since the test only checks the message call.
 
 ## MANAGER-002: Search Hook & Toolbar (2026-03-16)
@@ -88,3 +88,10 @@
 - Whitespace trim must be consistent between `isActiveSearch` check and `useSearch` filter. Adding `.trim()` in `useSearch`'s empty-check prevents whitespace-only queries from running the filter pipeline.
 - O(N*M) `findItemPath` per search result in `SearchResults` is acceptable for v1.0 (<1000 bookmarks) but should be documented as an optimization opportunity. Pre-computed `Map<id, path>` would reduce to O(N+M).
 - Silent `null` return from `.map()` when `findItemPath` fails is acceptable for the race condition (bookmark deleted between search and render) but not for integrity errors.
+
+### CodeRabbit VSC Post-Commit Review Cycle
+
+- CodeRabbit VSC (IDE extension) can flag issues after commit that the CLI agent missed. Copilot auto-fixes require the same confirmation-bias-zero verification as any code change.
+- Negative E2E assertions (`not.toBeVisible()`) MUST include explicit `timeout` — without it, Playwright returns immediately if the element isn't found yet (race condition with debounce/rendering).
+- E2E "restore" tests should verify the full roundtrip: navigate to specific state → perform action → undo action → verify original state is restored. Testing only the undo misses state-restoration bugs.
+- `useMemo` filter computations should compute derived values (like `q = debouncedQuery.trim().toLowerCase()`) once before the early-return check, not split trim/lowercase across separate lines.
