@@ -6,6 +6,7 @@ import { useSessionDispatch } from '@/hooks/useSessionProvider';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 import { RecoveryPhraseVerify } from '@/components/settings/RecoveryPhraseVerify';
 import { ImportSection } from '@/components/settings/ImportSection';
+import { HushImportSection } from '@/components/settings/HushImportSection';
 import { ExportSection } from '@/components/settings/ExportSection';
 import { SetManagement } from '@/components/settings/SetManagement';
 import { AutoLockConfig } from '@/components/settings/AutoLockConfig';
@@ -53,6 +54,11 @@ export default function SettingsScreen(): React.JSX.Element {
             <div>
               <h4 className="mb-2 text-sm font-medium">Import</h4>
               <ImportSection />
+            </div>
+            <Separator />
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Import from Hush</h4>
+              <HushImportSection />
             </div>
             <Separator />
             <div>

@@ -120,3 +120,24 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 - `--load-extension` flag only works with bundled Chromium, not Chrome/Edge/Firefox
 - Our pattern of `page.evaluate(() => chrome.runtime.sendMessage({...}))` is the standard approach for testing extension message passing
 - SJCL blob generation in Node context, passed as string to `page.evaluate<T, string>()`, is the correct pattern for testing with Node-only dependencies
+
+## HUSH-003: UI Component Lessons
+
+### Playwright strict mode with getByText
+- `getByText('Import from Hush')` resolves to 2 elements when the same text appears in both an h4 heading and a button label
+- Fix: use `getByRole('heading', { name: 'Import from Hush' })` for headings, `getByRole('button', { name: /import from hush/i })` for buttons
+- Lesson: always prefer role-based locators over `getByText` when text may appear in multiple elements
+
+### React 19 FormEvent deprecation
+- `React.FormEvent<HTMLFormElement>` shows TypeScript deprecation warning in React 19 types — this is a React 19 types migration notice, not an error
+- The pattern still works correctly and matches existing codebase usage (ImportSection.tsx:149)
+
+### appendImportedFolder duplication decision
+- One-liner `{ ...current, children: [...current.children, imported] }` duplicated in HushImportSection rather than extracted to shared utility
+- Extracting would touch ImportSection.tsx + its tests — scope creep for a single-line function
+- If a third consumer appears, extract to `lib/data-model.ts`
+
+### settingsPage fixture duplication
+- E2E test file duplicates the full settingsPage fixture (storage seeding, unlock, navigate) from popup-settings.test.ts
+- Playwright fixtures can't be shared across separate test files without a shared fixture file
+- If more settings E2E test files are added, extract settingsPage fixture to `tests/e2e/fixtures/settings-page.ts`
