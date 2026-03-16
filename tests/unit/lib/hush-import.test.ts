@@ -176,16 +176,19 @@ describe('importHushData', () => {
 });
 
 describe('mapHushToTree edge cases', () => {
-  it('returns empty array when data has neither folders nor bookmarks', () => {
+  it('returns empty array for data without folders or bookmarks (defensive path)', () => {
     const nodes = mapHushToTree({} as Parameters<typeof mapHushToTree>[0]);
     expect(nodes).toHaveLength(0);
   });
 });
 
-describe('isHushExportData validation', () => {
-  it('rejects data with invalid folder structure', async () => {
-    await expect(
-      decryptHushBlob('{"iv":"bad"}', 'pw'),
-    ).rejects.toThrow(ImportError);
+describe('decryptHushBlob validation', () => {
+  it('throws ImportError with format context for unrecognized data shape', async () => {
+    const sjcl = await import('sjcl');
+    const blob = sjcl.encrypt(HUSH_PASSWORD, JSON.stringify({ unrelated: true }));
+    await expect(decryptHushBlob(blob, HUSH_PASSWORD)).rejects.toMatchObject({
+      constructor: ImportError,
+      context: { source: 'hush', format: 'unknown' },
+    });
   });
 });

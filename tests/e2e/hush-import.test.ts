@@ -90,6 +90,7 @@ test.describe('Hush Import E2E Integration (HUSH-004)', () => {
     // #then — error is visible and user-friendly
     const alert = settingsPage.getByRole('alert');
     await expect(alert).toBeVisible({ timeout: 30_000 });
+    await expect(alert).toContainText(/decrypt|import|Hush/i);
 
     // #then — error does NOT leak crypto internals
     await expect(alert).not.toContainText('CORRUPT');
