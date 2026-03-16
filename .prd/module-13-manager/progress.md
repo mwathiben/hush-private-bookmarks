@@ -5,7 +5,7 @@
 | ID | Title | Status | Attempts |
 | --- | --- | --- | --- |
 | MANAGER-001 | Manager entry point, layout, and shared component integration | PASSED | 1 |
-| MANAGER-002 | Manager toolbar with search and action buttons | NOT STARTED | 0 |
+| MANAGER-002 | Manager toolbar with search and action buttons | PASSED | 1 |
 | MANAGER-003 | Open Manager from popup, settings in manager, and E2E | NOT STARTED | 0 |
 
 **Critical Path**: 001 → 002 → 003
@@ -78,4 +78,58 @@ Coverage:
   hooks/: 95.14% lines
   components/: all dirs ≥80% lines
   entrypoints/background/: 88.5% lines
+```
+
+---
+
+## Session: 2026-03-16T10:40:00Z
+**Task**: MANAGER-002 - Manager toolbar with search and action buttons
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created `hooks/useSearch.ts` — debounced search hook (200ms default, `useEffect` + `setTimeout`/`clearTimeout` cleanup, `useMemo` for filtered results)
+- Created `components/manager/ManagerToolbar.tsx` — search input (shadcn Input + lucide Search icon) + "+ Bookmark" and "+ Folder" action buttons
+- Created `components/manager/SearchResults.tsx` — flat bookmark list with path resolution via `findItemPath`
+- Integrated all three into `entrypoints/manager/ManagerApp.tsx` — replaced inline toolbar with ManagerToolbar component, added search state + useSearch hook, conditional rendering (search results vs folder view vs empty state)
+- Removed unused `Button` import from ManagerApp (now used inside ManagerToolbar)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| `hooks/useSearch.ts` | Debounced search hook: flattenTree → isBookmark → case-insensitive title/URL match |
+| `components/manager/ManagerToolbar.tsx` | Search input + action buttons, pure presentational |
+| `components/manager/SearchResults.tsx` | Flat bookmark results with path resolution for action menus |
+| `tests/unit/hooks/useSearch.test.ts` | 12 unit tests for useSearch hook |
+| `tests/unit/components/manager/ManagerToolbar.test.tsx` | 8 unit tests for ManagerToolbar |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `entrypoints/manager/ManagerApp.tsx` | Added searchQuery state, useSearch hook, handleSearchChange callback, replaced toolbar JSX with ManagerToolbar, added SearchResults conditional rendering |
+| `tests/e2e/manager-core.test.ts` | Added 5 E2E tests for search functionality |
+| `.prd/module-13-manager/prd.json` | MANAGER-002 passes: true, attempt_count: 1, passing_stories: 2 |
+
+### Acceptance Criteria Verification
+
+1. Search bar with debounced input (200ms) — PASS (useSearch uses setTimeout/clearTimeout with 200ms delay)
+2. Search filters by title and URL (case-insensitive), bookmarks only — PASS (flattenTree → isBookmark → toLowerCase includes)
+3. Flat list of matching bookmarks in search results — PASS (SearchResults renders BookmarkItem for each result)
+4. Active search overrides folder navigation — PASS (handleSearchChange sets selectedFolderPath to null)
+5. Clearing search restores folder view — PASS (isActiveSearch false → shows BookmarkTree)
+6. Add bookmark/folder buttons open shared dialogs — PASS (ManagerToolbar callbacks trigger dialog states)
+7. useSearch cleans up debounce timer on unmount — PASS (useEffect cleanup calls clearTimeout)
+
+### Verification Results
+
+```
+tsc --noEmit: clean (0 errors)
+vitest run: 875 tests passed (59 test files)
+  - useSearch.test.ts: 12/12 passed
+  - ManagerToolbar.test.tsx: 8/8 passed
+  - ManagerApp.test.tsx: 20/20 passed (all existing tests still pass)
+eslint: 27 pre-existing issues (0 from new code)
+wxt build: success (824.58 KB total)
+playwright tests/e2e/manager-core.test.ts: 11/11 passed (6 existing + 5 new search tests)
 ```

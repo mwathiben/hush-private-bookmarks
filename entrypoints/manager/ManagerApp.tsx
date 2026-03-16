@@ -8,7 +8,10 @@ import {
 import type { Screen } from '@/hooks/useSessionProvider';
 import { useSendMessage } from '@/hooks/useSendMessage';
 import { useTree } from '@/hooks/useTree';
+import { useSearch } from '@/hooks/useSearch';
 import { ManagerSidebar } from '@/components/manager/ManagerSidebar';
+import { ManagerToolbar } from '@/components/manager/ManagerToolbar';
+import { SearchResults } from '@/components/manager/SearchResults';
 import LoginScreen from '@/components/screens/LoginScreen';
 import SetupScreen from '@/components/screens/SetupScreen';
 import SettingsScreen from '@/components/screens/SettingsScreen';
@@ -18,7 +21,6 @@ import { AddEditBookmarkDialog } from '@/components/shared/AddEditBookmarkDialog
 import { AddFolderDialog } from '@/components/shared/AddFolderDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { FolderPicker } from '@/components/shared/FolderPicker';
-import { Button } from '@/components/ui/button';
 import { isSessionState } from '@/hooks/useSession';
 import { removeItem, moveItem, isFolder, getFolderByPath } from '@/lib/data-model';
 import type { BookmarkDialogMode } from '@/components/shared/AddEditBookmarkDialog';
@@ -50,6 +52,10 @@ function ManagerTreePanel(): React.JSX.Element {
   const [selectedFolderPath, setSelectedFolderPath] = useState<readonly number[] | null>(null);
   const [dialogState, setDialogState] = useState<DialogState>(DIALOG_NONE);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const { results: searchResults } = useSearch(tree, searchQuery);
+  const isActiveSearch = searchQuery.trim() !== '';
 
   const state = useSessionState();
   const dispatch = useSessionDispatch();
@@ -127,6 +133,13 @@ function ManagerTreePanel(): React.JSX.Element {
     return { mode: 'add', parentPath };
   }, [dialogState, parentPath]);
 
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (query.trim() !== '') {
+      setSelectedFolderPath(null);
+    }
+  }, []);
+
   const handleLock = useCallback(async () => {
     try {
       await sendMessage({ type: 'LOCK' });
@@ -161,31 +174,22 @@ function ManagerTreePanel(): React.JSX.Element {
         className="flex min-w-0 flex-1 flex-col overflow-y-auto"
         data-testid="manager-main"
       >
-        <div className="flex items-center gap-2 border-b px-4 py-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={tree === null}
-            onClick={() => { setActionError(null); setDialogState({ type: 'add-bookmark' }); }}
-          >
-            + Bookmark
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={tree === null}
-            onClick={() => { setActionError(null); setDialogState({ type: 'add-folder' }); }}
-          >
-            + Folder
-          </Button>
-        </div>
+        <ManagerToolbar
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          onAddBookmark={() => { setActionError(null); setDialogState({ type: 'add-bookmark' }); }}
+          onAddFolder={() => { setActionError(null); setDialogState({ type: 'add-folder' }); }}
+          disabled={tree === null}
+        />
         {(error ?? actionError) && (
           <p className="px-4 py-2 text-sm text-destructive" role="alert">
             {error ?? actionError}
           </p>
         )}
         <div className="p-4">
-          {hasChildren ? (
+          {isActiveSearch && tree !== null ? (
+            <SearchResults results={searchResults} tree={tree} onAction={handleAction} />
+          ) : hasChildren ? (
             <BookmarkTree nodes={visibleNodes} onAction={handleAction} />
           ) : (
             <EmptyTreeState

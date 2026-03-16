@@ -43,3 +43,48 @@
 - Never use `as SessionState` casts on `unknown` — use `isSessionState()` type guard for runtime validation before dispatching to context.
 - Reducers must never throw — return unchanged state on invalid transitions. `console.warn` is also forbidden per project rules; silently ignore instead.
 - Test names must match what the test actually asserts. "sends LOCK and returns to login" was renamed to "sends LOCK" since the test only checks the message call.
+
+## MANAGER-002: Search Hook & Toolbar (2026-03-16)
+
+### happy-dom Duplicate Element Rendering
+
+- `type="search"` inputs render duplicate elements under happy-dom. `getByPlaceholderText('Search bookmarks...')` and `getByRole('searchbox')` both find multiple matches.
+- **Fix**: Use `within(result.container as HTMLElement)` to scope queries to the actual rendered container, and use `getByLabelText('Search bookmarks')` (aria-label) instead of placeholder or role queries.
+- This is a happy-dom quirk, not a test design issue. Document per-component when this workaround is needed.
+
+### Test Query Specificity
+
+- URL filter tests must use queries that uniquely match a single fixture bookmark. Query `'EXAMPLE.COM'` matched both `jira.example.com` AND `example.com` — 2 results instead of expected 1.
+- **Fix**: Use domain-specific queries like `'GITHUB.COM'` that uniquely match one fixture entry. Always audit test fixtures for overlapping URLs/titles before writing assertions.
+
+### React Debounce Pattern
+
+- `useEffect` + `setTimeout`/`clearTimeout` cleanup is the canonical React debounce pattern (confirmed via React docs + context7). No external debounce libraries needed.
+- `useMemo` keyed on `[tree, debouncedQuery]` for the filtering computation — prevents re-filtering on unrelated state changes.
+- Effect cleanup runs before new effect AND on unmount — single mechanism handles both debounce reset and unmount cleanup.
+
+### Toolbar Extraction Pattern
+
+- Extracting inline toolbar JSX into a presentational component (`ManagerToolbar`) reduces ManagerApp line count and separates concerns.
+- The parent manages all state; the toolbar receives callbacks. Zero business logic in the toolbar component.
+- Button text (`+ Bookmark`, `+ Folder`) must be preserved exactly — existing tests check for this text.
+
+### Search Integration Architecture
+
+- `handleSearchChange` clears `selectedFolderPath` when search is active — ensures search results show all matches, not just current folder.
+- `isActiveSearch` derived from `searchQuery.trim() !== ''` — whitespace-only queries don't trigger search.
+- `SearchResults` resolves absolute paths via `findItemPath` for each result — O(n) per result but acceptable for v1.0 (< 1000 bookmarks).
+
+### E2E Search Testing
+
+- Use `page.fill()` for search input (triggers input event properly). `page.type()` also works but `fill()` is cleaner.
+- Debounce means assertions need `timeout: 5_000` to wait for results to appear after debounce settles.
+- Empty search result: use `data-testid="search-empty"` selector — more reliable than matching text content across locales.
+
+### CodeRabbit Findings (Post-MANAGER-002)
+
+- `role="toolbar"` + `aria-label` required on toolbar containers that group related controls (search + action buttons). Screen readers announce generic divs as unnamed containers without this.
+- `tree!` non-null assertions are fragile — restructure conditionals to provide explicit null guards (`isActiveSearch && tree !== null`) instead of relying on implicit guarantees across component boundaries.
+- Whitespace trim must be consistent between `isActiveSearch` check and `useSearch` filter. Adding `.trim()` in `useSearch`'s empty-check prevents whitespace-only queries from running the filter pipeline.
+- O(N*M) `findItemPath` per search result in `SearchResults` is acceptable for v1.0 (<1000 bookmarks) but should be documented as an optimization opportunity. Pre-computed `Map<id, path>` would reduce to O(N+M).
+- Silent `null` return from `.map()` when `findItemPath` fails is acceptable for the race condition (bookmark deleted between search and render) but not for integrity errors.
