@@ -36,7 +36,7 @@ async function activateSession(
 ): Promise<BackgroundResponse> {
   const sets = await listSets().then(r => r.success ? r.data : []);
   let isAllowedIncognito = false;
-  try { isAllowedIncognito = await ctx.isAllowedIncognitoAccess(); } catch {}
+  try { isAllowedIncognito = await ctx.isAllowedIncognitoAccess(); } catch { /* not available in all contexts */ }
   const state: SessionState = {
     isUnlocked: true, activeSetId: setId, sets, tree,
     incognitoMode: determineMode({ isIncognitoContext: false, isAllowedIncognito }),
