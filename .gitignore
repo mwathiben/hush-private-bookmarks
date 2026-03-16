@@ -22,6 +22,7 @@ web-ext.config.ts
 coverage/
 test-results/
 playwright-report/
+tests/screenshots/
 *.tsbuildinfo
 
 # Editor directories and files

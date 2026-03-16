@@ -59,6 +59,7 @@ function FolderNavItem({ name, path, children, depth, selectedPath, onSelectFold
         )}
         <button
           type="button"
+          aria-label={`Select folder ${name}`}
           className={`flex min-w-0 flex-1 items-center gap-1 rounded-md px-2 py-1 text-sm ${
             isSelected ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'
           }`}
@@ -107,6 +108,7 @@ export function ManagerSidebar({
       <nav className="flex-1 overflow-y-auto p-2" aria-label="Folder navigation">
         <button
           type="button"
+          aria-label="Select all bookmarks"
           className={`flex w-full items-center gap-1 rounded-md px-2 py-1 text-sm ${
             selectedPath === null ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'
           }`}

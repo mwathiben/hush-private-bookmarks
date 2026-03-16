@@ -1,3 +1,6 @@
+import { test as extensionTest, expect } from './extension';
+import type { Page } from '@playwright/test';
+
 export const SEED_PASSWORD = 'testpass123';
 
 export const POPULATED_TREE = JSON.stringify({
@@ -93,4 +96,45 @@ export function seedStorage(): (
       holyPrivateData: store,
     });
   };
+}
+
+export const EMPTY_TREE = JSON.stringify({
+  type: 'folder',
+  id: 'root',
+  name: 'Root',
+  children: [],
+  dateAdded: 0,
+});
+
+export async function unlockPopup(page: Page, password: string): Promise<void> {
+  await expect(page.getByTestId('login-screen')).toBeVisible({
+    timeout: 30_000,
+  });
+  const input = page.getByPlaceholder('Password');
+  await input.click();
+  await input.pressSequentially(password, { delay: 50 });
+  await page.getByRole('button', { name: /unlock/i }).click();
+  await expect(page.getByTestId('tree-screen')).toBeVisible({
+    timeout: 60_000,
+  });
+}
+
+export function makeTreeTest(treeData: string) {
+  return extensionTest.extend<{ treePage: Page }>({
+    treePage: async ({ context, extensionId }, use) => {
+      let sw = context.serviceWorkers()[0];
+      if (!sw) sw = await context.waitForEvent('serviceworker');
+
+      await sw.evaluate(
+        seedStorage(),
+        [SEED_PASSWORD, treeData] as const,
+      );
+
+      const page = await context.newPage();
+      await page.goto(`chrome-extension://${extensionId}/popup.html`);
+      await unlockPopup(page, SEED_PASSWORD);
+      await use(page);
+      await page.close();
+    },
+  });
 }
