@@ -1,0 +1,281 @@
+{
+    "project": {
+        "name": "Module 16e: New-Tab Dashboard",
+        "description": "Pro-gated new-tab override page with bookmark search dashboard. Replaces Chrome's new tab page with a privacy-focused command-palette search (shadcn Command component) for quick bookmark access. Shows recent bookmarks, folder quick-nav, and search. Implements SyncableFeature for dashboard config (layout preferences). WXT newtab entrypoint. Gated by useProGate() — free users see the dashboard with an upgrade banner (not a full block — lets them experience the value before converting).",
+        "version": "1.0.0",
+        "created": "2026-03-16",
+        "parent_plan": "Hush Consolidated Build Plan — Day 5 (Pro features)",
+        "critical_path_position": "Depends on Module 16a (ProGate) and Module 15a (SyncableFeature). Must execute after both. Last feature module before Modules 17-18 (testing + store prep)."
+    },
+    "holy_pb_shortfalls": {
+        "note": "New-tab dashboard is new infrastructure with no Holy PB equivalent. No upstream code to audit."
+    },
+    "user_stories": [
+        {
+            "id": "DASH-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "New-tab entrypoint scaffolding and auth routing",
+            "description": "Create entrypoints/newtab/ directory with WXT newtab override. Full-page React app with its own SessionProvider (independent of popup/manager, same pattern as Module 13). Auth screens reused (LoginScreen, SetupScreen) — user must unlock before seeing dashboard. Skeleton DashboardScreen placeholder. Inherits dark mode from popup/manager pattern.",
+            "story_points": 5,
+            "steps": [
+                "Research WXT newtab entrypoint requirements (index.html structure, meta tags, chrome_url_overrides)",
+                "Create entrypoints/newtab/index.html (with chrome_url_overrides.newtab in manifest)",
+                "Create entrypoints/newtab/main.tsx (React root + initSentry + theme init — same as manager/main.tsx)",
+                "Create entrypoints/newtab/DashboardApp.tsx with useSessionProvider, auth routing, skeleton DashboardScreen",
+                "RED: Test: 'DashboardApp shows login screen when locked'",
+                "RED: Test: 'DashboardApp shows dashboard when unlocked'",
+                "RED: Test: 'DashboardApp shows setup screen on first use'",
+                "RED: Test: 'DashboardScreen renders skeleton/loading state'",
+                "GREEN: Implement all files. Reuse LoginScreen, SetupScreen, ErrorBoundary.",
+                "REFACTOR: Ensure auth screen reuse (zero duplication). Verify newtab in manifest."
+            ],
+            "files": [
+                "entrypoints/newtab/index.html",
+                "entrypoints/newtab/main.tsx",
+                "entrypoints/newtab/DashboardApp.tsx",
+                "tests/unit/entrypoints/newtab/DashboardApp.test.tsx"
+            ],
+            "acceptance_criteria": [
+                "entrypoints/newtab/ creates chrome_url_overrides.newtab in manifest",
+                "DashboardApp has its own SessionProvider (independent instance)",
+                "Locked state → LoginScreen (reused from Module 10)",
+                "First-time → SetupScreen (reused from Module 10)",
+                "Unlocked → DashboardScreen (skeleton placeholder for DASH-002)",
+                "Dashboard shows skeleton/loading state before data loads",
+                "No blocking network requests before first paint",
+                "Dark mode supported (same pattern as manager)",
+                "initSentry() called in main.tsx",
+                "ErrorBoundary wraps app root"
+            ],
+            "definition_of_done": ["Unit tests pass", "tsc clean", "wxt build includes newtab"],
+            "verification": "npx vitest run tests/unit/entrypoints/newtab && npx tsc --noEmit && npx wxt build",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "DASH-002",
+            "category": "ui",
+            "priority": "CRITICAL",
+            "title": "Dashboard components — search, recent bookmarks, folder nav",
+            "description": "Build the three dashboard components: DashboardSearch (shadcn Command wrapping useSearch), RecentBookmarks (grid of most recently added bookmarks), FolderNav (horizontal folder list). Wire into DashboardScreen from DASH-001. Selecting a bookmark opens it in the current tab via browser.tabs.update.",
+            "story_points": 5,
+            "steps": [
+                "Install shadcn Command component (if not already installed)",
+                "Create components/dashboard/DashboardSearch.tsx: Command component wrapping bookmark search. Uses useSearch hook from Module 13. Opens bookmarks on select (browser.tabs.update for current tab).",
+                "Create components/dashboard/RecentBookmarks.tsx: grid of most recently added bookmarks (sorted by dateAdded desc, limit 12).",
+                "Create components/dashboard/FolderNav.tsx: horizontal folder list for quick navigation.",
+                "Wire all three components into DashboardScreen in DashboardApp.tsx",
+                "RED: Test: 'DashboardSearch renders Command component'",
+                "RED: Test: 'DashboardSearch filters bookmarks via useSearch'",
+                "RED: Test: 'RecentBookmarks shows most recent 12 bookmarks by dateAdded'",
+                "RED: Test: 'FolderNav lists top-level folders'",
+                "RED: Test: 'Selecting bookmark calls browser.tabs.update (not .create)'",
+                "GREEN: Implement all components. Reuse useSearch hook.",
+                "REFACTOR: Ensure layout is centered search + grid + folder nav. Verify keyboard navigation."
+            ],
+            "files": [
+                "components/dashboard/DashboardSearch.tsx",
+                "components/dashboard/RecentBookmarks.tsx",
+                "components/dashboard/FolderNav.tsx",
+                "entrypoints/newtab/DashboardApp.tsx",
+                "tests/unit/components/dashboard/DashboardSearch.test.tsx",
+                "tests/unit/components/dashboard/RecentBookmarks.test.tsx",
+                "tests/unit/components/dashboard/FolderNav.test.tsx"
+            ],
+            "acceptance_criteria": [
+                "DashboardSearch uses shadcn Command with bookmark results from useSearch",
+                "DashboardSearch provides keyboard navigation (up/down/enter)",
+                "RecentBookmarks: top 12 by dateAdded, grid layout",
+                "FolderNav: horizontal list of top-level folders",
+                "Selecting bookmark opens in current tab (browser.tabs.update, not .create)",
+                "Verify browser.tabs.update works from newtab page without additional permissions (extension-owned tab)",
+                "Dashboard layout: centered search bar, recent bookmarks grid, folder nav"
+            ],
+            "definition_of_done": ["Unit tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/dashboard && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["DASH-001"]
+        },
+        {
+            "id": "DASH-003",
+            "category": "ui",
+            "priority": "HIGH",
+            "title": "Pro gating with upgrade banner and SyncableFeature",
+            "description": "Dashboard is visible to free users but with a top banner encouraging upgrade. Pro users get the full clean experience. Create DashboardConfigSyncFeature implementing SyncableFeature (layout preferences like recent count, folder order). The dashboard itself works for free users — the Pro gate is soft (banner, not block) to let users experience value before converting.",
+            "story_points": 5,
+            "steps": [
+                "Create components/dashboard/UpgradeBanner.tsx: dismissible banner at top of dashboard for free users. 'Upgrade to Pro for ad-free dashboard and sync.' Shows only when useProGate().isPro is false.",
+                "Create lib/dashboard-config.ts: DashboardConfig type { recentCount: number; showFolderNav: boolean; layout: 'grid' | 'list' }. DashboardConfigSyncFeature implements SyncableFeature (featureId='dashboard-config', requiresServer()=false).",
+                "RED: Test: 'Free user sees UpgradeBanner'",
+                "RED: Test: 'Pro user does not see UpgradeBanner'",
+                "RED: Test: 'UpgradeBanner is dismissible'",
+                "RED: Test: 'DashboardConfigSyncFeature implements SyncableFeature'",
+                "RED: Test: 'DashboardConfigSyncFeature.requiresServer returns false'",
+                "RED: Test: 'DashboardConfig stored in chrome.storage.local (not encrypted tree)'",
+                "GREEN: Implement components and config."
+            ],
+            "files": [
+                "components/dashboard/UpgradeBanner.tsx",
+                "lib/dashboard-config.ts",
+                "tests/unit/components/dashboard/UpgradeBanner.test.tsx",
+                "tests/unit/lib/dashboard-config.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Free users see dismissible upgrade banner — NOT a full block",
+                "Pro users see clean dashboard (no banner)",
+                "DashboardConfig: recentCount, showFolderNav, layout",
+                "DashboardConfigSyncFeature implements SyncableFeature",
+                "DashboardConfigSyncFeature.requiresServer() returns false (Option A)",
+                "Config persisted in chrome.storage.local (not encrypted tree — it's preferences, not sensitive data)",
+                "lib/dashboard-config.ts has zero React imports (lib/ purity)"
+            ],
+            "definition_of_done": ["Unit tests pass", "tsc clean"],
+            "verification": "npx vitest run && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["DASH-002"]
+        },
+        {
+            "id": "DASH-004",
+            "category": "verification",
+            "priority": "HIGH",
+            "title": "E2E dashboard flows and integration verification",
+            "description": "E2E tests for new-tab dashboard. Full verification suite including newtab in manifest, auth flow, search, recent bookmarks.",
+            "story_points": 5,
+            "steps": [
+                "RED: E2E: 'new tab page shows login screen when locked'",
+                "RED: E2E: 'new tab page shows dashboard after unlock'",
+                "RED: E2E: 'dashboard search finds bookmarks by title'",
+                "RED: E2E: 'selecting search result opens in current tab'",
+                "RED: E2E: 'free user sees upgrade banner'",
+                "GREEN: Create tests/e2e/newtab-dashboard.test.ts",
+                "Run full verification: tsc + eslint + vitest + wxt build + playwright"
+            ],
+            "files": ["tests/e2e/newtab-dashboard.test.ts"],
+            "acceptance_criteria": [
+                "E2E: newtab loads and shows auth/dashboard appropriately",
+                "E2E: search works within dashboard",
+                "E2E: bookmark selection navigates current tab",
+                "E2E: upgrade banner visible for free users",
+                "Manifest includes chrome_url_overrides.newtab",
+                "Full verification passes",
+                "Zero regressions"
+            ],
+            "definition_of_done": ["All tests pass", "Full verification clean"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["DASH-002", "DASH-003"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "session_provider": "hooks/useSessionProvider.tsx — shared session infrastructure (SessionProvider component, useSessionState, useSessionDispatch, useTreeContext hooks). Reusable across entrypoints.",
+            "auth_screens": "components/screens/LoginScreen.tsx + SetupScreen.tsx — shared, reusable across entrypoints (popup, manager, newtab)",
+            "search": "hooks/useSearch.ts — useSearch(tree, query, delay?) → { results: readonly Bookmark[]; isSearching: boolean }",
+            "manager_pattern": "entrypoints/manager/ — reference for new entrypoint (3 files: index.html, main.tsx, ManagerApp.tsx)",
+            "sentry": "lib/sentry.ts — initSentry() called in main.tsx of each entrypoint",
+            "theme_init": "localStorage-based dark mode toggle pattern in manager/main.tsx (lines 10-24)",
+            "error_boundary": "components/ErrorBoundary.tsx — wraps app root in each entrypoint"
+        },
+        "what_does_not_exist": {
+            "newtab": "No entrypoints/newtab/ directory. No newtab in manifest.",
+            "dashboard": "No dashboard components. No DashboardConfig.",
+            "command": "shadcn Command component not installed (check components/ui/command.tsx before starting).",
+            "pro_gate": "hooks/useProGate.ts does not exist yet — depends on Module 16a",
+            "syncable_feature": "SyncableFeature interface not in lib/types.ts yet — depends on Module 15a"
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "wxt_newtab": "WXT newtab entrypoint: entrypoints/newtab/index.html. Generates chrome_url_overrides.newtab in manifest. Research WXT docs for exact newtab entrypoint requirements.",
+            "shadcn_command": "shadcn Command component — based on cmdk. Install via shadcn CLI if not present. Provides search input + results list with keyboard navigation.",
+            "tab_navigation": "browser.tabs.update(tabId, { url }) to navigate current tab to selected bookmark. NOT browser.tabs.create (which opens new tab).",
+            "forbidden_patterns": [
+                "Full-blocking Pro gate on dashboard (use soft banner instead)",
+                "browser.tabs.create for bookmark selection (use tabs.update)",
+                "Duplicating auth screen logic (reuse shared screens)",
+                "Storing dashboard preferences in encrypted tree (use chrome.storage.local — preferences are not sensitive)",
+                "React imports in lib/dashboard-config.ts",
+                "console.log, as any, @ts-ignore"
+            ]
+        },
+        "dashboard_philosophy": {
+            "soft_gate": "Dashboard is visible to free users with an upgrade banner. This lets users experience the value (quick search, recent bookmarks) before deciding to upgrade. Hard-blocking would prevent discovery of the feature's value.",
+            "current_tab": "Search results open in the CURRENT tab (new-tab page), not a new tab. This matches user expectation: type search → select result → page loads in same tab.",
+            "minimal_state": "Dashboard preferences (layout, recent count) stored in chrome.storage.local — NOT in the encrypted tree. Preferences are not sensitive bookmark data."
+        },
+        "option_b_readiness": {
+            "dashboard_config_sync": "DashboardConfigSyncFeature implements SyncableFeature. Today: local config only. Option B: dashboard preferences synced via backend.",
+            "consumed_by": "Module 15b (future backend sync)"
+        },
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": [
+            "CLAUDE.md",
+            "licensing-architecture-impact.md (Section 5: dashboard Option B)",
+            "entrypoints/manager/ (reference: creating new entrypoint with shared components)",
+            "hooks/useSessionProvider.tsx",
+            "hooks/useSearch.ts",
+            "WXT newtab entrypoint docs",
+            "This PRD"
+        ],
+        "inputs": [
+            { "file": "hooks/useSessionProvider.tsx", "from_module": "module-10", "what_it_provides": "Session state, auth routing, SessionProvider component" },
+            { "file": "hooks/useSearch.ts", "from_module": "module-13", "what_it_provides": "Debounced bookmark search hook" },
+            { "file": "components/screens/LoginScreen.tsx", "from_module": "module-10", "what_it_provides": "Reusable login screen component" },
+            { "file": "components/screens/SetupScreen.tsx", "from_module": "module-10", "what_it_provides": "Reusable first-time setup screen" },
+            { "file": "components/ErrorBoundary.tsx", "from_module": "module-01", "what_it_provides": "Error boundary wrapper with Sentry integration" },
+            { "file": "lib/sentry.ts", "from_module": "module-09", "what_it_provides": "initSentry() for entrypoint initialization" },
+            { "file": "hooks/useProGate.ts", "from_module": "module-16a", "what_it_provides": "Pro status checking hook (isPro, showUpgrade)" },
+            { "file": "lib/types.ts (SyncableFeature)", "from_module": "module-15a", "what_it_provides": "SyncableFeature interface for config sync" }
+        ],
+        "outputs": [
+            { "file": "entrypoints/newtab/", "consumed_by": "End users (new tab page)", "description": "New-tab dashboard entrypoint" },
+            { "file": "lib/dashboard-config.ts", "consumed_by": "Dashboard components, SyncableFeature consumers", "description": "Dashboard config + SyncableFeature" },
+            { "file": "components/dashboard/", "consumed_by": "DashboardApp", "description": "Dashboard-specific UI components" }
+        ]
+    },
+    "known_risks": [
+        { "issue": "Chrome new-tab override may deter some users", "severity": "MEDIUM", "action": "Users can disable the extension's newtab override in Chrome settings. Document this in store listing." },
+        { "issue": "Performance on new-tab open (cold start)", "severity": "MEDIUM", "action": "Dashboard needs to load fast. Use GET_STATE for initial data (same as popup). Skeleton loading state. No blocking network requests before first paint." },
+        { "issue": "shadcn Command component may not be installed", "severity": "LOW", "action": "Install via shadcn CLI: pnpm dlx shadcn@latest add command. Check before starting." },
+        { "issue": "WXT newtab entrypoint configuration", "severity": "LOW", "action": "Research WXT docs for newtab entrypoint requirements. May need specific index.html structure or meta tags." }
+    ],
+    "critical_path": "DASH-001 → DASH-002 → DASH-003 → DASH-004",
+    "total_story_points": 20,
+    "total_stories": 4,
+    "dependency_chain": {
+        "upstream": "Module 16a (ProGate — required), Module 15a (SyncableFeature — required for dashboard config sync)",
+        "downstream": "Module 17 (E2E tests cover dashboard). Module 18 (store prep includes dashboard screenshot).",
+        "parallel_safe": "Can run in parallel with 16b, 16c, 16d — all share 16a dependency but are otherwise independent"
+    },
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-16e-newtab-dashboard/",
+            "format": "Append-only. ## Session: ISO_timestamp",
+            "update_trigger": "After each story",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "build_plan_day": "Day 5",
+        "estimated_test_count": "~14 unit + ~5 E2E",
+        "session_protocol": "One Claude Code session. Research WXT newtab entrypoint + shadcn Command. Commit per story.",
+        "quality_gate": "All tests pass. tsc clean. wxt build includes newtab. Soft Pro gate (banner, not block). Auth screens reused. Search works.",
+        "human_review_required": "Verify: newtab loads, search works, recent bookmarks visible, bookmark opens in current tab, upgrade banner for free users."
+    },
+    "execution_rules": {
+        "execution_order": "DASH-001 → DASH-002 → DASH-003 → DASH-004",
+        "prd_scope": "Module 16e of 22. Last feature module. Pro feature with soft gate.",
+        "commit_protocol": "feat(dashboard): DASH-XXX — <title>",
+        "failure_protocol": "Max 3 attempts."
+    }
+}

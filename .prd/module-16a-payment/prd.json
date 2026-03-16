@@ -1,0 +1,254 @@
+{
+    "project": {
+        "name": "Module 16a: Payment Integration (ProGate)",
+        "description": "Create the reusable Pro feature gating infrastructure. lib/pro-gate.ts provides checkProStatus() and ProStatus type. hooks/useProGate.ts provides the React hook consumed by all Pro-gated components (16c, 16d, 16e). components/shared/UpgradePrompt.tsx provides the standardized upsell UI. ExtensionPay handles payment backend (Stripe, 5% fee). ProGate is GPL-3.0 — the gating code is visible to anyone. The moat is trust, reviews, maintenance, and the sync backend — not code secrecy.",
+        "version": "1.0.0",
+        "created": "2026-03-16",
+        "updated": "2026-03-16",
+        "parent_plan": "Hush Consolidated Build Plan — Day 5",
+        "critical_path_position": "Module 16a is a HARD dependency for Modules 16c, 16d, 16e (all Pro-gated). Must execute before any Pro feature module. Independent of Modules 14 and 15a — can run in parallel with either."
+    },
+    "holy_pb_shortfalls": {
+        "note": "ProGate is new infrastructure with no Holy PB equivalent. No upstream code to audit."
+    },
+    "user_stories": [
+        {
+            "id": "PAY-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "lib/pro-gate.ts — ExtensionPay integration, ProStatus, and ProGateError",
+            "description": "Create lib/pro-gate.ts with checkProStatus() that calls ExtensionPay's API to determine subscription state. Returns ProStatus { isPro, expiresAt, trialDaysLeft, canTrial }. Handles: active subscription, expired subscription, trial, no subscription. ExtensionPay SDK loaded once and cached. Includes openPaymentPage() to launch ExtensionPay checkout. ProStatus interface defined in lib/types.ts (centralized domain types convention). ProGateError + ProGateErrorContext added to lib/errors.ts (established error class pattern). lib/ module — zero React imports.",
+            "story_points": 8,
+            "steps": [
+                "PREREQUISITE: Research ExtensionPay SDK — (a) check npm registry for `extpay` package and current version, (b) read extensionpay.com API docs, (c) confirm API shape: ExtPay(extensionId), extpay.getUser(), extpay.openPaymentPage(), extpay.onPaid.addListener(), (d) determine if TypeScript types exist or if .d.ts declaration file is needed, (e) verify CWS publication requirement for real integration.",
+                "RED: Test: 'ProGateError is instanceof Error with name ProGateError and context'",
+                "RED: Test: 'ProGateErrorContext has valid code field'",
+                "RED: Test: 'checkProStatus returns isPro:true for active subscriber'",
+                "RED: Test: 'checkProStatus returns isPro:false for expired subscriber'",
+                "RED: Test: 'checkProStatus returns canTrial:true for new user'",
+                "RED: Test: 'checkProStatus returns trialDaysLeft for trial user'",
+                "RED: Test: 'checkProStatus returns isPro:false when ExtensionPay unreachable (graceful degradation)'",
+                "RED: Test: 'openPaymentPage calls ExtensionPay openPaymentPage'",
+                "RED: Test: 'pro-gate.ts has zero React imports (lib/ purity)'",
+                "GREEN: Add ProStatus interface to lib/types.ts: { isPro: boolean; expiresAt: number | null; trialDaysLeft: number | null; canTrial: boolean }. Add ProGateErrorContext { code: 'SDK_UNAVAILABLE' | 'NETWORK_ERROR' | 'CHECK_FAILED' } and ProGateError class to lib/errors.ts following established pattern (readonly name, context, ErrorOptions). Create lib/pro-gate.ts — import type { ProStatus } from '@/lib/types'. Create ExtensionPay singleton wrapper. Implement checkProStatus() — calls extpay.getUser(), maps response to ProStatus. Implement openPaymentPage(). Handle errors gracefully: if ExtensionPay is unreachable, return isPro: false (never break the free tier). Define PRO_EXTENSION_ID constant (placeholder — configured at build time or first run).",
+                "REFACTOR: Ensure zero React imports. Ensure graceful degradation on network failure. Use ProGateError for ExtensionPay failures (network, timeout, SDK unavailable)."
+            ],
+            "files": [
+                "lib/types.ts",
+                "lib/errors.ts",
+                "lib/pro-gate.ts",
+                "tests/unit/lib/pro-gate.test.ts"
+            ],
+            "acceptance_criteria": [
+                "ProStatus in lib/types.ts: { isPro: boolean; expiresAt: number | null; trialDaysLeft: number | null; canTrial: boolean }",
+                "ProGateErrorContext in lib/errors.ts: { code: 'SDK_UNAVAILABLE' | 'NETWORK_ERROR' | 'CHECK_FAILED' }",
+                "ProGateError in lib/errors.ts: follows established error class pattern (readonly name, context, ErrorOptions)",
+                "checkProStatus(): calls ExtensionPay getUser(), maps to ProStatus",
+                "Active subscription: isPro = true, expiresAt set",
+                "Expired: isPro = false, expiresAt in past",
+                "Trial: isPro = true, trialDaysLeft > 0",
+                "No subscription: isPro = false, canTrial = true (if never trialed)",
+                "Network failure: isPro = false (graceful degradation — never break free tier)",
+                "openPaymentPage(): launches ExtensionPay checkout",
+                "Zero React imports in lib/pro-gate.ts",
+                "ExtensionPay SDK initialized once and cached"
+            ],
+            "definition_of_done": [
+                "All unit tests pass",
+                "tsc clean",
+                "lib/ purity check passes"
+            ],
+            "verification": "npx vitest run tests/unit/lib/pro-gate.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "PAY-002",
+            "category": "ui",
+            "priority": "CRITICAL",
+            "title": "useProGate hook and UpgradePrompt component",
+            "description": "Create hooks/useProGate.ts — React hook wrapping checkProStatus() with loading state, caching, and periodic refresh. Create components/shared/UpgradePrompt.tsx — standardized upsell component shown in place of Pro features for free users. Shows feature name, benefit description, and 'Upgrade to Pro' button that calls openPaymentPage().",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'useProGate returns loading:true initially'",
+                "RED: Test: 'useProGate returns ProStatus after check completes'",
+                "RED: Test: 'useProGate.showUpgrade calls openPaymentPage'",
+                "RED: Test: 'useProGate caches result (does not re-fetch on re-render)'",
+                "RED: Test: 'useProGate refreshes on document visibilitychange event'",
+                "RED: Test: 'UpgradePrompt renders feature name and upgrade button'",
+                "RED: Test: 'UpgradePrompt button calls showUpgrade callback'",
+                "RED: Test: 'UpgradePrompt shows trial CTA when canTrial is true'",
+                "GREEN: Create hooks/useProGate.ts — useState for ProStatus + loading state, useRef boolean flag to prevent duplicate fetches on re-render. useEffect calls checkProStatus(). Provide showUpgrade function that calls openPaymentPage(). Add visibilitychange listener to refresh on tab focus (user pays → returns → sees Pro immediately). Create components/shared/UpgradePrompt.tsx with feature prop, benefit description, and action button. Style with existing shadcn Card + Button.",
+                "REFACTOR: Ensure hook is lightweight. Verify visibilitychange listener is cleaned up on unmount."
+            ],
+            "files": [
+                "hooks/useProGate.ts",
+                "components/shared/UpgradePrompt.tsx",
+                "tests/unit/hooks/useProGate.test.ts",
+                "tests/unit/components/shared/UpgradePrompt.test.tsx"
+            ],
+            "acceptance_criteria": [
+                "useProGate returns: { isPro, loading, expiresAt, trialDaysLeft, canTrial, showUpgrade }",
+                "Loading state while checkProStatus() runs",
+                "Cached result — does not re-fetch on re-render (useRef flag)",
+                "showUpgrade() calls openPaymentPage()",
+                "Refreshes ProStatus on document visibilitychange event (user pays → returns → sees Pro)",
+                "visibilitychange listener cleaned up on unmount",
+                "UpgradePrompt: displays feature name, benefit text, 'Upgrade to Pro' button",
+                "UpgradePrompt: shows 'Start free trial' when canTrial is true",
+                "UpgradePrompt: button onClick calls showUpgrade callback",
+                "Both files use existing shadcn components (Card, Button)"
+            ],
+            "definition_of_done": [
+                "All unit tests pass",
+                "tsc clean"
+            ],
+            "verification": "npx vitest run tests/unit/hooks/useProGate.test.ts tests/unit/components/shared/UpgradePrompt.test.tsx && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["PAY-001"]
+        },
+        {
+            "id": "PAY-003",
+            "category": "integration",
+            "priority": "HIGH",
+            "title": "Background payment status handler and integration verification",
+            "description": "Add CHECK_PRO_STATUS message type to background protocol. Wire handler that calls checkProStatus() and returns result. Add ProStatus to SessionState so popup/manager have immediate access on mount. Unit tests for handler and session state. UpgradePrompt visual E2E deferred to Module 16c (first Pro feature consumer — no Pro feature area exists until then).",
+            "story_points": 5,
+            "steps": [
+                "Add CheckProStatusMessage to background-types.ts. Add proStatus: ProStatus to SessionState.",
+                "Wire handler in handlers.ts: calls checkProStatus(), returns ProStatus.",
+                "Update buildLockedState and handleGetState to include proStatus.",
+                "RED: Unit: 'CHECK_PRO_STATUS handler returns ProStatus'",
+                "RED: Unit: 'SessionState includes proStatus field'",
+                "RED: Unit: 'buildLockedState includes proStatus with default values (isPro: false, canTrial: true)'",
+                "GREEN: Implement handler. Update session state construction. Wire unit tests.",
+                "Update scaffold-smoke.test.ts to verify SessionState includes proStatus field.",
+                "Run full verification: tsc + eslint + vitest + wxt build"
+            ],
+            "files": [
+                "lib/background-types.ts",
+                "entrypoints/background/handlers.ts",
+                "entrypoints/background/index.ts",
+                "tests/unit/entrypoints/background.test.ts",
+                "tests/unit/integration/scaffold-smoke.test.ts"
+            ],
+            "acceptance_criteria": [
+                "CHECK_PRO_STATUS message type added to protocol",
+                "SessionState includes proStatus: ProStatus field",
+                "Handler calls checkProStatus() and returns result",
+                "buildLockedState includes proStatus (default: isPro false, canTrial true)",
+                "Smoke test updated to verify SessionState includes proStatus field",
+                "UpgradePrompt visual E2E deferred to Module 16c (first consumer — no Pro feature area exists yet)",
+                "Full verification passes",
+                "Zero regressions"
+            ],
+            "definition_of_done": [
+                "All tests pass",
+                "Full verification clean"
+            ],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["PAY-001", "PAY-002"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "note": "Starting state depends on whether Module 14 and 15a have completed. Read actual state from the most recent progress.md before starting.",
+            "estimated_after_15a": "~920 unit tests, ~200 E2E tests (rough estimate). 16+ lib/ modules. Background protocol at ~20 message types (original 16 + IMPORT_HUSH + 3 SYNC_*).",
+            "key_files": "All lib/ modules, background handlers, popup, manager, settings (all from Modules 1-13). ImportSection, HushImportSection (Module 14). sync-client, sync-types, sync-queue (Module 15a)."
+        },
+        "what_does_not_exist": {
+            "pro_gate": "No lib/pro-gate.ts. No useProGate hook. No UpgradePrompt component.",
+            "extensionpay": "ExtensionPay SDK not installed.",
+            "pro_status": "No ProStatus in SessionState. No CHECK_PRO_STATUS message type.",
+            "pro_types": "No ProStatus in lib/types.ts. No ProGateError in lib/errors.ts."
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "extensionpay": "ExtensionPay (extensionpay.com) — payment SDK for Chrome extensions. Handles Stripe integration, subscription management, trial periods. SDK is a JS file loaded in extension context. API: ExtPay(id).getUser(), .openPaymentPage(), .onPaid.addListener(). 5% fee on top of Stripe fees.",
+            "extensionpay_installation": "Research current ExtensionPay installation method before starting. May be npm package (extpay) or manual script include. The SDK handles all Stripe communication — Hush never touches payment details directly.",
+            "testing": "Mock ExtensionPay SDK in tests. The SDK communicates with extensionpay.com servers — mock the getUser() and openPaymentPage() calls.",
+            "forbidden_patterns": [
+                "Direct Stripe API calls (ExtensionPay handles this)",
+                "Storing payment details in chrome.storage",
+                "Breaking free tier on ExtensionPay failure (graceful degradation mandatory)",
+                "React imports in lib/pro-gate.ts",
+                "console.log, as any, @ts-ignore",
+                "SyncError for ProGate failures (use ProGateError)"
+            ]
+        },
+        "pro_gate_philosophy": {
+            "code_is_visible": "lib/pro-gate.ts is GPL-3.0. Anyone can read the gating logic. A forker can strip useProGate() checks. This is BY DESIGN.",
+            "moat_is_not_code": "The moat is: cloud sync (proprietary backend), CWS review momentum, Sentry-monitored maintenance, brand trust. Not code secrecy.",
+            "graceful_degradation": "If ExtensionPay is unreachable → treat as free user. Never break the free tier. Never show errors about payment infrastructure to free users."
+        },
+        "licensing": {
+            "extension_license": "GPL-3.0",
+            "pro_gate_license": "GPL-3.0 (code visible, feature gated by ExtensionPay license check)"
+        },
+        "read_first": [
+            "CLAUDE.md",
+            "licensing-architecture-impact.md (Section 5: ProGate pattern, useProGate, UpgradePrompt)",
+            "ExtensionPay documentation (research current API before starting)",
+            "hooks/useSendMessage.ts (pattern reference for React hooks)",
+            "lib/errors.ts (pattern reference for ProGateError)",
+            "lib/types.ts (where ProStatus interface goes)",
+            "This PRD"
+        ],
+        "inputs": [
+            { "file": "lib/types.ts", "from_module": "Module 1", "what_it_provides": "Result<T,E> type, home for ProStatus interface" },
+            { "file": "lib/errors.ts", "from_module": "Module 1", "what_it_provides": "Error class pattern, home for ProGateError" },
+            { "file": "lib/background-types.ts", "from_module": "Module 15a", "what_it_provides": "BackgroundMessage union to extend" },
+            { "file": "hooks/useSendMessage.ts", "from_module": "Module 10", "what_it_provides": "Pattern reference for hooks" }
+        ],
+        "outputs": [
+            { "file": "lib/pro-gate.ts", "consumed_by": "hooks/useProGate.ts, background handlers", "description": "Pro status check, payment page launch" },
+            { "file": "hooks/useProGate.ts", "consumed_by": "Modules 16c, 16d, 16e (all Pro-gated components)", "description": "React hook for Pro gating" },
+            { "file": "components/shared/UpgradePrompt.tsx", "consumed_by": "Modules 16c, 16d, 16e", "description": "Standardized upsell UI" }
+        ]
+    },
+    "known_risks": [
+        { "issue": "ExtensionPay API may have changed since last research", "severity": "MEDIUM", "action": "Research current API BEFORE writing any code. Check npm package, docs, installation method." },
+        { "issue": "ExtensionPay SDK may not have TypeScript types", "severity": "LOW", "action": "Create .d.ts declaration file for ExtensionPay API." },
+        { "issue": "ExtensionPay requires extension to be published on CWS", "severity": "HIGH", "action": "During development and testing, mock ExtensionPay entirely. Real integration tested after CWS publication." },
+        { "issue": "Race condition: popup checks pro status while payment completes", "severity": "LOW", "action": "useProGate refreshes on visibilitychange event. ExtensionPay onPaid listener provides immediate callback." }
+    ],
+    "critical_path": "PAY-001 → PAY-002 → PAY-003",
+    "total_story_points": 18,
+    "total_stories": 3,
+    "dependency_chain": {
+        "upstream": "Module 15a (for background-types.ts state). Can run in parallel with 14 and 15a if background-types changes are coordinated.",
+        "downstream": "Module 16c (Tags), 16d (Panic Button), 16e (Dashboard) — ALL consume useProGate() and UpgradePrompt. Module 16c is also responsible for the first UpgradePrompt visual E2E test.",
+        "parallel_safe": "Independent of Module 14 and 15a at the lib/ level. Only dependency is background-types.ts message count."
+    },
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-16a-payment/",
+            "format": "Append-only. ## PAY-XXX — <title>",
+            "update_trigger": "After each story",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "build_plan_day": "Day 5",
+        "estimated_test_count": "~15 unit + ~0 E2E (visual E2E deferred to 16c)",
+        "session_protocol": "One Claude Code session. Research ExtensionPay FIRST — API, installation, types. Commit per story.",
+        "quality_gate": "All tests pass. tsc clean. wxt build. Zero React in lib/. Graceful degradation on ExtensionPay failure. Free tier never broken.",
+        "human_review_required": "Verify: ExtensionPay SDK integration. ProStatus correctly maps from ExtensionPay response. Graceful degradation tested. UpgradePrompt copy is appropriate."
+    },
+    "execution_rules": {
+        "execution_order": "PAY-001 → PAY-002 → PAY-003",
+        "clarifying_questions": "Encouraged. Key: ExtensionPay current API, SDK installation method, type declaration approach, CWS requirement for real testing.",
+        "prd_scope": "Module 16a of 22. Creates ProGate infrastructure consumed by all Pro feature modules.",
+        "commit_protocol": "feat(pro-gate): PAY-XXX — <title>",
+        "failure_protocol": "Max 3 attempts per story."
+    }
+}

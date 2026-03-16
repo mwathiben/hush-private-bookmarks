@@ -1,0 +1,232 @@
+{
+    "project": {
+        "name": "Module 16d: Panic Button",
+        "description": "Pro-gated panic button (Alt+P keyboard shortcut). Closes all browser tabs instantly, saves their URLs as bookmarks in a 'Panic Save [timestamp]' folder for later recovery. Optional browsing history clearing. Designed for the embarrassment-factor user segment. Stays client-side forever — no SyncableFeature needed (pure UI action). Gated by useProGate().",
+        "version": "1.0.0",
+        "created": "2026-03-16",
+        "parent_plan": "Hush Consolidated Build Plan — Day 5 (Pro features)",
+        "critical_path_position": "Depends on Module 16a (ProGate). Independent of 15a, 16b, 16c, 16e."
+    },
+    "user_stories": [
+        {
+            "id": "PANIC-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "lib/panic.ts — tab collection and panic save logic",
+            "description": "Create lib/panic.ts with: collectOpenTabs() → gets all tabs from all windows via browser.tabs.query. buildPanicFolder(tabs, timestamp) → creates a Folder (from lib/types.ts) containing a Bookmark for each open tab. clearBrowsingHistory() → clears all browsing history via browser.history.deleteAll(), guarded by runtime permission check. Pure lib/ module, zero React imports. Uses browser.* APIs via dependency injection for testability.",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'collectOpenTabs returns all non-extension tabs'",
+                "RED: Test: 'collectOpenTabs filters out chrome:// and extension:// URLs'",
+                "RED: Test: 'buildPanicFolder creates Folder with timestamp in name'",
+                "RED: Test: 'buildPanicFolder creates Bookmark child for each tab'",
+                "RED: Test: 'buildPanicFolder handles tabs with no title (uses URL as title)'",
+                "RED: Test: 'buildPanicFolder returns Folder and Bookmark types from lib/types.ts'",
+                "RED: Test: 'clearBrowsingHistory calls history.deleteAll()'",
+                "RED: Test: 'clearBrowsingHistory checks permissions.contains before calling API'",
+                "RED: Test: 'clearBrowsingHistory returns false when history permission not granted'",
+                "GREEN: Create lib/panic.ts. collectOpenTabs: query all tabs, filter to http/https URLs only. buildPanicFolder: returns Folder node (lib/types.ts) with name 'Panic Save YYYY-MM-DD HH:mm:ss', children are Bookmark nodes. clearBrowsingHistory: checks browser.permissions.contains({ permissions: ['history'] }) first, calls browser.history.deleteAll() if granted, returns boolean success.",
+                "REFACTOR: Ensure lib/ purity. Dependency injection for browser.tabs, browser.history, browser.permissions."
+            ],
+            "files": [
+                "lib/panic.ts",
+                "tests/unit/lib/panic.test.ts"
+            ],
+            "acceptance_criteria": [
+                "collectOpenTabs: returns Tab[] filtered to http/https URLs only",
+                "buildPanicFolder: returns Folder (from lib/types.ts) with name 'Panic Save YYYY-MM-DD HH:mm:ss'",
+                "buildPanicFolder: each tab → Bookmark (from lib/types.ts) with { type: 'bookmark', id, title, url, dateAdded }",
+                "buildPanicFolder: handles undefined tab.title gracefully (uses URL as fallback)",
+                "clearBrowsingHistory: checks browser.permissions.contains({ permissions: ['history'] }) before API call",
+                "clearBrowsingHistory: calls browser.history.deleteAll() only when permission is granted",
+                "clearBrowsingHistory: returns false (no throw) when permission not granted",
+                "Uses existing Bookmark and Folder types from lib/types.ts — no new type definitions",
+                "All functions pure or DI-based (testable without browser context)",
+                "Zero React imports"
+            ],
+            "definition_of_done": ["All unit tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/lib/panic.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "PANIC-002",
+            "category": "integration",
+            "priority": "CRITICAL",
+            "title": "PANIC background handler, message type, and Alt+P keyboard shortcut",
+            "description": "Two trigger paths: (1) Alt+P keyboard shortcut fires directly in background via browser.commands.onCommand — calls panic handler without going through message protocol. (2) PANIC message type for manual trigger from settings UI via browser.runtime.sendMessage. Both paths: check Pro status → check unlocked session → collectOpenTabs → buildPanicFolder → append to tree → save → open new blank tab → close all original tabs → optional history clear. Register Alt+P via chrome.commands in wxt.config.ts.",
+            "story_points": 8,
+            "steps": [
+                "Add PanicMessage { type: 'PANIC'; clearHistory?: boolean } to background-types.ts.",
+                "Add 'panic-button' command to wxt.config.ts manifest.commands: { 'panic-button': { 'suggested_key': { 'default': 'Alt+P' }, 'description': 'Panic: close all tabs and save URLs' } }.",
+                "Wire browser.commands.onCommand listener in defineBackground() for 'panic-button' → calls panic handler directly (no message protocol).",
+                "Add 'PANIC' to VALID_TYPES set and handleMessage switch in entrypoints/background/index.ts.",
+                "RED: Test: 'PANIC handler requires Pro status'",
+                "RED: Test: 'PANIC handler requires unlocked session'",
+                "RED: Test: 'PANIC handler collects tabs, saves panic folder, closes tabs'",
+                "RED: Test: 'PANIC handler opens new blank tab before closing original tabs'",
+                "RED: Test: 'PANIC handler clears history when clearHistory is true'",
+                "RED: Test: 'PANIC handler does not clear history when clearHistory is false/undefined'",
+                "RED: Test: 'PANIC handler does not close tabs if save fails'",
+                "GREEN: Implement handler. collectOpenTabs → buildPanicFolder → append folder to tree root → save → browser.tabs.create({}) (new blank tab) → browser.tabs.remove(originalTabIds) → optional clearBrowsingHistory.",
+                "Wire onCommand listener: read clearHistory preference from browser.storage.local, then call panic handler."
+            ],
+            "files": [
+                "lib/background-types.ts",
+                "entrypoints/background/handlers.ts",
+                "entrypoints/background/index.ts",
+                "wxt.config.ts",
+                "tests/unit/entrypoints/background.test.ts"
+            ],
+            "acceptance_criteria": [
+                "PanicMessage type added to BackgroundMessage union in background-types.ts",
+                "'PANIC' added to VALID_TYPES set in background/index.ts",
+                "handleMessage switch has 'PANIC' case in background/index.ts",
+                "'panic-button' command registered in manifest via wxt.config.ts (not _execute_panic — underscore prefix is reserved)",
+                "Alt+P triggers via browser.commands.onCommand in defineBackground() — direct handler call, no message protocol",
+                "PANIC message type used only for manual trigger from settings UI",
+                "Handler checks Pro status — returns PRO_REQUIRED if not Pro",
+                "Handler requires unlocked session",
+                "Handler: collect tabs → build panic folder → save to tree → open new blank tab → close original tabs",
+                "Handler opens browser.tabs.create({}) BEFORE closing tabs (prevents all windows closing)",
+                "Tabs closed AFTER save succeeds (no data loss on save failure)",
+                "Handler: optional history clearing (only when clearHistory: true)",
+                "onCommand listener reads clearHistory preference from browser.storage.local"
+            ],
+            "definition_of_done": ["Unit tests pass", "tsc clean", "wxt build includes panic-button command"],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit && npx wxt build",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["PANIC-001"]
+        },
+        {
+            "id": "PANIC-003",
+            "category": "ui_and_verification",
+            "priority": "HIGH",
+            "title": "Panic button settings UI, preference persistence, and E2E verification",
+            "description": "Add Panic Button configuration section in SettingsScreen (Pro-gated). Shows keyboard shortcut (Alt+P), history clearing toggle with runtime permission request, manual trigger button. Persist clearHistory preference to browser.storage.local. E2E tests for panic flow. Full verification.",
+            "story_points": 5,
+            "steps": [
+                "Create components/settings/PanicButtonConfig.tsx: displays Alt+P shortcut info, checkbox for 'Also clear browsing history', 'Trigger Panic' button for manual activation. Gated by useProGate().",
+                "History toggle: on enable, call browser.permissions.request({ permissions: ['history'] }). If denied, show info message and keep toggle unchecked.",
+                "Persist clearHistory preference to browser.storage.local key 'panicClearHistory' (boolean). Load on component mount.",
+                "Wire into SettingsScreen in Privacy section.",
+                "RED: Test: 'PanicButtonConfig shows shortcut info'",
+                "RED: Test: 'Free user sees UpgradePrompt instead of panic config'",
+                "RED: Test: 'History toggle requests permission when enabled'",
+                "RED: Test: 'History toggle reverts when permission denied'",
+                "RED: Test: 'Trigger Panic button sends PANIC message with clearHistory preference'",
+                "RED: Test: 'clearHistory preference persisted to storage.local'",
+                "RED: E2E: 'Panic button closes tabs and saves URLs'",
+                "RED: E2E: 'Panic save folder appears in tree after recovery'",
+                "GREEN: Implement component and E2E tests.",
+                "Run full verification"
+            ],
+            "files": [
+                "components/settings/PanicButtonConfig.tsx",
+                "components/screens/SettingsScreen.tsx",
+                "tests/unit/components/settings/PanicButtonConfig.test.tsx",
+                "tests/e2e/panic-button.test.ts"
+            ],
+            "acceptance_criteria": [
+                "PanicButtonConfig: Pro-gated (UpgradePrompt for free users)",
+                "Shows Alt+P shortcut info text",
+                "History clearing toggle (checkbox) with runtime permission request",
+                "Permission denial handled gracefully — toggle reverts, info message shown",
+                "clearHistory preference persisted to browser.storage.local key 'panicClearHistory'",
+                "Manual trigger button sends PANIC message with current clearHistory preference",
+                "E2E: tabs closed, panic folder created in tree, new blank tab opened",
+                "Full verification passes",
+                "Zero regressions"
+            ],
+            "definition_of_done": ["All tests pass", "Full verification clean"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["PANIC-001", "PANIC-002"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "note": "Read actual state from most recent progress.md. Requires Module 16a (ProGate) to be complete.",
+            "pro_gate": "lib/pro-gate.ts, hooks/useProGate.ts, UpgradePrompt (from Module 16a)",
+            "commands": "wxt.config.ts has _execute_action for Ctrl+Shift+H (from Module 9). commands.onCommand listener does NOT exist yet — must be added.",
+            "optional_permissions": "history permission in optional_permissions (from Module 1)",
+            "types": "lib/types.ts has Bookmark and Folder types — reuse these, do not create new ones"
+        },
+        "what_does_not_exist": {
+            "panic": "No lib/panic.ts. No PANIC message type. No Alt+P shortcut. No PanicButtonConfig component. No browser.commands.onCommand listener in background."
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "tabs_api": "browser.tabs.query({}) for all tabs, browser.tabs.remove(tabIds) to close",
+            "history_api": "browser.history.deleteAll() — requires 'history' permission (in optional_permissions). Must check browser.permissions.contains() before use and request via browser.permissions.request() in UI.",
+            "commands_api": "chrome.commands via wxt.config.ts manifest.commands. Command name: 'panic-button' (NOT _execute_panic — underscore prefix reserved for browser commands). Background onCommand listener.",
+            "types": "Reuse Bookmark and Folder from lib/types.ts. buildPanicFolder returns Folder with Bookmark children.",
+            "forbidden_patterns": [
+                "Closing tabs BEFORE save succeeds (data loss risk)",
+                "Closing all tabs without opening a new blank tab first (leaves user with no windows)",
+                "Auto-clearing history without user opt-in",
+                "Using _execute_* prefix for custom commands (reserved by Chrome)",
+                "React imports in lib/panic.ts",
+                "Creating new bookmark/folder types instead of reusing lib/types.ts",
+                "SyncableFeature (panic is client-only forever)",
+                "console.log, as any, @ts-ignore"
+            ]
+        },
+        "panic_philosophy": {
+            "data_safety": "SAVE before CLOSE. Tabs are only closed after panic folder is successfully saved to the encrypted tree. If save fails, tabs stay open and user gets an error. Always open a new blank tab before closing originals.",
+            "privacy_first": "History clearing is OPT-IN. Default: false. User must explicitly enable it in settings. Permission requested at runtime.",
+            "stays_client_side": "Panic button is a pure client-side action. No sync, no backend dependency. A forker gets the full feature."
+        },
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": ["CLAUDE.md", "lib/types.ts (Bookmark and Folder types to reuse)", "licensing-architecture-impact.md (panic stays client-side)", "wxt.config.ts (existing commands config)", "entrypoints/background/index.ts (existing listeners, handleMessage switch, VALID_TYPES)", "lib/background-types.ts (existing message types)", "This PRD"],
+        "outputs": [
+            { "file": "lib/panic.ts", "consumed_by": "Background handler", "description": "Tab collection + panic folder builder + history clearing" },
+            { "file": "components/settings/PanicButtonConfig.tsx", "consumed_by": "SettingsScreen", "description": "Panic button configuration UI with permission management" }
+        ]
+    },
+    "known_risks": [
+        { "issue": "Alt+P may conflict with other extensions or OS shortcuts", "severity": "MEDIUM", "action": "Chrome allows user to customize via chrome://extensions/shortcuts. Alt+P is suggested, not enforced. Document in settings UI." },
+        { "issue": "History permission may not be granted", "severity": "LOW", "action": "Request at runtime via browser.permissions.request(). If denied, revert toggle and show info message. clearBrowsingHistory returns false gracefully." },
+        { "issue": "Tab close timing — race condition", "severity": "MEDIUM", "action": "await save THEN open new blank tab THEN close original tabs. Do not close before save confirms." },
+        { "issue": "Closing all tabs closes all windows", "severity": "MEDIUM", "action": "Open a new blank tab via browser.tabs.create({}) BEFORE closing originals. User always has at least one window." }
+    ],
+    "critical_path": "PANIC-001 → PANIC-002 → PANIC-003",
+    "total_story_points": 18,
+    "total_stories": 3,
+    "dependency_chain": {
+        "upstream": "Module 16a (ProGate — required). Independent of 14, 15a, 16b, 16c, 16e.",
+        "downstream": "None",
+        "parallel_safe": "Can run in parallel with 16c and 16e"
+    },
+    "progress_log": {
+        "format_rules": [
+            "Append-only history in .prd/module-16d-panic-button/progress.md",
+            "Never overwrite previous entries",
+            "Each entry: ## Session: {ISO timestamp}",
+            "Status: PASSED (attempt N) or FAILED (attempt N)",
+            "Max 3 attempts per story"
+        ]
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "total_stories": 3,
+        "build_plan_day": "Day 5",
+        "estimated_test_count": "~12 unit + ~2 E2E",
+        "session_protocol": "One Claude Code session. Research chrome.commands. Commit per story.",
+        "quality_gate": "All tests pass. tsc clean. panic-button command in manifest. Save before close. New tab before close. Pro gated. History permission guarded.",
+        "human_review_required": "Verify: tabs closed AFTER save, new blank tab opened before close, Alt+P shortcut works, history clearing opt-in only with runtime permission."
+    },
+    "execution_rules": {
+        "execution_order": "PANIC-001 → PANIC-002 → PANIC-003",
+        "prd_scope": "Module 16d of 22. Pro feature. Client-side only.",
+        "commit_protocol": "feat(panic): PANIC-XXX — <title>",
+        "failure_protocol": "Max 3 attempts."
+    }
+}

@@ -1,0 +1,297 @@
+{
+    "project": {
+        "name": "Module 16b: Folder Locking",
+        "description": "Per-folder password protection as a UI-level authorization gate. Each folder can optionally have its own password (independent of the vault password). The entire tree is already encrypted at rest by the vault password — folder locking adds a SECOND authorization layer: you need the vault password to decrypt the tree, then each locked folder's password to view its contents. Locked folders show a lock icon; contents hidden until folder password entered. Unlocked state is session-only (re-locked when popup closes or session locks). Free tier feature — no ProGate required.",
+        "version": "1.0.0",
+        "created": "2026-03-16",
+        "parent_plan": "Hush Consolidated Build Plan — Day 5 (folder locking)",
+        "critical_path_position": "Module 16b is independent of 16a (ProGate) since folder locking is Free tier. Depends on Modules 1-13 (all complete). Can run in any order relative to 14, 15a, 16a."
+    },
+    "prerequisites": [
+        "module-01-scaffold",
+        "module-02-crypto",
+        "module-03-storage",
+        "module-04-data-model",
+        "module-09-background",
+        "module-11-popup-bookmarks",
+        "module-13-manager"
+    ],
+    "user_stories": [
+        {
+            "id": "LOCK-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "lib/folder-lock.ts — folder password hashing and verification",
+            "description": "Create lib/folder-lock.ts with: createFolderLock(password) → FolderLock { salt, hash } using Web Crypto SHA-256 with random salt. verifyFolderLock(password, lock) → boolean. Extend Folder type in lib/types.ts with optional lock?: FolderLock field. Pure lib/ module, zero React imports. FolderLock hashes are stored in the Folder metadata within the encrypted tree — protected by vault encryption at rest.",
+            "story_points": 5,
+            "steps": [
+                "Extend Folder type in lib/types.ts: add lock?: FolderLock. Define FolderLock = { readonly salt: string; readonly hash: string } (base64 strings). Default: undefined (not locked). IMPORTANT: this is an additive, optional change — existing Folder objects without lock are valid.",
+                "RED: Test: 'createFolderLock returns salt and hash'",
+                "RED: Test: 'createFolderLock generates unique salt each time'",
+                "RED: Test: 'verifyFolderLock returns true for correct password'",
+                "RED: Test: 'verifyFolderLock returns false for wrong password'",
+                "RED: Test: 'FolderLock salt is 16 bytes (base64 decoded)'",
+                "RED: Test: 'folder-lock.ts has zero React imports'",
+                "GREEN: Create lib/folder-lock.ts. Use crypto.subtle.digest('SHA-256', ...) with salt prepended. Salt: crypto.getRandomValues(new Uint8Array(16)). Hash: SHA-256(salt + utf8encode(password)). Both stored as base64.",
+                "REFACTOR: Verify lib/ purity. Update scaffold-smoke LIB_MODULES count. Verify existing Folder-using tests still pass (additive optional field)."
+            ],
+            "files": [
+                "lib/folder-lock.ts",
+                "lib/types.ts",
+                "tests/unit/lib/folder-lock.test.ts",
+                "tests/unit/integration/scaffold-smoke.test.ts"
+            ],
+            "acceptance_criteria": [
+                "FolderLock type: { readonly salt: string; readonly hash: string }",
+                "Folder type extended with lock?: FolderLock (optional, additive — undefined means not locked)",
+                "createFolderLock: random 16-byte salt, SHA-256 hash, both base64 encoded",
+                "verifyFolderLock: recomputes hash with stored salt, compares",
+                "Unique salt per createFolderLock call (CSPRNG)",
+                "Existing tests pass without modification (additive type change)",
+                "Zero React imports in lib/folder-lock.ts",
+                "LIB_MODULES updated in scaffold-smoke"
+            ],
+            "definition_of_done": [
+                "All unit tests pass",
+                "tsc clean",
+                "Existing tests unaffected"
+            ],
+            "verification": "npx vitest run tests/unit/lib/folder-lock.test.ts && npx vitest run && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "LOCK-002",
+            "category": "integration",
+            "priority": "CRITICAL",
+            "title": "Background handlers for SET_FOLDER_LOCK, REMOVE_FOLDER_LOCK, VERIFY_FOLDER_LOCK",
+            "description": "Add three new message types to the background service worker. SET_FOLDER_LOCK: takes folderPath + password → createFolderLock → update folder in tree → save. REMOVE_FOLDER_LOCK: takes folderPath + password → verifyFolderLock → remove lock → save. VERIFY_FOLDER_LOCK: takes folderPath + password → verifyFolderLock → return success/failure (no tree mutation — unlock state is UI-only).",
+            "story_points": 5,
+            "steps": [
+                "Add to lib/background-types.ts: SetFolderLockMessage { type, folderPath: readonly number[], password: string }, RemoveFolderLockMessage { type, folderPath: readonly number[], password: string }, VerifyFolderLockMessage { type, folderPath: readonly number[], password: string }. Add all three to BackgroundMessage union.",
+                "RED: Test: 'SET_FOLDER_LOCK creates lock on folder and saves tree'",
+                "RED: Test: 'SET_FOLDER_LOCK requires unlocked session'",
+                "RED: Test: 'REMOVE_FOLDER_LOCK verifies password before removing lock'",
+                "RED: Test: 'REMOVE_FOLDER_LOCK rejects wrong password'",
+                "RED: Test: 'VERIFY_FOLDER_LOCK returns success for correct password'",
+                "RED: Test: 'VERIFY_FOLDER_LOCK returns failure for wrong password'",
+                "GREEN: Wire handlers in entrypoints/background/handlers.ts. SET_FOLDER_LOCK: get folder by path → createFolderLock → set folder.lock → save tree. REMOVE_FOLDER_LOCK: get folder → verifyFolderLock → set folder.lock = undefined → save. VERIFY_FOLDER_LOCK: get folder → verifyFolderLock → return boolean (no tree mutation). Update switch in entrypoints/background/index.ts.",
+                "REFACTOR: Ensure getFolderByPath from lib/data-model.ts is used for path resolution. Verify exhaustive switch compiles."
+            ],
+            "files": [
+                "lib/background-types.ts",
+                "entrypoints/background/handlers.ts",
+                "entrypoints/background/index.ts",
+                "tests/unit/entrypoints/background.test.ts"
+            ],
+            "acceptance_criteria": [
+                "3 new message types: SET_FOLDER_LOCK, REMOVE_FOLDER_LOCK, VERIFY_FOLDER_LOCK",
+                "SET_FOLDER_LOCK: creates lock hash, updates tree immutably, saves",
+                "REMOVE_FOLDER_LOCK: verifies password first, then removes lock (sets undefined)",
+                "VERIFY_FOLDER_LOCK: pure check, no tree mutation",
+                "All require unlocked session",
+                "Wrong password returns clear error with appropriate code (not crypto internals)",
+                "Exhaustive switch compiles"
+            ],
+            "definition_of_done": [
+                "All unit tests pass",
+                "tsc clean",
+                "wxt build succeeds"
+            ],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit && npx wxt build",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["LOCK-001"]
+        },
+        {
+            "id": "LOCK-003",
+            "category": "ui",
+            "priority": "HIGH",
+            "title": "Folder lock UI — hook, dialogs, and tree integration",
+            "description": "Add lock/unlock visuals and dialogs to FolderItem. Locked folders show lock icon and hide children until password entered. Session-level unlock tracking via useFolderLockState hook (re-locked on popup close/session lock). Lock/Unlock/Remove Lock options in folder context menu. SetFolderLockDialog and VerifyFolderLockDialog shared components. Extends existing DialogState and ItemAction types.",
+            "story_points": 10,
+            "steps": [
+                "Create hooks/useFolderLockState.ts: manages Set<string> of unlocked folder paths. Path serialization: path.join('/') (e.g., [0,2,1] → '0/2/1'). Exposes: isUnlocked(path: readonly number[]) → boolean, markUnlocked(path: readonly number[]) → void, clearAll() → void. Clears on session lock events (listen for LOCK message response or session state change). Uses useReducer internally.",
+                "Extend ItemAction type: add 'set-folder-lock' | 'remove-folder-lock' variants with path and folder fields.",
+                "Extend DialogState discriminated union in TreeScreen: add { type: 'set-folder-lock'; path: readonly number[]; folder: Folder } and { type: 'verify-folder-lock'; path: readonly number[]; folder: Folder } variants.",
+                "Create components/shared/SetFolderLockDialog.tsx: password + confirm password inputs, sends SET_FOLDER_LOCK via useSendMessage.",
+                "Create components/shared/VerifyFolderLockDialog.tsx: single password input, sends VERIFY_FOLDER_LOCK, calls markUnlocked on success.",
+                "Extend FolderItem: if folder.lock exists, show lock icon (lucide-react Lock). If locked (not in unlocked set via isUnlocked), hide children and show 'Enter password to view'. Click opens VerifyFolderLockDialog.",
+                "Extend folder context menu: 'Lock Folder' (when folder.lock is undefined), 'Remove Lock' (when folder.lock exists, requires password via REMOVE_FOLDER_LOCK).",
+                "Wire dialogs into TreeScreen and ManagerApp using existing dialog state pattern.",
+                "RED: Test: 'useFolderLockState — isUnlocked returns false by default'",
+                "RED: Test: 'useFolderLockState — markUnlocked makes isUnlocked return true'",
+                "RED: Test: 'useFolderLockState — clearAll resets all unlocked paths'",
+                "RED: Test: 'locked folder hides children'",
+                "RED: Test: 'entering correct password reveals children'",
+                "RED: Test: 'wrong password shows error'",
+                "RED: Test: 'Lock Folder option opens SetFolderLockDialog'",
+                "RED: Test: 'Remove Lock verifies password before removing'",
+                "GREEN: Implement all components, hook, and wire into existing tree rendering."
+            ],
+            "files": [
+                "hooks/useFolderLockState.ts",
+                "components/shared/SetFolderLockDialog.tsx",
+                "components/shared/VerifyFolderLockDialog.tsx",
+                "components/shared/FolderItem.tsx",
+                "components/screens/TreeScreen.tsx",
+                "entrypoints/manager/ManagerApp.tsx",
+                "tests/unit/hooks/useFolderLockState.test.ts",
+                "tests/unit/components/shared/SetFolderLockDialog.test.tsx",
+                "tests/unit/components/shared/VerifyFolderLockDialog.test.tsx",
+                "tests/unit/components/shared/FolderItem.test.tsx"
+            ],
+            "acceptance_criteria": [
+                "useFolderLockState hook: isUnlocked, markUnlocked, clearAll. Path serialized via path.join('/')",
+                "Hook clears unlocked state on session lock",
+                "Locked folder shows lock icon (lucide-react Lock)",
+                "Locked folder hides children until password entered",
+                "VerifyFolderLockDialog: password input + verify button + error display",
+                "SetFolderLockDialog: password + confirm + create button",
+                "Correct password calls markUnlocked → children visible",
+                "Wrong password shows error, input stays",
+                "Context menu: 'Lock Folder' (when no lock) / 'Remove Lock' (when locked)",
+                "DialogState extended with set-folder-lock and verify-folder-lock variants",
+                "ItemAction extended with set-folder-lock and remove-folder-lock variants",
+                "Works in both popup and manager (shared components + hook)",
+                "Zero business logic in components (all via messages to background)"
+            ],
+            "definition_of_done": [
+                "All unit tests pass",
+                "tsc clean"
+            ],
+            "verification": "npx vitest run && npx tsc --noEmit",
+            "estimated_effort": "large",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["LOCK-002"]
+        },
+        {
+            "id": "LOCK-004",
+            "category": "verification",
+            "priority": "HIGH",
+            "title": "E2E folder lock flows and integration verification",
+            "description": "E2E tests for full folder lock lifecycle: lock folder → verify locked → enter password → view contents → re-lock on session end. Test in both popup and manager. Full verification suite.",
+            "story_points": 5,
+            "steps": [
+                "RED: E2E: 'lock folder → folder shows lock icon'",
+                "RED: E2E: 'locked folder hides children'",
+                "RED: E2E: 'enter correct password → children visible'",
+                "RED: E2E: 'wrong folder password → error shown'",
+                "RED: E2E: 'lock/unlock session → folder re-locks'",
+                "GREEN: Create tests/e2e/folder-lock.test.ts",
+                "Run full verification: tsc + eslint + vitest + wxt build + playwright"
+            ],
+            "files": [
+                "tests/e2e/folder-lock.test.ts"
+            ],
+            "acceptance_criteria": [
+                "E2E: full lock lifecycle works",
+                "E2E: folder re-locks on session lock",
+                "Full verification passes",
+                "Zero regressions"
+            ],
+            "definition_of_done": [
+                "All E2E tests pass",
+                "Full verification passes"
+            ],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["LOCK-001", "LOCK-002", "LOCK-003"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "note": "Read actual state from most recent progress.md. Module 16b can run after Modules 1-13 and is independent of 14, 15a, 16a.",
+            "data_model": "lib/data-model.ts: getFolderByPath() exists (Module 13). Folder type has type, id, name, children, dateAdded.",
+            "folder_item": "components/shared/FolderItem.tsx: Accordion-based folder with context menu (Edit/Move/Delete). Uses ItemAction discriminated union.",
+            "tree_screen": "components/screens/TreeScreen.tsx: DialogState discriminated union manages all dialogs. Pattern: action triggers dialog → dialog sends message → handler updates tree → dialog closes.",
+            "hooks": "hooks/useSendMessage.ts (message transport), hooks/useSession.ts, hooks/useTree.ts, hooks/useSearch.ts."
+        },
+        "what_does_not_exist": {
+            "folder_lock": "No lib/folder-lock.ts. No FolderLock type. No lock property on Folder type.",
+            "lock_messages": "No SET_FOLDER_LOCK, REMOVE_FOLDER_LOCK, VERIFY_FOLDER_LOCK message types.",
+            "lock_ui": "No lock icon on folders. No lock/unlock dialogs. No useFolderLockState hook."
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "crypto": "Web Crypto API for SHA-256 hashing (folder lock passwords). NOT using full PBKDF2 — folder lock is a UI authorization gate, not crypto-level encryption. The tree is already encrypted by vault password.",
+            "security_model": "Two-layer security: (1) Vault password encrypts the entire tree with AES-256-GCM/PBKDF2 (lib/crypto.ts). (2) Folder lock adds UI-level authorization gate — contents hidden until folder password verified. Folder lock hashes live inside the encrypted tree (protected at rest).",
+            "session_unlock_tracking": "Unlocked folders tracked in useFolderLockState hook via Set<string>. Path serialization: path.join('/') (e.g., [0,2,1] → '0/2/1'). NOT persisted — re-locked when popup closes, session locks, or browser restarts. This is intentional security behavior.",
+            "testing": "Vitest + happy-dom for unit. Playwright for E2E.",
+            "forbidden_patterns": [
+                "Persisting unlocked folder state to storage (session-only)",
+                "Using PBKDF2 for folder lock (overkill — SHA-256 with salt is sufficient for UI gate)",
+                "Storing folder passwords in plaintext",
+                "React imports in lib/folder-lock.ts",
+                "console.log, as any, @ts-ignore",
+                "Mutating tree in place (all operations must be immutable)"
+            ]
+        },
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": [
+            "CLAUDE.md",
+            "lib/types.ts (Folder type, BookmarkNode union)",
+            "lib/data-model.ts (getFolderByPath, immutable tree operations)",
+            "components/shared/FolderItem.tsx (existing folder rendering, ItemAction, context menu)",
+            "components/screens/TreeScreen.tsx (DialogState pattern, dialog management)",
+            "hooks/useSendMessage.ts (message transport pattern)",
+            "This PRD"
+        ],
+        "inputs": [
+            { "file": "lib/types.ts", "from_module": "Module 1", "what_it_provides": "Folder type to extend with lock? field" },
+            { "file": "lib/data-model.ts", "from_module": "Module 4/13", "what_it_provides": "getFolderByPath(), immutable tree operations" },
+            { "file": "components/shared/FolderItem.tsx", "from_module": "Module 11", "what_it_provides": "Existing folder component, ItemAction type, context menu" },
+            { "file": "components/screens/TreeScreen.tsx", "from_module": "Module 11", "what_it_provides": "DialogState discriminated union pattern" },
+            { "file": "hooks/useSendMessage.ts", "from_module": "Module 10", "what_it_provides": "Message transport hook for background communication" }
+        ],
+        "outputs": [
+            { "file": "lib/folder-lock.ts", "consumed_by": "Background handlers", "description": "Folder password hash/verify" },
+            { "file": "hooks/useFolderLockState.ts", "consumed_by": "TreeScreen, ManagerApp, FolderItem", "description": "Session-only unlock state tracking" },
+            { "file": "components/shared/SetFolderLockDialog.tsx", "consumed_by": "TreeScreen, ManagerApp", "description": "Lock creation dialog" },
+            { "file": "components/shared/VerifyFolderLockDialog.tsx", "consumed_by": "TreeScreen, ManagerApp", "description": "Lock verification dialog" }
+        ]
+    },
+    "known_risks": [
+        { "issue": "Extending Folder type may break existing tests", "severity": "MEDIUM", "action": "lock field is optional (lock?: FolderLock). Existing Folder objects without lock are valid — undefined is the default. Run full test suite after type change." },
+        { "issue": "SHA-256 without iterations is weaker than PBKDF2", "severity": "LOW", "action": "Acceptable. Folder lock is a UI gate, not crypto-level encryption. The tree itself is protected by AES-256-GCM with 600K PBKDF2 iterations. Folder lock prevents casual viewing, not cryptographic attack." },
+        { "issue": "unlockedFolderPaths lost on component unmount", "severity": "LOW", "action": "Track in useFolderLockState hook with useReducer (survives re-renders). Hook instance per entrypoint (popup/manager) — each has independent unlock state, which is correct." }
+    ],
+    "critical_path": "LOCK-001 → LOCK-002 → LOCK-003 → LOCK-004",
+    "total_story_points": 25,
+    "total_stories": 4,
+    "dependency_chain": {
+        "upstream": "Modules 1-13 (all complete). Independent of 14, 15a, 16a.",
+        "downstream": "None. Folder locking is self-contained.",
+        "parallel_safe": "Can run in parallel with 14, 15a, 16a."
+    },
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-16b-folder-lock/",
+            "format": "Append-only. ## LOCK-XXX — <title>",
+            "update_trigger": "After each story",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "build_plan_day": "Day 5",
+        "estimated_test_count": "~18 unit + ~5 E2E",
+        "session_protocol": "One Claude Code session. Commit per story.",
+        "quality_gate": "All tests pass. tsc clean. wxt build. Folder type change doesn't break existing tests. Lock state session-only. Zero plaintext passwords stored.",
+        "human_review_required": "Verify: lock icon visible on locked folders, children hidden, session-only unlock, folder type change backward compatible."
+    },
+    "execution_rules": {
+        "execution_order": "LOCK-001 → LOCK-002 → LOCK-003 → LOCK-004",
+        "clarifying_questions": "Encouraged. Key: Folder type extension backward compatibility, SHA-256 vs PBKDF2 for folder lock, session unlock tracking approach, DialogState/ItemAction extension.",
+        "prd_scope": "Module 16b of 22. Free tier feature.",
+        "commit_protocol": "feat(folder-lock): LOCK-XXX — <title>",
+        "failure_protocol": "Max 3 attempts per story."
+    }
+}

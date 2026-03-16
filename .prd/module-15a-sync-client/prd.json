@@ -1,0 +1,286 @@
+{
+    "project": {
+        "name": "Module 15a: Sync Client",
+        "description": "Client-side sync infrastructure for encrypted cross-device bookmark synchronization. Creates lib/sync-types.ts (SyncableFeature interface, sync status types), lib/sync-client.ts (HTTPS API client), and entrypoints/background/sync-queue.ts (offline retry queue — lives in entrypoints/ because it requires browser.storage.local, which violates lib/ purity). All testable against mocked HTTP. The sync feature is DORMANT until Module 15b (hush-sync backend, separate repo, post-sprint) ships — but the client code exists, is tested, and is ready. Pro-gated at UI layer by Module 16a (ProGate). The SyncableFeature interface defined here is consumed by Modules 16c (Tags) and 16e (Dashboard) for Option B readiness.",
+        "version": "1.0.0",
+        "created": "2026-03-16",
+        "parent_plan": "Hush Consolidated Build Plan — Day 5",
+        "critical_path_position": "Module 15a defines SyncableFeature interface consumed by 16c and 16e. Must execute BEFORE 16c/16e. Module 16a (ProGate) is independent of 15a — they can run in parallel. Module 15b (sync backend) is a separate repo/sprint."
+    },
+    "user_stories": [
+        {
+            "id": "SYNC-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "Sync types, SyncableFeature interface, and SyncError class",
+            "description": "Create lib/sync-types.ts with all type definitions for the sync system. Key interface: SyncableFeature — contract for Pro features that can be synced (NOTE: serialize() returns plaintext data; encryption is the caller's responsibility — the background handler must encrypt via crypto.ts before passing to sync-client). Also: SyncConfig, SyncStatus, SyncConflict, SyncResult. These are TYPES ONLY (like background-types.ts) — zero runtime code. The SyncableFeature interface is consumed by Modules 16c and 16e. Additionally, add SyncError + SyncErrorContext to lib/errors.ts following the established error class pattern.",
+            "story_points": 3,
+            "steps": [
+                "RED: Test: 'sync-types.ts exports SyncableFeature interface with required methods'",
+                "RED: Test: 'sync-types.ts has no runtime exports (only type/interface)' — verify via static check: compiled JS output is empty or contains only 'export {}'. Cannot unit-test type erasure with Vitest directly.",
+                "RED: Test: 'SyncConfig has required fields: backendUrl, authToken, syncIntervalMs'",
+                "RED: Test: 'SyncStatus discriminated union covers all states'",
+                "RED: Test: 'SyncError is instanceof Error with name SyncError and context'",
+                "GREEN: Create lib/sync-types.ts. Define: SyncableFeature { featureId: string; serialize(): Promise<Uint8Array>; deserialize(data: Uint8Array): Promise<void>; requiresServer(): boolean }, SyncConfig { backendUrl: string; authToken: string; syncIntervalMs: number }, SyncStatus = { state: 'idle' | 'syncing' | 'error' | 'offline' | 'not_configured'; lastSyncAt: number | null; error?: string }, SyncResult = Result<{ timestamp: number; bytesTransferred: number }, SyncError>, SyncConflict { local: Uint8Array; remote: Uint8Array; localTimestamp: number; remoteTimestamp: number }.",
+                "GREEN: Add SyncErrorContext { code?: 'AUTH_FAILED' | 'NETWORK_ERROR' | 'SERVER_ERROR' | 'TIMEOUT' } and SyncError class to lib/errors.ts. Pattern: readonly name = 'SyncError' as const, readonly context: SyncErrorContext, constructor(message, context, options?).",
+                "REFACTOR: Verify zero runtime code in sync-types.ts. Verify SyncError follows existing error class pattern in errors.ts."
+            ],
+            "files": [
+                "lib/sync-types.ts",
+                "lib/errors.ts",
+                "tests/unit/lib/sync-types.test.ts"
+            ],
+            "acceptance_criteria": [
+                "lib/sync-types.ts is TYPES ONLY: zero runtime code, only type/interface/import type statements",
+                "SyncableFeature interface: featureId, serialize, deserialize, requiresServer",
+                "SyncableFeature JSDoc: note that serialize() returns plaintext; encryption is the caller's responsibility",
+                "SyncConfig: backendUrl, authToken, syncIntervalMs",
+                "SyncStatus: discriminated union with 5 states (idle, syncing, error, offline, not_configured)",
+                "SyncResult: uses existing Result<T,E> pattern from lib/types.ts",
+                "SyncConflict: local/remote blobs + timestamps for last-write-wins resolution",
+                "SyncError class in lib/errors.ts: readonly name, SyncErrorContext with code field",
+                "SyncError follows established pattern (DecryptionError, StorageError, ImportError, etc.)",
+                "Passes lib/ purity check"
+            ],
+            "definition_of_done": [
+                "Type tests pass",
+                "SyncError tests pass",
+                "tsc clean"
+            ],
+            "verification": "npx vitest run tests/unit/lib/sync-types.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "SYNC-002",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "Sync client — HTTPS API client with conflict resolution",
+            "description": "Create lib/sync-client.ts with: uploadBlob(config, encryptedBlob, timestamp) → POST to backend. downloadBlob(config) → GET from backend. resolveConflict(conflict) → last-write-wins by timestamp. getSyncStatus(config) → health check. All functions are async, use fetch() internally, and are fully testable with mocked responses. The sync client encrypts NOTHING — it receives already-encrypted blobs from crypto.ts and sends them as-is. E2E encrypted: the backend never sees plaintext.",
+            "story_points": 8,
+            "steps": [
+                "RED: Test: 'uploadBlob sends POST with encrypted blob and auth header'",
+                "RED: Test: 'uploadBlob returns SyncResult with timestamp and bytes'",
+                "RED: Test: 'uploadBlob returns error for network failure'",
+                "RED: Test: 'uploadBlob returns error for 401 unauthorized'",
+                "RED: Test: 'downloadBlob sends GET with auth header'",
+                "RED: Test: 'downloadBlob returns encrypted blob and timestamp'",
+                "RED: Test: 'downloadBlob returns null for 404 (no remote data)'",
+                "RED: Test: 'resolveConflict picks blob with later timestamp (last-write-wins)'",
+                "RED: Test: 'resolveConflict picks local on tie (local wins ties)'",
+                "RED: Test: 'getSyncStatus returns not_configured when backendUrl is empty'",
+                "GREEN: Create lib/sync-client.ts. All functions take SyncConfig as first arg. Use fetch() for HTTP. Auth via Authorization: Bearer header. Content-Type: application/octet-stream for blob upload. Error handling: network errors → SyncError with code NETWORK_ERROR, HTTP 401 → SyncError with code AUTH_FAILED, HTTP 404 on download → null (no remote data), HTTP 5xx → SyncError with code SERVER_ERROR.",
+                "REFACTOR: Ensure sync-client.ts has zero crypto imports. It sends/receives opaque blobs."
+            ],
+            "files": [
+                "lib/sync-client.ts",
+                "tests/unit/lib/sync-client.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Exports: uploadBlob, downloadBlob, resolveConflict, getSyncStatus",
+                "uploadBlob: POST with Bearer auth, octet-stream body, returns SyncResult",
+                "downloadBlob: GET with Bearer auth, returns { blob: Uint8Array, timestamp: number } | null",
+                "resolveConflict: last-write-wins, local wins ties",
+                "getSyncStatus: returns SyncStatus based on config + health check",
+                "Zero crypto imports — sync client is opaque blob transport",
+                "All network calls use fetch() (available in service worker and tests)",
+                "Uses SyncError from lib/errors.ts with appropriate context codes"
+            ],
+            "definition_of_done": [
+                "All unit tests pass with mocked fetch",
+                "tsc clean"
+            ],
+            "verification": "npx vitest run tests/unit/lib/sync-client.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["SYNC-001"]
+        },
+        {
+            "id": "SYNC-003",
+            "category": "core",
+            "priority": "HIGH",
+            "title": "Offline sync queue with retry",
+            "description": "Create entrypoints/background/sync-queue.ts (NOT lib/ — requires browser.storage.local which violates lib/ purity) with a persistent offline queue for failed sync operations. When upload fails (network error, not auth error), the operation is queued in browser.storage.local and retried with exponential backoff. Queue drains automatically when connectivity restores. Max queue depth prevents unbounded storage growth. Uses browser from wxt/browser for storage access.",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'enqueue adds operation to persistent queue'",
+                "RED: Test: 'drain processes queued operations in FIFO order'",
+                "RED: Test: 'drain retries failed operations with exponential backoff'",
+                "RED: Test: 'drain removes successful operations from queue'",
+                "RED: Test: 'queue respects max depth (drops oldest on overflow)'",
+                "RED: Test: 'queue ignores auth errors (not retryable)'",
+                "RED: Test: 'queue stops retrying after max retry count (10)'",
+                "GREEN: Create entrypoints/background/sync-queue.ts. SyncQueue class with enqueue(operation), drain(config), getQueueSize(), clearQueue(). Storage key: 'hush_sync_queue'. Max depth: 50 operations. Exponential backoff: 1s base, 2x multiplier, 300s (5 min) max. Max retries per operation: 10. Operations: { type: 'upload'; blob: string (base64); timestamp: number; retryCount: number }. Uses browser.storage.local (import { browser } from 'wxt/browser') for persistence.",
+                "REFACTOR: Ensure queue operations are atomic (read-modify-write with single storage.local.set). Verify auth errors (SyncError with code AUTH_FAILED) are removed immediately, not retried."
+            ],
+            "files": [
+                "entrypoints/background/sync-queue.ts",
+                "tests/unit/entrypoints/sync-queue.test.ts"
+            ],
+            "acceptance_criteria": [
+                "File lives in entrypoints/background/ (NOT lib/) due to browser.storage.local dependency",
+                "SyncQueue persists to browser.storage.local (survives SW restart)",
+                "Uses browser from wxt/browser (NOT raw chrome.storage.local)",
+                "FIFO order for drain operations",
+                "Exponential backoff: 1s base, 2x multiplier, 300s (5 min) max",
+                "Max queue depth: 50 (drops oldest on overflow)",
+                "Max retries per operation: 10 (permanently failed after 10 attempts)",
+                "Auth errors (SyncError code AUTH_FAILED) are NOT retried — removed from queue immediately",
+                "Network errors ARE retried with backoff",
+                "getQueueSize() returns current queue depth",
+                "clearQueue() removes all pending operations"
+            ],
+            "definition_of_done": [
+                "All unit tests pass",
+                "tsc clean"
+            ],
+            "verification": "npx vitest run tests/unit/entrypoints/sync-queue.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["SYNC-002"]
+        },
+        {
+            "id": "SYNC-004",
+            "category": "integration",
+            "priority": "HIGH",
+            "title": "Background sync handlers and integration verification",
+            "description": "Add SYNC_UPLOAD, SYNC_DOWNLOAD, SYNC_STATUS message types to background protocol. Wire handlers that return 'sync not configured' until a valid SyncConfig exists (backend URL set by ExtensionPay in Module 16a). Full integration verification suite. Update scaffold-smoke LIB_MODULES count.",
+            "story_points": 5,
+            "steps": [
+                "Add SyncUploadMessage, SyncDownloadMessage, SyncStatusMessage to background-types.ts. Adds 3 new types to BackgroundMessage union.",
+                "Wire handlers in handlers.ts: check for SyncConfig in browser.storage.local. If not configured, return { success: false, error: 'Sync not configured', code: 'SYNC_NOT_CONFIGURED' }. If configured, call sync-client functions.",
+                "RED: Test: 'SYNC_STATUS returns not_configured when no config exists'",
+                "RED: Test: 'SYNC_UPLOAD returns not_configured when no config exists'",
+                "RED: Test: 'SYNC_DOWNLOAD returns not_configured when no config exists'",
+                "GREEN: Implement handlers. Update switch in index.ts. Update scaffold-smoke LIB_MODULES.",
+                "Run full verification: tsc + eslint + vitest + wxt build"
+            ],
+            "files": [
+                "lib/background-types.ts",
+                "entrypoints/background/handlers.ts",
+                "entrypoints/background/index.ts",
+                "tests/unit/entrypoints/background.test.ts",
+                "tests/unit/integration/scaffold-smoke.test.ts"
+            ],
+            "acceptance_criteria": [
+                "3 new message types: SYNC_UPLOAD, SYNC_DOWNLOAD, SYNC_STATUS",
+                "BackgroundMessage union updated (+3 types)",
+                "All 3 handlers return SYNC_NOT_CONFIGURED when no SyncConfig in storage",
+                "LIB_MODULES updated in scaffold-smoke",
+                "Exhaustive switch compiles cleanly",
+                "Full verification passes",
+                "Zero regressions"
+            ],
+            "definition_of_done": [
+                "All tests pass",
+                "Full verification clean"
+            ],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["SYNC-001", "SYNC-002", "SYNC-003"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "lib_modules": "14 files in lib/ (after Module 14): types.ts, errors.ts, sentry.ts, utils.ts, crypto.ts, storage.ts, data-model.ts, bookmark-import.ts, bookmark-backup.ts, password-sets.ts, recovery.ts, incognito.ts, background-types.ts, hush-import.ts.",
+            "background": "entrypoints/background/index.ts + handlers.ts. 17 message types (16 original + IMPORT_HUSH from Module 14). All handlers implemented.",
+            "test_counts": "~895 unit tests, ~195 E2E tests (estimated after Module 14).",
+            "note": "These counts are estimates. Read actual counts from Module 14 progress.md before starting."
+        },
+        "what_does_not_exist": {
+            "sync": "No sync infrastructure. No sync-types.ts, sync-client.ts, sync-queue.ts.",
+            "sync_messages": "No SYNC_* message types in background protocol.",
+            "sync_config": "No SyncConfig storage. No backend URL configured."
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "http": "fetch() API — available in service worker context and test environment. No axios or other HTTP libraries.",
+            "storage": "browser.storage.local (via browser from wxt/browser) for sync queue and sync config persistence. Queue lives in entrypoints/background/, not lib/.",
+            "crypto_boundary": "Sync client is opaque blob transport. Encryption/decryption happens in crypto.ts BEFORE blobs reach sync-client.ts. The background handler is responsible for calling crypto.ts.encrypt() on SyncableFeature.serialize() output before passing to sync-client.uploadBlob(). The backend never sees plaintext.",
+            "testing": "Vitest + happy-dom. Mock global fetch() for HTTP tests. Mock browser.storage.local for queue tests.",
+            "forbidden_patterns": [
+                "Importing crypto.ts in sync-client.ts",
+                "Plaintext data in sync payloads",
+                "Hardcoded backend URLs (must come from SyncConfig)",
+                "Retrying auth failures (AUTH_FAILED = not retryable)",
+                "console.log, as any, @ts-ignore",
+                "browser.storage.local in lib/ modules (use entrypoints/ for storage-dependent code)",
+                "Raw chrome.* calls (use browser from wxt/browser)"
+            ]
+        },
+        "sync_architecture": {
+            "e2e_encryption": "Client encrypts tree → Uint8Array blob → sync-client uploads blob → backend stores opaque blob → sync-client downloads blob → client decrypts tree. Backend NEVER has decryption keys.",
+            "encryption_orchestration": "SyncableFeature.serialize() returns PLAINTEXT Uint8Array. The background sync handler must encrypt this via crypto.ts before passing to sync-client.uploadBlob(). On download, the handler decrypts before calling SyncableFeature.deserialize(). This orchestration lives in the background handler, NOT in sync-client.ts or SyncableFeature implementations.",
+            "conflict_resolution": "Last-write-wins by timestamp. Local wins ties. Simple and predictable. No CRDT or OT complexity for v1.0.",
+            "offline_queue": "Failed uploads queued in browser.storage.local. Drained on next successful connectivity. Exponential backoff (1s base, 300s max, 10 retries) prevents thundering herd. Queue lives in entrypoints/background/sync-queue.ts.",
+            "dormant_until_backend": "All sync operations return SYNC_NOT_CONFIGURED until Module 15b deploys the backend and Module 16a provides the auth token via ExtensionPay."
+        },
+        "option_b_readiness": {
+            "syncable_feature_interface": "SyncableFeature { featureId, serialize, deserialize, requiresServer }. Modules 16c (Tags) and 16e (Dashboard) implement this. Today requiresServer() returns false (local-only). If fork protection needed, flip to true and route through backend API.",
+            "consumed_by": ["Module 16c (Tags & Search)", "Module 16e (New-Tab Dashboard)"]
+        },
+        "licensing": { "extension_license": "GPL-3.0" },
+        "read_first": [
+            "CLAUDE.md",
+            "lib/crypto.ts (encrypt/decrypt produce/consume Uint8Array — sync-client receives these blobs)",
+            "lib/storage.ts (browser.storage.local patterns — sync-queue follows similar patterns but lives in entrypoints/)",
+            "lib/errors.ts (existing error class pattern — SyncError follows same structure)",
+            "This PRD"
+        ],
+        "inputs": [
+            { "file": "lib/types.ts", "from_module": "Module 1", "what_it_provides": "Result<T,E> type" },
+            { "file": "lib/errors.ts", "from_module": "Module 1", "what_it_provides": "Base error patterns (SyncError added here)" },
+            { "file": "lib/background-types.ts", "from_module": "Module 14", "what_it_provides": "BackgroundMessage union to extend" }
+        ],
+        "outputs": [
+            { "file": "lib/sync-types.ts", "consumed_by": "Modules 16c, 16e (SyncableFeature), 15b (backend contract)", "description": "Types-only. SyncableFeature interface." },
+            { "file": "lib/sync-client.ts", "consumed_by": "Background handlers, Module 15b integration", "description": "HTTPS API client" },
+            { "file": "entrypoints/background/sync-queue.ts", "consumed_by": "Background sync handlers", "description": "Offline retry queue (browser.storage.local)" }
+        ]
+    },
+    "known_risks": [
+        { "issue": "Backend doesn't exist yet (Module 15b is post-sprint)", "severity": "HIGH", "action": "All sync handlers return SYNC_NOT_CONFIGURED. Sync code is dormant but fully tested against mocked HTTP." },
+        { "issue": "fetch() availability in service worker", "severity": "LOW", "action": "fetch() is available in MV3 service workers. Standard API." },
+        { "issue": "browser.storage.local quota for offline queue", "severity": "LOW", "action": "Max 50 operations, each ~1KB max. Total queue ~50KB max. Well within 10MB quota." },
+        { "issue": "Conflict resolution edge cases", "severity": "MEDIUM", "action": "Last-write-wins is simple and predictable. No merge conflicts to resolve. Acceptable for v1.0." },
+        { "issue": "Encryption orchestration between SyncableFeature.serialize() and sync-client.uploadBlob() is undefined in Module 15a", "severity": "MEDIUM", "action": "Module 15b must define where crypto.ts.encrypt() is called. Likely: background handler encrypts serialized data before passing to sync-client. Documented in sync_architecture.encryption_orchestration." }
+    ],
+    "critical_path": "SYNC-001 → SYNC-002 → SYNC-003 → SYNC-004",
+    "total_story_points": 21,
+    "total_stories": 4,
+    "dependency_chain": {
+        "upstream": "Module 14 (for starting state counts and background-types.ts state)",
+        "downstream": "Module 16c (Tags: implements SyncableFeature), Module 16e (Dashboard: implements SyncableFeature). Module 16a (ProGate) is independent — parallel-safe.",
+        "parallel_safe": "Can run in parallel with Module 16a."
+    },
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-15a-sync-client/",
+            "format": "Append-only. ## SYNC-XXX — <title>",
+            "update_trigger": "After each story",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "build_plan_day": "Day 5",
+        "estimated_test_count": "~20 unit",
+        "session_protocol": "One Claude Code session. Research fetch() in service worker context. Commit per story.",
+        "quality_gate": "All tests pass. tsc clean. wxt build. Zero crypto imports in sync-client. SyncableFeature interface complete. Queue max depth enforced. SyncError in lib/errors.ts. sync-queue.ts in entrypoints/background/ (not lib/).",
+        "human_review_required": "Verify: SyncableFeature interface contract is complete. Zero plaintext in sync payloads. Queue backoff parameters reasonable (300s max, 10 retries). SyncError context codes cover all failure modes."
+    },
+    "execution_rules": {
+        "execution_order": "SYNC-001 → SYNC-002 → SYNC-003 → SYNC-004",
+        "clarifying_questions": "Encouraged. Key: fetch() in service worker, offline queue persistence strategy, SyncableFeature contract.",
+        "prd_scope": "Module 15a of 22. Sync CLIENT only. Backend is Module 15b (separate repo).",
+        "commit_protocol": "feat(sync-client): SYNC-XXX — <title>",
+        "failure_protocol": "Max 3 attempts per story."
+    }
+}

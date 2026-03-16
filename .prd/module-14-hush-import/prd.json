@@ -1,0 +1,323 @@
+{
+    "project": {
+        "name": "Module 14: Hush 1.0 Import (SJCL)",
+        "description": "Add 'Import from Hush' feature — SJCL-based decryption of original Hush extension export blobs. Lazy-loads SJCL (~50KB) via dynamic import, decrypts the self-describing JSON blob using the user's original Hush password, maps the Hush data model (folders/bookmarks) to Hush's BookmarkTree format, and returns the tree + stats to the caller (persistence handled by existing SAVE flow). New message type IMPORT_HUSH added to background protocol. UI added to existing ImportSection in settings. This is the final migration path for Hush's ~10K remaining users — key GTM differentiator.",
+        "version": "1.0.0",
+        "created": "2026-03-16",
+        "parent_plan": "Hush Consolidated Build Plan — Day 5 (Hush import)",
+        "critical_path_position": "Module 14 is independent. No upstream dependency beyond Modules 1-13 (all complete). No downstream modules depend on Module 14."
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": [],
+        "falls_short": [],
+        "do_not_incorporate": [
+            "Holy PB has no Hush import capability — this is entirely new functionality",
+            "Do NOT use SJCL for any Hush-native encryption — SJCL is import-only"
+        ],
+        "build_from_scratch": [
+            "lib/hush-import.ts: SJCL decryption of Hush export blob, data model mapping (Hush folders/bookmarks → BookmarkTree), import stats generation. Pure TypeScript, no UI. SJCL loaded via dynamic import().",
+            "IMPORT_HUSH message type added to lib/background-types.ts",
+            "IMPORT_HUSH handler in entrypoints/background/handlers.ts",
+            "HushImportSection component in components/settings/ — textarea for blob paste, password field, import button, stats display",
+            "Hush data model types: HushExportData, HushFolder, HushBookmark (internal to hush-import.ts, not exported to lib/types.ts)"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "HUSH-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "lib/hush-import.ts — SJCL decryption and data model mapping",
+            "description": "Create lib/hush-import.ts with: (1) decryptHushBlob(blob: string, password: string) → decrypts SJCL JSON blob using raw password, returns parsed HushExportData. (2) mapHushToTree(data: HushExportData) → maps Hush folders/bookmarks to BookmarkNode[] suitable for appending to existing tree. (3) importHushData(blob: string, password: string) → full pipeline: decrypt → validate → map → wrap in 'Hush Import' folder → return Result<{ tree, stats }, ImportError | InvalidPasswordError>. SJCL is lazy-loaded via dynamic import('sjcl'). Hush export format is self-describing JSON: {iv, v, iter, ks, ts, mode, adata, cipher, salt, ct}. NOTE: dynamic import() is a new pattern for lib/ — no existing module uses it. This is intentional for lazy-loading heavy dependencies.",
+            "story_points": 8,
+            "steps": [
+                "PREREQUISITE: Install sjcl as dependency: npm install sjcl --legacy-peer-deps. Check if @types/sjcl exists on npm; if not, create a minimal type declaration file (e.g., types/sjcl.d.ts). The only function needed is sjcl.decrypt(password: string, ciphertext: string): string.",
+                "RED: Test: 'decryptHushBlob decrypts valid SJCL blob with correct password' — NOTE: sjcl can be imported at top-level in test files (lazy-load constraint is production-only). Use sjcl.encrypt() in test setup to generate valid fixtures.",
+                "RED: Test: 'decryptHushBlob throws InvalidPasswordError for wrong password'",
+                "RED: Test: 'decryptHushBlob throws ImportError for malformed JSON blob'",
+                "RED: Test: 'mapHushToTree maps folders and bookmarks to BookmarkNode[]'",
+                "RED: Test: 'mapHushToTree filters out Trash folder'",
+                "RED: Test: 'mapHushToTree handles empty folders gracefully'",
+                "RED: Test: 'mapHushToTree maps Hush bookmark fields (text→title, url→url, created→dateAdded)'",
+                "RED: Test: 'mapHushToTree handles pre-1.0 exports without folders array (wraps flat content in default folder)'",
+                "RED: Test: 'importHushData wraps import in Hush Import folder and returns Result with stats'",
+                "RED: Test: 'importHushData returns Result with ImportStats (folder/bookmark counts)'",
+                "RED: Test: 'importHushData returns error Result for wrong password (InvalidPasswordError)'",
+                "GREEN: Create lib/hush-import.ts. Define internal types HushExportData = { key?: string; folders: HushFolder[] }, HushFolder = { id: string; title: string; bookmarks: HushBookmark[] }, HushBookmark = { url: string; text: string; created: string }. Implement decryptHushBlob using dynamic import('sjcl') — throws InvalidPasswordError for wrong password, ImportError for format errors. Implement mapHushToTree — filter Trash, handle missing folders array (pre-1.0 edge case). Implement importHushData returning Result<{ tree: BookmarkTree; stats: ImportStats }, ImportError | InvalidPasswordError>. Silently ignore the 'key' field in HushExportData (no logging).",
+                "REFACTOR: Ensure SJCL is ONLY imported inside decryptHushBlob (lazy-load). Verify no SJCL types leak into lib/types.ts. Verify InvalidPasswordError for password errors, ImportError for format errors."
+            ],
+            "files": [
+                "lib/hush-import.ts",
+                "tests/unit/lib/hush-import.test.ts"
+            ],
+            "acceptance_criteria": [
+                "lib/hush-import.ts exports: decryptHushBlob, mapHushToTree, importHushData",
+                "SJCL loaded via dynamic import('sjcl') ONLY inside decryptHushBlob — never at module top level",
+                "decryptHushBlob: takes (blob: string, password: string), returns decrypted+parsed HushExportData",
+                "decryptHushBlob: wrong password → InvalidPasswordError (not ImportError)",
+                "decryptHushBlob: malformed blob → ImportError with source: 'hush'",
+                "mapHushToTree: filters out Trash folder (title === 'Trash')",
+                "mapHushToTree: maps text→title, url→url, created→dateAdded (ISO string → timestamp)",
+                "mapHushToTree: generates unique IDs for each folder and bookmark (via generateId())",
+                "mapHushToTree: handles pre-1.0 exports without folders array (wraps flat content in default folder)",
+                "importHushData: returns Result<{ tree: BookmarkTree; stats: ImportStats }, ImportError | InvalidPasswordError>",
+                "importHushData: wraps mapped nodes in 'Hush Import' folder",
+                "importHushData: stats include folder count, bookmark count, errors array",
+                "Hush 'key' field silently ignored — zero console.log",
+                "Zero SJCL types or references in lib/types.ts"
+            ],
+            "definition_of_done": [
+                "All unit tests pass",
+                "tsc clean",
+                "SJCL not in top-level imports of hush-import.ts"
+            ],
+            "verification": "npx vitest run tests/unit/lib/hush-import.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "HUSH-002",
+            "category": "integration",
+            "priority": "CRITICAL",
+            "title": "IMPORT_HUSH message type and background handler",
+            "description": "Add IMPORT_HUSH to the background message protocol (17th type). Wire handler in background/handlers.ts: receive blob + password → importHushData → return tree + stats to caller. Handler does NOT write to storage — persistence is handled by the existing SAVE message flow (matching handleImportChromeBookmarks and handleImportBackup patterns). Update background-types.ts union. Update exhaustive switch.",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'IMPORT_HUSH handler calls importHushData and returns tree + stats on success'",
+                "RED: Test: 'IMPORT_HUSH handler returns INVALID_PASSWORD code for wrong password (instanceof InvalidPasswordError check)'",
+                "RED: Test: 'IMPORT_HUSH handler returns IMPORT_ERROR code for format failure'",
+                "GREEN: Add ImportHushMessage = { type: 'IMPORT_HUSH'; blob: string; password: string } to background-types.ts. Add to BackgroundMessage union (now 17 types). Update MessageType. Wire handler: importHushData(msg.blob, msg.password) → if (!result.success) check instanceof InvalidPasswordError → code: 'INVALID_PASSWORD', else code: 'IMPORT_ERROR' → if success, return { tree: result.data.tree, stats: result.data.stats }. Match handleImportBackup pattern at handlers.ts:273-282. Update switch in index.ts.",
+                "REFACTOR: Update scaffold-smoke.test.ts LIB_MODULES count (14, now includes hush-import.ts). Verify exhaustive switch still compiles."
+            ],
+            "files": [
+                "lib/background-types.ts",
+                "entrypoints/background/handlers.ts",
+                "entrypoints/background/index.ts",
+                "tests/unit/entrypoints/background.test.ts",
+                "tests/unit/integration/scaffold-smoke.test.ts"
+            ],
+            "acceptance_criteria": [
+                "background-types.ts: ImportHushMessage type added, BackgroundMessage union now 17 types",
+                "MessageType includes 'IMPORT_HUSH'",
+                "Handler does NOT require unlocked session (Hush import uses its own password, not the active password)",
+                "Handler calls importHushData(msg.blob, msg.password)",
+                "Handler checks instanceof InvalidPasswordError → returns { success: false, error: 'Invalid password', code: 'INVALID_PASSWORD' }",
+                "Handler returns { success: true, data: { tree, stats } } on success",
+                "Handler does NOT write to any storage — returns tree to caller (persistence via SAVE flow)",
+                "Exhaustive switch compiles cleanly (no missing case)",
+                "LIB_MODULES count updated to 14 in scaffold-smoke"
+            ],
+            "definition_of_done": [
+                "Unit tests pass",
+                "tsc clean",
+                "wxt build succeeds"
+            ],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit && npx wxt build",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["HUSH-001"]
+        },
+        {
+            "id": "HUSH-003",
+            "category": "ui",
+            "priority": "HIGH",
+            "title": "HushImportSection UI component",
+            "description": "Create HushImportSection component in components/settings/ — textarea for pasting Hush export blob, password field (PasswordInput), import button with loading state, success stats display, error display. Wired into SettingsScreen within the existing Import/Export section. Sends IMPORT_HUSH message via useSendMessage. Follows established wait-for-response pattern from ImportSection.",
+            "story_points": 5,
+            "steps": [
+                "RED: Test: 'renders textarea and password input'",
+                "RED: Test: 'import button disabled when textarea or password empty'",
+                "RED: Test: 'sends IMPORT_HUSH message with blob and password on submit'",
+                "RED: Test: 'shows loading state during import'",
+                "RED: Test: 'displays import stats on success'",
+                "RED: Test: 'displays error message on failure'",
+                "GREEN: Create components/settings/HushImportSection.tsx — textarea (placeholder: 'Paste your Hush export data here...'), PasswordInput for Hush password (autocomplete='off' — this is a foreign password for a one-time import, not the Hush Private Bookmarks password), Import button. Loading → IMPORT_HUSH → success stats / error. Clear password from state on success (defense-in-depth).",
+                "Wire into SettingsScreen: add HushImportSection below existing ImportSection (or as a collapsible section within it).",
+                "REFACTOR: Ensure zero business logic in component. No direct SJCL import. No crypto operations."
+            ],
+            "files": [
+                "components/settings/HushImportSection.tsx",
+                "components/screens/SettingsScreen.tsx",
+                "tests/unit/components/settings/HushImportSection.test.tsx"
+            ],
+            "acceptance_criteria": [
+                "Textarea with placeholder explaining what to paste",
+                "PasswordInput with label 'Hush Password' and autocomplete='off' (foreign password, not Hush Private Bookmarks password)",
+                "Import button disabled when textarea empty OR password empty",
+                "Button shows loading state during import (disabled + 'Importing...')",
+                "Success: displays folder count, bookmark count, clears password from state",
+                "Failure: displays error message inline, does NOT clear inputs (user can retry)",
+                "Wired into SettingsScreen in Import/Export section",
+                "Zero business logic: only sends message and displays result"
+            ],
+            "definition_of_done": [
+                "Unit tests pass",
+                "Component renders correctly in SettingsScreen"
+            ],
+            "verification": "npx vitest run tests/unit/components/settings/HushImportSection.test.tsx && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["HUSH-002"]
+        },
+        {
+            "id": "HUSH-004",
+            "category": "verification",
+            "priority": "HIGH",
+            "title": "E2E Hush import flows and integration verification",
+            "description": "E2E tests for the full Hush import flow. Generate a real SJCL-encrypted test fixture (encrypt a known Hush data structure with a known password using SJCL in the test setup — top-level import OK in test files). Verify: paste blob → enter password → import → bookmarks appear in tree. Verify error paths: wrong password, malformed blob. Full verification suite.",
+            "story_points": 5,
+            "steps": [
+                "Create SJCL test fixture: use sjcl.encrypt() in test setup to create a valid encrypted blob from a known HushExportData. This ensures the test fixture is always valid. NOTE: sjcl top-level import is OK in test files — the lazy-load constraint is production-only.",
+                "RED: E2E: 'Hush import: paste valid blob + correct password → bookmarks appear'",
+                "RED: E2E: 'Hush import: wrong password → shows error'",
+                "RED: E2E: 'Hush import: malformed blob → shows error'",
+                "RED: E2E: 'Hush import: empty textarea → button disabled'",
+                "GREEN: Create tests/e2e/hush-import.test.ts with fixture generation and flow tests.",
+                "Run full verification suite: tsc + eslint + vitest + wxt build + playwright"
+            ],
+            "files": [
+                "tests/e2e/hush-import.test.ts"
+            ],
+            "acceptance_criteria": [
+                "E2E: valid import flow creates bookmarks in tree (excluding Trash)",
+                "E2E: wrong password shows user-friendly error (not crypto internals)",
+                "E2E: malformed blob shows error",
+                "E2E: empty fields disable button",
+                "Full verification passes: tsc + eslint + vitest + wxt build + playwright",
+                "Zero regressions in existing tests"
+            ],
+            "definition_of_done": [
+                "All E2E tests pass",
+                "Full verification passes",
+                "Zero regressions"
+            ],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build && npm run test:e2e",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["HUSH-001", "HUSH-002", "HUSH-003"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "lib_modules": "13 files in lib/: types.ts, errors.ts, sentry.ts, utils.ts, crypto.ts, storage.ts, data-model.ts, bookmark-import.ts, bookmark-backup.ts, password-sets.ts, recovery.ts, incognito.ts, background-types.ts. scaffold-smoke tracks 13 LIB_MODULES (background-types is counted as lib/).",
+            "background": "entrypoints/background/index.ts + handlers.ts. ALL 16 handlers implemented. Zero NOT_IMPLEMENTED. HandlerContext for dependency injection.",
+            "background_types": "lib/background-types.ts: 16-type BackgroundMessage union (Unlock, Lock, Save, GetState, AddBookmark, GetIncognitoState, ChangePassword, UpdateAutoLock, CreateSet, RenameSet, DeleteSet, SwitchSet, ClearAll, ImportChromeBookmarks, ImportBackup, ExportBackup). BackgroundResponse with success/error/code. SessionState with hasData: boolean.",
+            "import_section": "components/settings/ImportSection.tsx: 3 import flows (Chrome bookmarks, HTML file, encrypted backup). Does NOT have Hush import.",
+            "settings_screen": "components/screens/SettingsScreen.tsx: Account, Data Management (Import/Export), Preferences, Danger Zone sections.",
+            "result_type": "lib/types.ts exports Result<T, E> = { success: true; data: T } | { success: false; error: E }. Used by all import functions.",
+            "error_classes": "lib/errors.ts: InvalidPasswordError (password failures), ImportError (format/structural failures with context: { source?, format? }). Handler pattern: check instanceof InvalidPasswordError → code: 'INVALID_PASSWORD', else code: 'IMPORT_ERROR'.",
+            "handler_pattern": "Import handlers (handleImportChromeBookmarks, handleImportBackup) return tree + stats to caller. They do NOT write to storage — persistence is handled by the SAVE message flow.",
+            "key_exports": {
+                "bookmark_import": "convertChromeBookmarks, parseHtmlBookmarks, ImportStats, ImportResult",
+                "bookmark_backup": "importEncryptedBackup, exportEncryptedBackup, BackupResult",
+                "data_model": "addBookmark, createEmptyTree, isBookmark, isFolder, generateId, MAX_TREE_DEPTH",
+                "errors": "ImportError (source?, format?), InvalidPasswordError"
+            }
+        },
+        "what_does_not_exist": {
+            "hush_import": "lib/hush-import.ts does not exist. No SJCL dependency. No IMPORT_HUSH message type.",
+            "sjcl": "sjcl package not installed. No type declarations for sjcl.",
+            "hush_import_ui": "No HushImportSection component. ImportSection only handles Chrome/HTML/backup.",
+            "dynamic_imports": "No existing lib/ module uses dynamic import(). This module introduces the pattern for lazy-loading heavy dependencies."
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "sjcl": "Stanford Javascript Crypto Library. Install via npm install sjcl --legacy-peer-deps. Lazy-load via dynamic import('sjcl') in production code — NEVER top-level import in lib/. Top-level import OK in test files. ~50KB.",
+            "sjcl_types": "If @types/sjcl does not exist on npm, create minimal declaration: declare module 'sjcl' { export function decrypt(password: string, ciphertext: string): string; export function encrypt(password: string, plaintext: string): string; }. Place in a .d.ts file (e.g., types/sjcl.d.ts).",
+            "hush_export_format": "Self-describing JSON: {iv:<base64>, v:1, iter:10000, ks:128, ts:64, mode:'ccm', adata:'', cipher:'aes', salt:<base64>, ct:<base64>}. sjcl.decrypt() handles all params automatically from the blob.",
+            "hush_key_handling": "Export uses RAW password (not hashed). sjcl.decrypt(password, blob) with raw password. No need to implement hashKey() fallback for exports — only local storage used hashed keys.",
+            "hush_data_model": "Decrypted JSON: { key?: string, folders: [{ id: string, title: string, bookmarks: [{ url: string, text: string, created: string }] }] }. Standard folders: 'Home' and 'Trash'. Filter out Trash on import. Silently ignore the 'key' field (no logging — zero console.log per CLAUDE.md).",
+            "pre_1_0_edge_case": "Very old Hush exports (pre-1.0) may lack a folders array. Handle gracefully: if no folders array, treat entire decrypted content as flat bookmark list wrapped in a default folder.",
+            "testing": "Vitest + happy-dom for unit. Playwright for E2E. For test fixtures: generate real SJCL blobs using sjcl.encrypt() at top-level import in test files (lazy-load constraint is production-only).",
+            "forbidden_patterns": [
+                "Top-level import of SJCL in production code (lib/, components/, entrypoints/)",
+                "Using SJCL for any Hush-native encryption",
+                "Exposing SJCL types in lib/types.ts",
+                "Importing crypto.ts functions for Hush import (SJCL handles its own crypto)",
+                "console.log (zero per CLAUDE.md), as any, @ts-ignore",
+                "Throwing raw errors — use InvalidPasswordError or ImportError",
+                "Returning raw values — use Result<T, E> pattern"
+            ]
+        },
+        "hush_encryption_analysis": {
+            "source_document": "Hush_Encryption_Analysis.docx (in project knowledge)",
+            "key_facts": [
+                "Hush v1.3.0 uses SJCL with AES-128-CCM, PBKDF2-SHA256, 10K iterations",
+                "Export format is self-describing JSON — all crypto params embedded",
+                "sjcl.decrypt(password, blob) handles everything given correct password",
+                "Decrypted plaintext is JSON.stringify'd data — parse after decrypt",
+                "Recommendation: Option C (Hybrid) — SJCL for import only, Web Crypto for native"
+            ]
+        },
+        "licensing": {
+            "extension_license": "GPL-3.0",
+            "sjcl_license": "BSD-2-Clause (open source, compatible with GPL-3.0)"
+        },
+        "read_first": [
+            "CLAUDE.md",
+            "Hush_Encryption_Analysis.docx (in project knowledge — critical reference for data format)",
+            "lib/bookmark-import.ts (pattern reference: ImportResult, ImportStats, convertChromeBookmarks for tree mapping)",
+            "lib/bookmark-backup.ts (pattern reference: importEncryptedBackup for Result + InvalidPasswordError pattern)",
+            "components/settings/ImportSection.tsx (pattern reference: existing import UI flows)",
+            "entrypoints/background/handlers.ts (pattern reference: handleImportBackup at line 273)",
+            "This PRD"
+        ],
+        "inputs": [
+            { "file": "lib/types.ts", "from_module": "Module 1", "what_it_provides": "Bookmark, Folder, BookmarkNode, BookmarkTree, ImportStats (via bookmark-import.ts), Result<T, E>" },
+            { "file": "lib/errors.ts", "from_module": "Module 1", "what_it_provides": "ImportError class, InvalidPasswordError class" },
+            { "file": "lib/data-model.ts", "from_module": "Module 4", "what_it_provides": "generateId(), MAX_TREE_DEPTH" },
+            { "file": "lib/background-types.ts", "from_module": "Module 9", "what_it_provides": "BackgroundMessage union (add IMPORT_HUSH), BackgroundResponse" },
+            { "file": "entrypoints/background/handlers.ts", "from_module": "Module 12", "what_it_provides": "HandlerContext, existing handler patterns (handleImportBackup at line 273)" }
+        ],
+        "outputs": [
+            { "file": "lib/hush-import.ts", "consumed_by": "Background handler", "description": "Hush SJCL decryption + data mapping, returns Result<T,E>" },
+            { "file": "components/settings/HushImportSection.tsx", "consumed_by": "SettingsScreen", "description": "Hush import UI" }
+        ]
+    },
+    "known_risks": [
+        { "issue": "SJCL npm package may not have TypeScript types", "severity": "LOW", "action": "Create minimal .d.ts declaring sjcl.decrypt() and sjcl.encrypt(). Only two functions needed." },
+        { "issue": "SJCL is unmaintained since 2016", "severity": "LOW", "action": "Acceptable. Used only for import (read), not for new encryption. The format is frozen." },
+        { "issue": "Users may paste partial/corrupted blob", "severity": "MEDIUM", "action": "sjcl.decrypt throws on invalid JSON or failed auth tag. Catch and return ImportError Result (not throw)." },
+        { "issue": "Very old Hush exports (pre-1.0) may lack folders", "severity": "LOW", "action": "Handle in mapHushToTree: if no folders array, wrap flat content in default folder." },
+        { "issue": "Bundle size increase from SJCL (~50KB)", "severity": "LOW", "action": "Lazy-loaded via dynamic import(). Only loaded when user triggers Hush import. Not in main bundle." },
+        { "issue": "Hush export includes plaintext password in encrypted blob (key field)", "severity": "LOW", "action": "Silently ignore the key field during mapping. Do not store, display, or log it. Zero console.log per CLAUDE.md." },
+        { "issue": "dynamic import() is a new pattern for lib/", "severity": "LOW", "action": "Intentional for lazy-loading heavy deps. Works with Vite bundler. No existing lib/ module needs to change." }
+    ],
+    "critical_path": "HUSH-001 → HUSH-002 → HUSH-003 → HUSH-004",
+    "total_story_points": 23,
+    "total_stories": 4,
+    "dependency_chain": {
+        "upstream": "Modules 1-13 (all complete)",
+        "downstream": "None. Module 14 is a leaf — no other modules depend on it.",
+        "parallel_safe": "Can run in parallel with Module 15a or 16a if needed."
+    },
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-14-hush-import/",
+            "format": "Append-only. ## HUSH-XXX — <title>",
+            "update_trigger": "After each story",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "build_plan_day": "Day 5",
+        "estimated_test_count": "~15 unit + ~4 E2E",
+        "session_protocol": "One Claude Code session. Research sjcl npm package, verify decrypt() API, check TypeScript types availability. Commit per story.",
+        "quality_gate": "All tests pass. tsc clean. wxt build. SJCL lazy-loaded only. Zero SJCL in lib/types.ts. InvalidPasswordError for password failures. ImportError for format failures. Result<T,E> pattern for all returns. Password cleared from state on success.",
+        "human_review_required": "Verify: SJCL decrypt works with real Hush export blob (if available), Trash folder filtered, password field cleared, no PII in errors."
+    },
+    "execution_rules": {
+        "execution_order": "HUSH-001 → HUSH-002 → HUSH-003 → HUSH-004",
+        "clarifying_questions": "Encouraged. Key: sjcl npm package API, type declaration approach, test fixture generation strategy.",
+        "prd_scope": "Module 14 of 22. Last module with holy_pb_shortfalls section.",
+        "commit_protocol": "feat(hush-import): HUSH-XXX — <title>",
+        "failure_protocol": "Max 3 attempts per story."
+    }
+}

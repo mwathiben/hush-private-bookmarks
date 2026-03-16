@@ -1,0 +1,282 @@
+{
+    "project": {
+        "name": "Module 16c: Tags & Search",
+        "description": "Pro-gated bookmark tagging system with enhanced search. lib/tags.ts provides tag CRUD operations (add/remove/list tags on bookmarks, get bookmarks by tag). Tags stored as readonly string arrays on Bookmark type. Search enhanced to filter by tag in addition to title/URL. Implements SyncableFeature interface for Option B readiness. UI: TagInput component for adding tags, tag pills on bookmarks, tag filter in search. Gated by useProGate() — free users see UpgradePrompt.",
+        "version": "1.0.0",
+        "created": "2026-03-16",
+        "parent_plan": "Hush Consolidated Build Plan — Day 5 (Pro features)",
+        "critical_path_position": "Depends on Module 16a (ProGate — useProGate hook) and Module 15a (SyncableFeature interface). Must execute after both."
+    },
+    "holy_pb_shortfalls": {
+        "preserve_verbatim": [],
+        "falls_short": [],
+        "do_not_incorporate": [],
+        "build_from_scratch": [
+            "lib/tags.ts: tag CRUD (addTag, removeTag, getBookmarksByTag, getAllTags) — pure functions, tree in/tree out. Tags normalized to lowercase, max 50 chars.",
+            "TagSyncFeature class implementing SyncableFeature interface (requiresServer()=false for Option A)",
+            "ADD_TAG and REMOVE_TAG message types in lib/background-types.ts",
+            "Background handlers for tag operations with Pro status check",
+            "components/shared/TagInput.tsx: autocomplete input for adding/removing tags",
+            "components/shared/TagPills.tsx: colored badge display for bookmark tags",
+            "Enhanced useSearch hook with tag filtering",
+            "ManagerToolbar tag filter dropdown"
+        ]
+    },
+    "user_stories": [
+        {
+            "id": "TAG-001",
+            "category": "core",
+            "priority": "CRITICAL",
+            "title": "lib/tags.ts — tag CRUD and SyncableFeature implementation",
+            "description": "Create lib/tags.ts with: addTag(tree, bookmarkPath, tag) → updated tree, removeTag(tree, bookmarkPath, tag) → updated tree, getBookmarksByTag(tree, tag) → Bookmark[], getAllTags(tree) → string[]. Extend Bookmark type with optional readonly tags?: readonly string[]. Implement SyncableFeature interface for tag index (serializes tag data for potential server-side sync under Option B).",
+            "story_points": 8,
+            "steps": [
+                "Extend Bookmark type in lib/types.ts: add readonly tags?: readonly string[]. Optional/additive — existing bookmarks without tags are valid.",
+                "RED: Test: 'addTag adds tag to bookmark and returns updated tree'",
+                "RED: Test: 'addTag creates tags array if none exists'",
+                "RED: Test: 'addTag deduplicates (no duplicate tags)'",
+                "RED: Test: 'removeTag removes tag from bookmark'",
+                "RED: Test: 'getBookmarksByTag returns all bookmarks with given tag'",
+                "RED: Test: 'getBookmarksByTag traverses nested folders'",
+                "RED: Test: 'getAllTags returns unique tags across all bookmarks'",
+                "RED: Test: 'TagSyncFeature implements SyncableFeature interface'",
+                "RED: Test: 'TagSyncFeature.requiresServer returns false (Option A)'",
+                "GREEN: Create lib/tags.ts. All functions are pure (tree in, tree out). Tag operations use path-based addressing like data-model.ts. TagSyncFeature class implements SyncableFeature: featureId='tags', serialize/deserialize for tag index, requiresServer()=false.",
+                "REFACTOR: Ensure lib/ purity. Tags are case-insensitive (normalize to lowercase). Max tag length: 50 chars."
+            ],
+            "files": [
+                "lib/tags.ts",
+                "lib/types.ts",
+                "tests/unit/lib/tags.test.ts"
+            ],
+            "acceptance_criteria": [
+                "Bookmark type extended with readonly tags?: readonly string[] (optional, additive)",
+                "addTag: adds tag, deduplicates, normalizes to lowercase",
+                "removeTag: removes tag, returns unchanged tree if tag not found",
+                "getBookmarksByTag: deep traversal, returns matching bookmarks",
+                "getAllTags: unique set of all tags across entire tree",
+                "TagSyncFeature implements SyncableFeature from lib/sync-types.ts",
+                "TagSyncFeature.requiresServer() returns false",
+                "All operations are pure functions (tree in, tree out)",
+                "Tags normalized to lowercase, max 50 chars",
+                "Zero React imports"
+            ],
+            "definition_of_done": ["All unit tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/lib/tags.test.ts && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": []
+        },
+        {
+            "id": "TAG-002",
+            "category": "integration",
+            "priority": "HIGH",
+            "title": "Background handlers for tag operations",
+            "description": "Add ADD_TAG, REMOVE_TAG message types to background protocol. Wire handlers: validate session → apply tag operation to tree → SAVE → return updated tree. Both require Pro status check.",
+            "story_points": 3,
+            "steps": [
+                "Add AddTagMessage { type, bookmarkPath, tag } and RemoveTagMessage { type, bookmarkPath, tag } to background-types.ts.",
+                "Wire handlers: check cachedPassword + proStatus.isPro → get tree → addTag/removeTag → save → return.",
+                "RED: Test: 'ADD_TAG handler adds tag and saves tree'",
+                "RED: Test: 'ADD_TAG returns PRO_REQUIRED when not Pro'",
+                "RED: Test: 'REMOVE_TAG handler removes tag and saves tree'",
+                "GREEN: Implement handlers. Update switch."
+            ],
+            "files": [
+                "lib/background-types.ts",
+                "entrypoints/background/handlers.ts",
+                "entrypoints/background/index.ts",
+                "tests/unit/entrypoints/background.test.ts"
+            ],
+            "acceptance_criteria": [
+                "ADD_TAG and REMOVE_TAG message types added",
+                "Handlers check Pro status — return PRO_REQUIRED if not Pro",
+                "Handlers require unlocked session",
+                "Handlers save tree after mutation",
+                "Exhaustive switch compiles"
+            ],
+            "definition_of_done": ["Unit tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["TAG-001"]
+        },
+        {
+            "id": "TAG-003a",
+            "category": "ui",
+            "priority": "HIGH",
+            "title": "Tag UI components — TagInput, TagPills, and dialog integration",
+            "description": "Create TagInput (autocomplete input for adding tags), TagPills (display tags on BookmarkItem). Integrate into AddEditBookmarkDialog for Pro users. Pro-gated: free users see UpgradePrompt when accessing tag features in edit dialog.",
+            "story_points": 5,
+            "steps": [
+                "Create components/shared/TagInput.tsx: text input with autocomplete from getAllTags, Enter to add, X to remove. Sends ADD_TAG/REMOVE_TAG messages.",
+                "Create components/shared/TagPills.tsx: inline display of bookmark tags as colored badges.",
+                "Extend BookmarkItem: show TagPills when bookmark has tags.",
+                "Extend AddEditBookmarkDialog: add TagInput in edit mode for Pro users, UpgradePrompt for free users.",
+                "Wrap tag features with useProGate() check — free users see UpgradePrompt.",
+                "RED: Test: 'TagInput adds tag on Enter key'",
+                "RED: Test: 'TagPills renders tag badges'",
+                "RED: Test: 'Free user sees UpgradePrompt instead of TagInput'",
+                "GREEN: Implement all components."
+            ],
+            "files": [
+                "components/shared/TagInput.tsx",
+                "components/shared/TagPills.tsx",
+                "components/shared/BookmarkItem.tsx",
+                "components/shared/AddEditBookmarkDialog.tsx",
+                "tests/unit/components/shared/TagInput.test.tsx",
+                "tests/unit/components/shared/TagPills.test.tsx"
+            ],
+            "acceptance_criteria": [
+                "TagInput: autocomplete, Enter to add, X to remove",
+                "TagPills: colored badges for each tag",
+                "Pro users see tag features in bookmark edit dialog",
+                "Free users see UpgradePrompt instead of tag features",
+                "All tag UI gated by useProGate()"
+            ],
+            "definition_of_done": ["All unit tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/components/shared/ && npx tsc --noEmit",
+            "estimated_effort": "medium",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["TAG-001", "TAG-002"]
+        },
+        {
+            "id": "TAG-003b",
+            "category": "ui",
+            "priority": "HIGH",
+            "title": "Enhanced search with tag filtering",
+            "description": "Extend useSearch hook to accept optional tag filter, include tag matching in search results. Add tag filter dropdown to ManagerToolbar populated from getAllTags.",
+            "story_points": 3,
+            "steps": [
+                "Extend useSearch hook: accept optional tag filter, include tag matching in search results.",
+                "Extend ManagerToolbar: tag filter dropdown populated from getAllTags.",
+                "RED: Test: 'Search filters by tag when tag filter active'",
+                "RED: Test: 'Search matches bookmarks with matching tag even if title/URL don't match'",
+                "GREEN: Implement search enhancement and toolbar filter."
+            ],
+            "files": [
+                "hooks/useSearch.ts",
+                "components/manager/ManagerToolbar.tsx",
+                "tests/unit/hooks/useSearch.test.ts"
+            ],
+            "acceptance_criteria": [
+                "useSearch accepts optional tag parameter",
+                "Search enhanced with tag filtering",
+                "ManagerToolbar has tag filter dropdown",
+                "Tag filter dropdown populated from getAllTags",
+                "Tag search gated by useProGate()"
+            ],
+            "definition_of_done": ["All unit tests pass", "tsc clean"],
+            "verification": "npx vitest run tests/unit/hooks/useSearch.test.ts && npx tsc --noEmit",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["TAG-001", "TAG-003a"]
+        },
+        {
+            "id": "TAG-004",
+            "category": "verification",
+            "priority": "HIGH",
+            "title": "E2E tag flows and integration verification",
+            "description": "E2E tests for tag lifecycle. Full verification suite.",
+            "story_points": 3,
+            "steps": [
+                "RED: E2E: 'Pro user adds tag to bookmark → tag visible'",
+                "RED: E2E: 'Search by tag filters results'",
+                "RED: E2E: 'Free user sees UpgradePrompt in tag area'",
+                "GREEN: Create tests/e2e/tags-search.test.ts",
+                "Run full verification"
+            ],
+            "files": ["tests/e2e/tags-search.test.ts"],
+            "acceptance_criteria": ["E2E flows pass", "Full verification clean", "Zero regressions"],
+            "definition_of_done": ["All tests pass", "Full verification clean"],
+            "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build && npm run test:e2e",
+            "estimated_effort": "small",
+            "passes": false,
+            "attempt_count": 0,
+            "depends_on": ["TAG-001", "TAG-002", "TAG-003a", "TAG-003b"]
+        }
+    ],
+    "starting_state": {
+        "what_exists": {
+            "note": "Read actual state from most recent progress.md. Requires Module 16a (ProGate) and Module 15a (SyncableFeature) to be complete before starting.",
+            "pro_gate": "Expected from Module 16a: lib/pro-gate.ts, hooks/useProGate.ts, components/shared/UpgradePrompt.tsx — must be implemented before this module starts",
+            "syncable_feature": "Expected from Module 15a: SyncableFeature interface in lib/sync-types.ts — must be implemented before this module starts",
+            "search": "hooks/useSearch.ts (from Module 13): debounced search by title/URL — exists and working",
+            "bookmark_item": "components/shared/BookmarkItem.tsx (from Module 11/13) — exists and working",
+            "manager_toolbar": "components/manager/ManagerToolbar.tsx (from Module 13) — exists and working"
+        },
+        "what_does_not_exist": {
+            "tags": "No lib/tags.ts. No tags property on Bookmark type. No tag UI components.",
+            "tag_messages": "No ADD_TAG, REMOVE_TAG message types.",
+            "tag_search": "Search does not filter by tags."
+        }
+    },
+    "context": {
+        "tech_stack": {
+            "tags_storage": "Tags stored as readonly string[] on Bookmark type within the encrypted tree. No separate tag storage. This means tags are encrypted at rest with the vault password.",
+            "option_b_readiness": "TagSyncFeature implements SyncableFeature. Today requiresServer()=false (tags in local tree). If fork protection needed: flip to true → tag CRUD routed through hush-sync backend → local cache only.",
+            "testing": "Vitest + happy-dom. Mock useProGate to test Pro vs Free UX.",
+            "forbidden_patterns": [
+                "Separate tag storage outside the encrypted tree",
+                "Tags visible to free users (must be gated)",
+                "React imports in lib/tags.ts",
+                "console.log, as any, @ts-ignore"
+            ]
+        },
+        "licensing": {
+            "extension_license": "GPL-3.0",
+            "note": "Tag code is GPL-3.0 and visible. Gated by ExtensionPay. Forker can strip gate but loses sync, maintenance, trust."
+        },
+        "read_first": [
+            "CLAUDE.md",
+            "lib/sync-types.ts (SyncableFeature interface — from Module 15a)",
+            "hooks/useProGate.ts (from Module 16a)",
+            "hooks/useSearch.ts (enhance with tag filtering)",
+            "This PRD"
+        ],
+        "outputs": [
+            { "file": "lib/tags.ts", "consumed_by": "Background handlers, tag UI", "description": "Tag CRUD + SyncableFeature" },
+            { "file": "components/shared/TagInput.tsx", "consumed_by": "AddEditBookmarkDialog", "description": "Tag input with autocomplete" },
+            { "file": "components/shared/TagPills.tsx", "consumed_by": "BookmarkItem", "description": "Tag display badges" }
+        ]
+    },
+    "known_risks": [
+        { "issue": "Extending Bookmark type may affect existing tests", "severity": "LOW", "action": "tags is readonly and optional (readonly tags?: readonly string[]). Additive change." },
+        { "issue": "Tag autocomplete performance with large tag sets", "severity": "LOW", "action": "getAllTags is O(n) over tree. Acceptable for v1.0 (<1000 bookmarks)." },
+        { "issue": "Pro gate mock complexity in tests", "severity": "MEDIUM", "action": "Mock useProGate to return isPro:true/false. Established pattern from Module 16a." }
+    ],
+    "critical_path": "TAG-001 → TAG-002 → TAG-003a → TAG-003b → TAG-004",
+    "total_story_points": 22,
+    "total_stories": 5,
+    "dependency_chain": {
+        "upstream": "Module 16a (ProGate — required), Module 15a (SyncableFeature — required)",
+        "downstream": "None",
+        "parallel_safe": "Can run in parallel with 16d and 16e (all share ProGate dependency)"
+    },
+    "progress_log": {
+        "format_rules": {
+            "file": "progress.md in .prd/module-16c-tags-search/",
+            "format": "Append-only. ## TAG-XXX — <title>",
+            "update_trigger": "After each story",
+            "max_attempts_per_story": 3
+        }
+    },
+    "metadata": {
+        "passing_stories": 0,
+        "build_plan_day": "Day 5",
+        "estimated_test_count": "~20 unit + ~3 E2E",
+        "session_protocol": "One Claude Code session. Commit per story.",
+        "quality_gate": "All tests pass. tsc clean. Pro gate working. SyncableFeature implemented. Tags in encrypted tree.",
+        "human_review_required": "Verify: Pro gate works, free users see UpgradePrompt, tag search works, SyncableFeature contract correct."
+    },
+    "execution_rules": {
+        "execution_order": "TAG-001 → TAG-002 → TAG-003a → TAG-003b → TAG-004",
+        "prd_scope": "Module 16c of 18. Pro feature.",
+        "commit_protocol": "feat(tags): TAG-XXX — <title>",
+        "failure_protocol": "Max 3 attempts."
+    }
+}
