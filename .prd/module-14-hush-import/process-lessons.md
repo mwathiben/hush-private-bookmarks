@@ -101,3 +101,22 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 - Cannot use `sjcl.encrypt()` inside `page.evaluate()` — SJCL is a Node dependency, not available in browser context
 - Pattern: `const validBlob = sjcl.encrypt('pw', data); page.evaluate<Response, string>(async (blob) => { ... }, validBlob);`
 - `import sjcl from 'sjcl'` works at top level in Playwright test files (CJS default export interop)
+
+### CodeRabbit Review Findings (HUSH-002)
+
+- Verdict: "Ship it" — 0 Critical, 0 High, 1 Low
+- Low finding: mixed concerns (formatting changes + feature) in same commit — acceptable for 300-line limit compliance
+- All checks passed: security (no PII leak), type safety (zero `as any`), module boundaries, error discrimination, handler statelessness
+
+### WXT Messaging Best Practices (WebSearch 2026-03-16)
+
+- WXT recommends `@webext-core/messaging` wrapper for type-safe messaging — we use raw `runtime.sendMessage` with discriminated unions instead, which is equally type-safe and avoids an extra dependency
+- MV3 service workers terminate after ~5 minutes of inactivity — handlers must be stateless (no in-memory state between messages). Our import handlers (handleImportBackup, handleImportHush) are correctly stateless (no ctx parameter)
+- `VALID_TYPES` Set pattern for runtime message validation is not from WXT docs but is a project-specific guard — works well with the `satisfies never` exhaustive switch
+
+### Playwright Extension E2E Patterns (WebSearch 2026-03-16)
+
+- Extension testing requires Chromium-only + persistent context + headed mode (per Playwright docs)
+- `--load-extension` flag only works with bundled Chromium, not Chrome/Edge/Firefox
+- Our pattern of `page.evaluate(() => chrome.runtime.sendMessage({...}))` is the standard approach for testing extension message passing
+- SJCL blob generation in Node context, passed as string to `page.evaluate<T, string>()`, is the correct pattern for testing with Node-only dependencies
