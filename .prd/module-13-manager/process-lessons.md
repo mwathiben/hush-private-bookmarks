@@ -95,6 +95,8 @@
 - Negative E2E assertions (`not.toBeVisible()`) MUST include explicit `timeout` — without it, Playwright returns immediately if the element isn't found yet (race condition with debounce/rendering).
 - E2E "restore" tests should verify the full roundtrip: navigate to specific state → perform action → undo action → verify original state is restored. Testing only the undo misses state-restoration bugs.
 - `useMemo` filter computations should compute derived values (like `q = debouncedQuery.trim().toLowerCase()`) once before the early-return check, not split trim/lowercase across separate lines.
+- Progress.md audit entries should list test names explicitly when referencing counts (e.g., "6 existing tests" → list all 6 by name). Ambiguous counts create confusion in later sessions.
+- Playwright `getByLabel()` uses substring matching by default. `{ exact: true }` is only needed when the label is a substring of another label (e.g., "Action" vs "Actions"). When all labels are unique, keep selectors consistent — don't mix `{ exact: true }` and bare calls for the same label.
 
 ## MANAGER-003: Open Manager, Settings in Manager, E2E (2026-03-16)
 
