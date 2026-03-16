@@ -162,3 +162,10 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 - **M-03 (deferred): no test for `tree === null` early return** — when `useTree()` returns null before initial load, `handleImport` bails silently. Low risk (button requires both fields filled). Add in HUSH-004 or future test pass.
 - **L-03 (deferred): no test for `sendMessage` rejection** — catch branch only tested via unit tests that mock resolved errors, not rejected promises. Add in future test pass.
 - **Verdict: Ship it** — 0 Critical, 1 High (SJCL E2E coupling — acceptable, documented), 4 Medium (1 fixed, 3 pre-existing/deferred), 5 Low/Info
+
+### PRD metadata drift
+
+- CodeRabbit VSC (GitHub Copilot) caught that `.prd/README.md` Module 14 row still showed `0/4, 0/23` after 3 stories passed
+- Also caught that Module 16a `prd.json` had incomplete ProStatus default shape (`{ isPro: false, canTrial: true }` missing `expiresAt: null, trialDaysLeft: null`)
+- Lesson: PRD metadata (README tracker table, acceptance criteria examples) drifts from actual state when progress logging updates only `prd.json` and `progress.md`. Add README update to the post-story checklist.
+- Cross-reference: `Progress Logging Protocol` in CLAUDE.md does not mention README updates — consider adding it
