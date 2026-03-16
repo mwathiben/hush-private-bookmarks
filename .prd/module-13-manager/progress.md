@@ -80,6 +80,17 @@ Coverage:
   entrypoints/background/: 88.5% lines
 ```
 
+### Existing Manager E2E Baseline (6 tests)
+
+The "6 existing" tests referenced later in MANAGER-002 are the original tests in `tests/e2e/manager-core.test.ts` from MANAGER-001:
+
+1. `first-time user sees setup screen` (MANAGER-001, auth routing)
+2. `existing user sees login screen` (MANAGER-001, auth routing)
+3. `shows sidebar and main panel after unlock` (MANAGER-001, layout)
+4. `shows bookmark titles in main panel` (MANAGER-001, layout)
+5. `sidebar folder click filters main panel` (MANAGER-001, layout)
+6. `lock button returns to login screen` (MANAGER-001, layout)
+
 ---
 
 ## Session: 2026-03-16T10:40:00Z

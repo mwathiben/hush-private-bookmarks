@@ -125,7 +125,7 @@ twoFolderTest.describe(
         });
 
         await twoFolderTest.step('move GitHub from Work to Personal', async () => {
-          await treePage.getByLabel('Actions', { exact: true }).click();
+          await treePage.getByLabel('Actions').click();
           await treePage.getByText('Move to...').click();
           await expect(treePage.getByText('Move to folder')).toBeVisible({ timeout: 10_000 });
           await treePage.getByRole('button', { name: /personal/i }).click();
