@@ -121,3 +121,26 @@
 
 - `Promise.all([context.waitForEvent('page'), clickAction])` atomically captures the new tab from a click. The new page URL may briefly be blank — use `newPage.waitForURL('**/manager.html', { timeout: 10_000 })` before asserting.
 - For extension pages opened via `browser.tabs.create`, the URL will be `chrome-extension://<id>/manager.html` — use glob pattern `**/manager.html` to match regardless of extension ID.
+
+### Retroactive Review Findings (Post-MANAGER-003)
+
+#### Module-Boundaries Checklist — All Clear
+
+- Zero React/DOM imports in `lib/` — PASS
+- Zero `browser.storage.*` in `components/` — PASS
+- Zero upward imports (components→entrypoints, hooks→components) — PASS
+- Zero `as any`, `@ts-ignore`, `@ts-expect-error` in changed files — PASS
+- Zero `chrome.*` calls — PASS (all use WXT `browser` auto-import)
+- Import direction: all downward — PASS
+- Known exception: `browser.tabs.create()` in `TreeScreen.tsx:173` and `BookmarkItem.tsx:27` — pre-existing pattern, UI-triggered navigation action (not business logic or storage). Flagged for future extraction to `lib/browser-actions.ts` if more `browser.*` calls accumulate in components.
+
+#### Research Validation (context7 + WebSearch)
+
+- **Playwright new tab**: `context.waitForEvent('page')` + `Promise.all` confirmed as canonical pattern in [Playwright docs](https://playwright.dev/docs/pages). Our implementation matches exactly.
+- **WXT vitest mocking**: `@webext-core/fake-browser` provides in-memory polyfills but NOT Vitest spies. Must assign `vi.fn()` before `expect().toHaveBeenCalledWith()`. Confirmed via [WXT testing docs](https://wxt.dev/guide/essentials/unit-testing).
+- **CSS centered overflow**: `overflow-y-auto` on container + `margin: auto` on child ("Child Requesting Center" pattern) is the recommended fix per [blog.jobins.jp](https://blog.jobins.jp/fixing-flex-scroll-height-overflow-with-margin-auto) and [Medium article](https://medium.com/@16102000.raghu/the-flexbox-scroll-trap-how-to-center-content-without-breaking-scrolling-9c09d6b223c9). CSS `safe` keyword (`justify-content: safe center`) is an alternative but has limited browser support.
+
+#### Process Lesson: Research Before Implementation
+
+- The stop hook correctly flagged that WebSearch/context7 research was not done BEFORE implementation. While the implementation turned out correct, the research-first workflow catches issues earlier and validates design decisions upfront.
+- For future stories: run context7 + WebSearch queries during the planning phase (before RED step), not after implementation.
