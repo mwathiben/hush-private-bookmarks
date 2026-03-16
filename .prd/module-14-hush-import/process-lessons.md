@@ -111,7 +111,7 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 ### WXT Messaging Best Practices (WebSearch 2026-03-16)
 
 - WXT recommends `@webext-core/messaging` wrapper for type-safe messaging — we use raw `runtime.sendMessage` with discriminated unions instead, which is equally type-safe and avoids an extra dependency
-- MV3 service workers terminate after ~5 minutes of inactivity — handlers must be stateless (no in-memory state between messages). Our import handlers (handleImportBackup, handleImportHush) are correctly stateless (no ctx parameter)
+- MV3 service workers are terminated after approximately 30 seconds of idle time — handlers must be stateless (no in-memory state between messages). The ~5 minute limit applies to how long an individual event handler may take to settle, not to idle timeout. Our import handlers (handleImportBackup, handleImportHush) are correctly stateless (no ctx parameter)
 - `VALID_TYPES` Set pattern for runtime message validation is not from WXT docs but is a project-specific guard — works well with the `satisfies never` exhaustive switch
 
 ### Playwright Extension E2E Patterns (WebSearch 2026-03-16)
