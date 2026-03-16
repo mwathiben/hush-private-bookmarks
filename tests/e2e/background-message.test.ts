@@ -1,3 +1,4 @@
+import sjcl from 'sjcl';
 import { test, expect } from './fixtures/extension';
 import type { BackgroundResponse } from '@/lib/background-types';
 
@@ -345,6 +346,70 @@ test.describe('Background service worker: SETTINGS-001a', () => {
     expect(response.success).toBe(false);
     if (!response.success) {
       expect(response.code).toBe('IMPORT_ERROR');
+    }
+    await page.close();
+  });
+});
+
+test.describe('Background service worker: HUSH-002', () => {
+  test('IMPORT_HUSH with malformed blob returns IMPORT_ERROR', async ({ context, extensionId }) => {
+    // #given
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    // #when
+    const response = await page.evaluate<BackgroundResponse>(async () => {
+      return await chrome.runtime.sendMessage({
+        type: 'IMPORT_HUSH', blob: 'not-a-valid-sjcl-blob', password: 'any',
+      });
+    });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('IMPORT_ERROR');
+    }
+    await page.close();
+  });
+
+  test('IMPORT_HUSH with wrong password on valid blob returns INVALID_PASSWORD', async ({ context, extensionId }) => {
+    // #given — generate a real SJCL blob in Node context using Hush export format
+    const hushData = JSON.stringify({ folders: [{ id: '1', title: 'Test', bookmarks: [{ url: 'https://example.com', text: 'Ex', created: '2026-01-01T00:00:00Z' }] }] });
+    const validBlob = sjcl.encrypt('correct-pw', hushData);
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    // #when
+    const response = await page.evaluate<BackgroundResponse, string>(async (blob) => {
+      return await chrome.runtime.sendMessage({
+        type: 'IMPORT_HUSH', blob, password: 'wrong-password',
+      });
+    }, validBlob);
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_PASSWORD');
+    }
+    await page.close();
+  });
+
+  test('IMPORT_HUSH with correct password returns success with tree and stats', async ({ context, extensionId }) => {
+    // #given
+    const hushData = JSON.stringify({ folders: [{ id: '1', title: 'Test Folder', bookmarks: [{ url: 'https://example.com', text: 'Example', created: '2026-01-01T00:00:00Z' }] }] });
+    const validBlob = sjcl.encrypt('correct-pw', hushData);
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    // #when
+    const response = await page.evaluate<BackgroundResponse, string>(async (blob) => {
+      return await chrome.runtime.sendMessage({
+        type: 'IMPORT_HUSH', blob, password: 'correct-pw',
+      });
+    }, validBlob);
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      const data = response.data as { tree: { type: string; name: string }; stats: { bookmarksImported: number; foldersImported: number } };
+      expect(data.tree.type).toBe('folder');
+      expect(data.tree.name).toBe('Hush Import');
+      expect(data.stats.bookmarksImported).toBeGreaterThanOrEqual(1);
+      expect(data.stats.foldersImported).toBeGreaterThanOrEqual(1);
     }
     await page.close();
   });

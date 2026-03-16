@@ -78,3 +78,26 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 - `crypto-js`, `node-forge`: No CCM mode
 - SJCL format is frozen (self-describing JSON). Only SJCL can decode its own blobs.
 - SJCL is deprecated (2016) but acceptable for import-only (read-only) use on frozen format.
+
+## HUSH-002: Handler Wiring Lessons
+
+### Hush export data format (for E2E fixtures)
+- Hush export format uses `{ id, title, bookmarks: [{ url, text, created }] }` — NOT `{ name, links }`
+- E2E test initially used wrong field names causing import failure. The `isHushFolder` type guard requires exact field names.
+- Lesson: always reference the type guard source code (or unit test fixtures) when building E2E test data, don't guess from memory.
+
+### handlers.ts 300-line limit
+- Adding handleImportHush (11 lines) pushed handlers.ts to 309 lines, exceeding the 300-line scaffold-smoke constraint
+- Fix: removed 9 internal blank lines within function bodies (between guard clauses and logic). No readability impact because early-return guard style makes flow clear without visual separators.
+- Lesson: when a file is near the limit, plan for compaction before adding new code.
+
+### Pre-existing test gaps
+- background-types.test.ts "each interface is independently importable" test only had 13 of 16 `satisfies` checks (missing UnlockMessage, SaveMessage, AddBookmarkMessage)
+- Tracer bullet analysis caught this gap before implementation. Fixed by adding all 3 missing checks + ImportHushMessage → 17 total.
+- Lesson: tracer bullet analysis is valuable for finding pre-existing gaps, not just blast radius.
+
+### SJCL in Playwright E2E
+- SJCL blob must be generated in Node context (test setup), passed as string argument to `page.evaluate()`
+- Cannot use `sjcl.encrypt()` inside `page.evaluate()` — SJCL is a Node dependency, not available in browser context
+- Pattern: `const validBlob = sjcl.encrypt('pw', data); page.evaluate<Response, string>(async (blob) => { ... }, validBlob);`
+- `import sjcl from 'sjcl'` works at top level in Playwright test files (CJS default export interop)

@@ -9,6 +9,7 @@ import type {
   MessageType,
   UnlockMessage,
   LockMessage,
+  SaveMessage,
   GetStateMessage,
   AddBookmarkMessage,
   GetIncognitoStateMessage,
@@ -22,6 +23,7 @@ import type {
   ImportChromeBookmarksMessage,
   ImportBackupMessage,
   ExportBackupMessage,
+  ImportHushMessage,
 } from '@/lib/background-types';
 
 import type { BookmarkTree } from '@/lib/types';
@@ -50,9 +52,10 @@ describe('background-types: type compilation', () => {
       { type: 'IMPORT_CHROME_BOOKMARKS' },
       { type: 'IMPORT_BACKUP', blob: 'base64data', password: 'p' },
       { type: 'EXPORT_BACKUP' },
+      { type: 'IMPORT_HUSH', blob: 'sjcl-blob', password: 'p' },
     ];
 
-    expect(messages).toHaveLength(16);
+    expect(messages).toHaveLength(17);
   });
 
   it('discriminated union narrows correctly in switch', () => {
@@ -132,16 +135,21 @@ describe('background-types: MessageType literal union', () => {
       'CHANGE_PASSWORD', 'UPDATE_AUTO_LOCK', 'CREATE_SET', 'RENAME_SET',
       'DELETE_SET', 'SWITCH_SET', 'CLEAR_ALL',
       'IMPORT_CHROME_BOOKMARKS', 'IMPORT_BACKUP', 'EXPORT_BACKUP',
+      'IMPORT_HUSH',
     ];
-    expect(types).toHaveLength(16);
+    expect(types).toHaveLength(17);
   });
 });
 
 describe('background-types: individual message type exports', () => {
   it('each interface is independently importable', () => {
+    const tree: BookmarkTree = { type: 'folder', id: 'r', name: 'Root', children: [], dateAdded: 0 };
     const messages: BackgroundMessage[] = [
+      { type: 'UNLOCK', password: 'p' } satisfies UnlockMessage,
       { type: 'LOCK' } satisfies LockMessage,
+      { type: 'SAVE', tree } satisfies SaveMessage,
       { type: 'GET_STATE' } satisfies GetStateMessage,
+      { type: 'ADD_BOOKMARK', url: 'https://x.com', title: 't' } satisfies AddBookmarkMessage,
       { type: 'GET_INCOGNITO_STATE' } satisfies GetIncognitoStateMessage,
       { type: 'CHANGE_PASSWORD', currentPassword: 'a', newPassword: 'b' } satisfies ChangePasswordMessage,
       { type: 'UPDATE_AUTO_LOCK', minutes: 5 } satisfies UpdateAutoLockMessage,
@@ -153,9 +161,10 @@ describe('background-types: individual message type exports', () => {
       { type: 'IMPORT_CHROME_BOOKMARKS' } satisfies ImportChromeBookmarksMessage,
       { type: 'IMPORT_BACKUP', blob: 'b', password: 'p' } satisfies ImportBackupMessage,
       { type: 'EXPORT_BACKUP' } satisfies ExportBackupMessage,
+      { type: 'IMPORT_HUSH', blob: 'b', password: 'p' } satisfies ImportHushMessage,
     ];
 
-    expect(messages).toHaveLength(13);
+    expect(messages).toHaveLength(17);
   });
 });
 

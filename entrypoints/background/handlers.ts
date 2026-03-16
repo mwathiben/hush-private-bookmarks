@@ -7,10 +7,11 @@ import { determineMode } from '@/lib/incognito';
 import { InvalidPasswordError } from '@/lib/errors';
 import { convertChromeBookmarks, type ChromeBookmarkTreeNode } from '@/lib/bookmark-import';
 import { exportEncryptedBackup, importEncryptedBackup } from '@/lib/bookmark-backup';
+import { importHushData } from '@/lib/hush-import';
 import type {
   AddBookmarkMessage, BackgroundResponse, ChangePasswordMessage,
   ClearAllMessage, CreateSetMessage, DeleteSetMessage,
-  ExportBackupMessage, ImportBackupMessage, ImportChromeBookmarksMessage,
+  ExportBackupMessage, ImportBackupMessage, ImportChromeBookmarksMessage, ImportHushMessage,
   RenameSetMessage, SaveMessage, SessionState,
   SwitchSetMessage, UnlockMessage, UpdateAutoLockMessage,
 } from '@/lib/background-types';
@@ -106,13 +107,11 @@ export async function handleSave(
   if (!state) {
     return { success: false, error: 'No active session', code: 'NOT_UNLOCKED' };
   }
-
   const json = JSON.stringify(msg.tree);
   const saveResult = await saveSetData(state.activeSetId, json, ctx.getCachedPassword()!);
   if (!saveResult.success) {
     return { success: false, error: saveResult.error.message, code: 'STORAGE_ERROR' };
   }
-
   await ctx.setSessionState({ ...state, tree: msg.tree });
   await ctx.resetAlarm();
   return { success: true };
@@ -128,20 +127,17 @@ export async function handleAddBookmark(
   if (!state || !state.tree) {
     return { success: false, error: 'No active session', code: 'NOT_UNLOCKED' };
   }
-
   const result = addBookmark(state.tree, msg.parentPath ?? [], {
     type: 'bookmark', title: msg.title, url: msg.url, dateAdded: Date.now(),
   });
   if (!result.success) {
     return { success: false, error: result.error.message, code: 'DATA_MODEL_ERROR' };
   }
-
   const json = JSON.stringify(result.data);
   const saveResult = await saveSetData(state.activeSetId, json, ctx.getCachedPassword()!);
   if (!saveResult.success) {
     return { success: false, error: saveResult.error.message, code: 'STORAGE_ERROR' };
   }
-
   await ctx.setSessionState({ ...state, tree: result.data });
   await ctx.resetAlarm();
   return { success: true, data: result.data };
@@ -165,7 +161,6 @@ export async function handleChangePassword(
   if (!state) {
     return { success: false, error: 'No active session', code: 'NOT_UNLOCKED' };
   }
-
   const dataResult = await loadSetData(state.activeSetId, msg.currentPassword);
   if (!dataResult.success) {
     if (dataResult.error instanceof InvalidPasswordError) {
@@ -173,7 +168,6 @@ export async function handleChangePassword(
     }
     return { success: false, error: dataResult.error.message, code: 'STORAGE_ERROR' };
   }
-
   const saveResult = await saveSetData(state.activeSetId, dataResult.data, msg.newPassword);
   if (!saveResult.success) {
     return { success: false, error: saveResult.error.message, code: 'STORAGE_ERROR' };
@@ -205,12 +199,10 @@ export async function handleCreateSet(
   if (!saveResult.success) {
     return { success: false, error: saveResult.error.message, code: 'STORAGE_ERROR' };
   }
-
   const activeSetResult = await setActiveSetId(setResult.data.id);
   if (!activeSetResult.success) {
     return { success: false, error: activeSetResult.error.message, code: 'STORAGE_ERROR' };
   }
-
   return activateSession(setResult.data.id, msg.password, emptyTree, ctx);
 }
 
@@ -279,6 +271,17 @@ export async function handleImportBackup(msg: ImportBackupMessage): Promise<Back
     return { success: false, error: result.error.message, code: 'IMPORT_ERROR' };
   }
   return { success: true, data: { tree: result.data } };
+}
+
+export async function handleImportHush(msg: ImportHushMessage): Promise<BackgroundResponse> {
+  const result = await importHushData(msg.blob, msg.password);
+  if (!result.success) {
+    if (result.error instanceof InvalidPasswordError) {
+      return { success: false, error: 'Invalid password', code: 'INVALID_PASSWORD' };
+    }
+    return { success: false, error: result.error.message, code: 'IMPORT_ERROR' };
+  }
+  return { success: true, data: { tree: result.data.tree, stats: result.data.stats } };
 }
 
 export async function handleExportBackup(

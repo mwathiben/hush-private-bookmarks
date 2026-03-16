@@ -13,6 +13,7 @@ import {
   handleUpdateAutoLock, handleCreateSet, handleRenameSet,
   handleDeleteSet, handleSwitchSet, handleClearAll,
   handleImportChromeBookmarks, handleImportBackup, handleExportBackup,
+  handleImportHush,
 } from './handlers';
 
 initSentry();
@@ -41,6 +42,7 @@ const VALID_TYPES = new Set<string>([
   'GET_INCOGNITO_STATE', 'CHANGE_PASSWORD', 'UPDATE_AUTO_LOCK',
   'CREATE_SET', 'RENAME_SET', 'DELETE_SET', 'SWITCH_SET',
   'CLEAR_ALL', 'IMPORT_CHROME_BOOKMARKS', 'IMPORT_BACKUP', 'EXPORT_BACKUP',
+  'IMPORT_HUSH',
 ]);
 
 function isBackgroundMessage(msg: unknown): msg is BackgroundMessage {
@@ -146,6 +148,8 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
       return handleImportBackup(msg);
     case 'EXPORT_BACKUP':
       return handleExportBackup(msg, ctx);
+    case 'IMPORT_HUSH':
+      return handleImportHush(msg);
     default:
       msg satisfies never;
       throw new Error(`Unhandled BackgroundMessage type: ${(msg as { type: string }).type}`);

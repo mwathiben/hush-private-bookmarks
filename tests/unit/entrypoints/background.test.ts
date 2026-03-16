@@ -37,6 +37,10 @@ vi.mock('@/lib/bookmark-backup', () => ({
   importEncryptedBackup: vi.fn(),
 }));
 
+vi.mock('@/lib/hush-import', () => ({
+  importHushData: vi.fn(),
+}));
+
 import {
   handleMessage, onAlarmFired, registerContextMenu, onContextMenuClicked,
 } from '@/entrypoints/background';
@@ -52,6 +56,7 @@ import { determineMode } from '@/lib/incognito';
 import { InvalidPasswordError, StorageError, ImportError } from '@/lib/errors';
 import { convertChromeBookmarks } from '@/lib/bookmark-import';
 import { exportEncryptedBackup, importEncryptedBackup } from '@/lib/bookmark-backup';
+import { importHushData } from '@/lib/hush-import';
 
 const TEST_TREE: BookmarkTree = { type: 'folder', id: 'r', name: 'Root', children: [], dateAdded: 0 };
 
@@ -1071,6 +1076,59 @@ describe('handleMessage — EXPORT_BACKUP', () => {
     expect(response.success).toBe(false);
     if (!response.success) {
       expect(response.code).toBe('NOT_UNLOCKED');
+    }
+  });
+});
+
+describe('handleMessage — IMPORT_HUSH', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('calls importHushData and returns tree + stats on success', async () => {
+    // #given
+    const stats = { bookmarksImported: 3, foldersImported: 1, errors: [] as string[] };
+    vi.mocked(importHushData).mockResolvedValue({
+      success: true, data: { tree: TEST_TREE, stats },
+    });
+    // #when
+    const response = await handleMessage({ type: 'IMPORT_HUSH', blob: 'sjcl-blob', password: 'hush-pw' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      const data = response.data as { tree: BookmarkTree; stats: typeof stats };
+      expect(data.tree).toEqual(TEST_TREE);
+      expect(data.stats).toEqual(stats);
+    }
+    expect(vi.mocked(importHushData)).toHaveBeenCalledWith('sjcl-blob', 'hush-pw');
+  });
+
+  it('returns INVALID_PASSWORD for wrong password', async () => {
+    // #given
+    vi.mocked(importHushData).mockResolvedValue({
+      success: false, error: new InvalidPasswordError('wrong password'),
+    });
+    // #when
+    const response = await handleMessage({ type: 'IMPORT_HUSH', blob: 'blob', password: 'wrong' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('INVALID_PASSWORD');
+    }
+  });
+
+  it('returns IMPORT_ERROR for format failure', async () => {
+    // #given
+    vi.mocked(importHushData).mockResolvedValue({
+      success: false, error: new ImportError('bad format', { source: 'hush' }),
+    });
+    // #when
+    const response = await handleMessage({ type: 'IMPORT_HUSH', blob: 'bad', password: 'pw' });
+    // #then
+    expect(response.success).toBe(false);
+    if (!response.success) {
+      expect(response.code).toBe('IMPORT_ERROR');
     }
   });
 });

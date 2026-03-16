@@ -116,8 +116,8 @@
             ],
             "verification": "npx vitest run tests/unit/entrypoints/background.test.ts && npx tsc --noEmit && npx wxt build",
             "estimated_effort": "small",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": ["HUSH-001"]
         },
         {
@@ -306,7 +306,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 1,
+        "passing_stories": 2,
         "build_plan_day": "Day 5",
         "estimated_test_count": "~15 unit + ~4 E2E",
         "session_protocol": "One Claude Code session. Research sjcl npm package, verify decrypt() API, check TypeScript types availability. Commit per story.",

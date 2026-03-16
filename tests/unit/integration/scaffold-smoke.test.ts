@@ -127,7 +127,7 @@ import type {
 
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts', 'background-types.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts', 'background-types.ts', 'hush-import.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -458,7 +458,7 @@ describe('scaffold integration: error class properties', () => {
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(13);
+    expect(LIB_MODULES).toHaveLength(14);
   });
 });
 

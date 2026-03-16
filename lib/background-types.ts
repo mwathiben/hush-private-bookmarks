@@ -94,6 +94,12 @@ export interface ExportBackupMessage {
   readonly type: 'EXPORT_BACKUP';
 }
 
+export interface ImportHushMessage {
+  readonly type: 'IMPORT_HUSH';
+  readonly blob: string;
+  readonly password: string;
+}
+
 export type BackgroundMessage =
   | UnlockMessage
   | LockMessage
@@ -110,7 +116,8 @@ export type BackgroundMessage =
   | ClearAllMessage
   | ImportChromeBookmarksMessage
   | ImportBackupMessage
-  | ExportBackupMessage;
+  | ExportBackupMessage
+  | ImportHushMessage;
 
 export type MessageType = BackgroundMessage['type'];
 
