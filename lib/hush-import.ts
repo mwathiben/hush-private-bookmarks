@@ -127,7 +127,7 @@ export async function decryptHushBlob(
 function mapBookmarks(bookmarks: readonly HushBookmark[]): BookmarkNode[] {
   const nodes: BookmarkNode[] = [];
   for (const b of bookmarks) {
-    if (typeof b.url !== 'string' || b.url === '') continue;
+    if (b.url === '') continue;
     const ts = Date.parse(b.created);
     nodes.push({
       type: 'bookmark',

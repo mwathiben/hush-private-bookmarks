@@ -356,12 +356,14 @@ test.describe('Background service worker: HUSH-002', () => {
     // #given
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
     // #when
     const response = await page.evaluate<BackgroundResponse>(async () => {
       return await chrome.runtime.sendMessage({
         type: 'IMPORT_HUSH', blob: 'not-a-valid-sjcl-blob', password: 'any',
       });
     });
+
     // #then
     expect(response.success).toBe(false);
     if (!response.success) {
@@ -376,12 +378,14 @@ test.describe('Background service worker: HUSH-002', () => {
     const validBlob = sjcl.encrypt('correct-pw', hushData);
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
     // #when
     const response = await page.evaluate<BackgroundResponse, string>(async (blob) => {
       return await chrome.runtime.sendMessage({
         type: 'IMPORT_HUSH', blob, password: 'wrong-password',
       });
     }, validBlob);
+
     // #then
     expect(response.success).toBe(false);
     if (!response.success) {
@@ -396,12 +400,14 @@ test.describe('Background service worker: HUSH-002', () => {
     const validBlob = sjcl.encrypt('correct-pw', hushData);
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
     // #when
     const response = await page.evaluate<BackgroundResponse, string>(async (blob) => {
       return await chrome.runtime.sendMessage({
         type: 'IMPORT_HUSH', blob, password: 'correct-pw',
       });
     }, validBlob);
+
     // #then
     expect(response.success).toBe(true);
     if (response.success) {
