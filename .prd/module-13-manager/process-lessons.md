@@ -95,3 +95,29 @@
 - Negative E2E assertions (`not.toBeVisible()`) MUST include explicit `timeout` — without it, Playwright returns immediately if the element isn't found yet (race condition with debounce/rendering).
 - E2E "restore" tests should verify the full roundtrip: navigate to specific state → perform action → undo action → verify original state is restored. Testing only the undo misses state-restoration bugs.
 - `useMemo` filter computations should compute derived values (like `q = debouncedQuery.trim().toLowerCase()`) once before the early-return check, not split trim/lowercase across separate lines.
+
+## MANAGER-003: Open Manager, Settings in Manager, E2E (2026-03-16)
+
+### Shared E2E Helper Extraction
+
+- `seedStorage()` was duplicated identically across `manager-core.test.ts` (62 lines) and `popup-bookmarks.test.ts` (62 lines). Extract to `tests/e2e/fixtures/seed-storage.ts` when any E2E test needs to seed storage for both popup and manager flows.
+- Also extract shared constants (`SEED_PASSWORD`, `POPULATED_TREE`) alongside the function — they are tightly coupled to `seedStorage()` and always used together.
+- Keep test-specific tree fixtures (e.g., `EMPTY_TREE`, `TWO_FOLDER_TREE`) local to their test file — they aren't shared.
+
+### WXT Auto-Mock of browser APIs in Vitest
+
+- WxtVitest's `extensionApiMock` provides `browser.*` globals in tests, but they are NOT Vitest spies by default. `expect(browser.tabs.create).toHaveBeenCalledWith(...)` fails with "is not a spy".
+- **Fix**: Assign a `vi.fn()` spy before rendering: `browser.tabs.create = vi.fn().mockResolvedValue({ id: 1 })`, then assert on that spy.
+- This applies to any `browser.*` API call asserted in unit tests — always replace with a spy first.
+
+### Centered Screen Viewport Overflow in Manager
+
+- Manager's `CENTERED_SCREENS` wrapper uses `items-center justify-center` with `h-screen` — when the centered content (e.g., SettingsScreen with all its cards) exceeds viewport height, the content overflows above and below the viewport.
+- Playwright E2E tests surface this as "element is outside of the viewport" when clicking buttons at the top of the centered screen.
+- **Fix**: Add `overflow-y-auto` to the outer container + `my-auto` on the inner content div. This allows scrolling while maintaining centering when content fits.
+- This was NOT caught by unit tests (happy-dom doesn't enforce viewport bounds) — only visible in E2E.
+
+### Playwright New Tab Detection Pattern
+
+- `Promise.all([context.waitForEvent('page'), clickAction])` atomically captures the new tab from a click. The new page URL may briefly be blank — use `newPage.waitForURL('**/manager.html', { timeout: 10_000 })` before asserting.
+- For extension pages opened via `browser.tabs.create`, the URL will be `chrome-extension://<id>/manager.html` — use glob pattern `**/manager.html` to match regardless of extension ID.

@@ -168,6 +168,7 @@ function ManagerTreePanel(): React.JSX.Element {
           selectedPath={selectedFolderPath}
           onSelectFolder={setSelectedFolderPath}
           onLock={handleLock}
+          onSettings={() => dispatch({ type: 'NAVIGATE', to: 'settings' })}
         />
       </aside>
       <main
@@ -262,8 +263,8 @@ export default function ManagerApp(): React.JSX.Element {
   const CenteredScreen = CENTERED_SCREENS[state.screen];
   if (CenteredScreen) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-foreground">
-        <div className="w-full max-w-lg p-8">
+      <div className="flex h-screen items-center justify-center overflow-y-auto bg-background text-foreground">
+        <div className="my-auto w-full max-w-lg p-8">
           <SessionProvider state={state} dispatch={dispatch} treeValue={treeValue}>
             <CenteredScreen />
           </SessionProvider>

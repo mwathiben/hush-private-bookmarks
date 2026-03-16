@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | MANAGER-001 | Manager entry point, layout, and shared component integration | PASSED | 1 |
 | MANAGER-002 | Manager toolbar with search and action buttons | PASSED | 1 |
-| MANAGER-003 | Open Manager from popup, settings in manager, and E2E | NOT STARTED | 0 |
+| MANAGER-003 | Open Manager from popup, settings in manager, and E2E | PASSED | 1 |
 
 **Critical Path**: 001 → 002 → 003
 
@@ -133,3 +133,75 @@ eslint: 27 pre-existing issues (0 from new code)
 wxt build: success (824.58 KB total)
 playwright tests/e2e/manager-core.test.ts: 11/11 passed (6 existing + 5 new search tests)
 ```
+
+---
+
+## Session: 2026-03-16T12:00:00Z
+**Task**: MANAGER-003 - Open Manager from popup, settings in manager, and E2E
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Extracted shared E2E helper `seedStorage()`, `SEED_PASSWORD`, and `POPULATED_TREE` from duplicated code in `manager-core.test.ts` and `popup-bookmarks.test.ts` into `tests/e2e/fixtures/seed-storage.ts`
+- Added Settings button (lucide `Settings` icon) to `ManagerSidebar` with `onSettings` callback prop
+- Wired `onSettings` in `ManagerApp.tsx` to `dispatch({ type: 'NAVIGATE', to: 'settings' })`
+- Added "Open Manager" button (lucide `ExternalLink` icon) to popup `TreeScreen` toolbar — calls `browser.tabs.create({ url: browser.runtime.getURL('/manager.html') })`
+- Fixed centered screen overflow: added `overflow-y-auto` + `my-auto` to manager `CENTERED_SCREENS` wrapper so settings screen scrolls when content exceeds viewport
+- Wrote 4 new Playwright E2E tests for MANAGER-003 flows
+- Wrote 2 new unit tests (Settings dispatch + Open Manager browser.tabs.create)
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| `tests/e2e/fixtures/seed-storage.ts` | Shared E2E helper: seedStorage(), SEED_PASSWORD, POPULATED_TREE (DRY extraction) |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `components/manager/ManagerSidebar.tsx` | Added `Settings` icon import, `onSettings` prop, Settings button in header |
+| `components/screens/TreeScreen.tsx` | Added `ExternalLink` icon import, "Open Manager" button with `browser.tabs.create` |
+| `entrypoints/manager/ManagerApp.tsx` | Passed `onSettings` prop to ManagerSidebar, added `overflow-y-auto` + `my-auto` to centered screen wrapper |
+| `tests/e2e/manager-core.test.ts` | Replaced local seedStorage with shared import, added 3 MANAGER-003 E2E test blocks (settings flow, popup open manager, full flow) |
+| `tests/e2e/popup-bookmarks.test.ts` | Replaced local seedStorage/SEED_PASSWORD/POPULATED_TREE with shared imports |
+| `tests/unit/components/screens/TreeScreen.test.tsx` | Added "Open Manager button calls browser.tabs.create" test |
+| `tests/unit/entrypoints/manager/ManagerApp.test.tsx` | Added "settings button dispatches navigate to settings" test |
+| `.prd/module-13-manager/prd.json` | MANAGER-003 passes: true, attempt_count: 1, passing_stories: 3 |
+
+### Acceptance Criteria Verification
+
+1. Popup has 'Open Manager' button → manager.html in new tab — PASS (unit test + E2E test verify browser.tabs.create with runtime.getURL)
+2. Manager has settings accessible (reuses SettingsScreen) — PASS (Settings button in sidebar dispatches NAVIGATE, CENTERED_SCREENS routes to SettingsScreen)
+3. E2E: full manager flow works (login → tree → search → settings) — PASS (E2E "tree → search → settings → back" test passes)
+4. E2E: sidebar folder navigation works — PASS (existing MANAGER-001 E2E test + full flow test both verify)
+5. Zero duplicated logic between popup and manager — PASS (shared seedStorage extracted, all UI reuses shared components)
+6. Zero regressions — PASS (877 unit tests + 36 E2E tests all pass)
+
+### Verification Results
+
+```
+tsc --noEmit: clean (0 errors)
+vitest run: 877 tests passed (59 test files)
+  - TreeScreen.test.tsx: 20/20 passed (19 existing + 1 new)
+  - ManagerApp.test.tsx: 21/21 passed (20 existing + 1 new)
+eslint (changed files only): 0 errors, 0 warnings
+wxt build: success (825.32 KB total)
+playwright tests/e2e/manager-core.test.ts + popup-bookmarks.test.ts: 36/36 passed
+  - MANAGER-003 settings: 2/2 passed
+  - Popup Open Manager: 1/1 passed
+  - Full manager flow: 1/1 passed
+  - All existing tests: 32/32 passed (zero regressions)
+```
+
+## Module Summary
+
+All 3 stories complete. Module 13 (Full-Page Manager) is DONE.
+
+| ID | Title | Status | Attempts |
+| --- | --- | --- | --- |
+| MANAGER-001 | Manager entry point, layout, and shared component integration | PASSED | 1 |
+| MANAGER-002 | Manager toolbar with search and action buttons | PASSED | 1 |
+| MANAGER-003 | Open Manager from popup, settings in manager, and E2E | PASSED | 1 |
+
+**Total**: 3/3 stories passed, 0 regressions, all on first attempt.
+**Architecture**: Zero duplicated business logic between popup and manager. ManagerApp.tsx at 283 lines (slightly over 200-line target due to dialog handling). All shared components reused from Modules 10-12.

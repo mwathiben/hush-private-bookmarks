@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Lock, ChevronRight, ChevronDown, FolderIcon } from 'lucide-react';
+import { Lock, Settings, ChevronRight, ChevronDown, FolderIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SetPicker } from '@/components/ui/SetPicker';
 import { isFolder } from '@/lib/data-model';
@@ -12,6 +12,7 @@ interface ManagerSidebarProps {
   readonly selectedPath: readonly number[] | null;
   readonly onSelectFolder: (path: readonly number[] | null) => void;
   readonly onLock: () => void;
+  readonly onSettings: () => void;
 }
 
 interface FolderNavItemProps {
@@ -88,14 +89,20 @@ export function ManagerSidebar({
   selectedPath,
   onSelectFolder,
   onLock,
+  onSettings,
 }: ManagerSidebarProps): React.JSX.Element {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <h1 className="text-sm font-semibold">Hush Bookmarks</h1>
-        <Button variant="ghost" size="icon-xs" aria-label="Lock" onClick={onLock}>
-          <Lock className="size-4" />
-        </Button>
+        <div className="flex gap-0.5">
+          <Button variant="ghost" size="icon-xs" aria-label="Settings" onClick={onSettings}>
+            <Settings className="size-4" />
+          </Button>
+          <Button variant="ghost" size="icon-xs" aria-label="Lock" onClick={onLock}>
+            <Lock className="size-4" />
+          </Button>
+        </div>
       </div>
       <nav className="flex-1 overflow-y-auto p-2" aria-label="Folder navigation">
         <button

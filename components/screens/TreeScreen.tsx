@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, ExternalLink } from 'lucide-react';
 import { useTree } from '@/hooks/useTree';
 import { useSessionDispatch } from '@/hooks/useSessionProvider';
 import { BookmarkTree } from '@/components/shared/BookmarkTree';
@@ -165,6 +165,14 @@ export default function TreeScreen(): React.JSX.Element {
             onClick={openFolderDialog}
           >
             + Folder
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Open Manager"
+            onClick={() => { void browser.tabs.create({ url: browser.runtime.getURL('/manager.html') }); }}
+          >
+            <ExternalLink />
           </Button>
           <Button
             variant="ghost"

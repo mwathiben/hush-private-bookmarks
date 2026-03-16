@@ -430,4 +430,29 @@ describe('ManagerApp', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
+
+  it('settings button in sidebar dispatches navigate to settings', async () => {
+    // #given
+    const session = { ...BASE_STATE, isUnlocked: true, tree: MOCK_TREE, hasData: true };
+    const mockDispatch = vi.fn();
+    vi.mocked(useSessionProvider).mockReturnValue({
+      ...makeProviderReturn(session),
+      dispatch: mockDispatch,
+    });
+    vi.mocked(useTree).mockReturnValue({
+      tree: MOCK_TREE,
+      saving: false,
+      error: null,
+      save: vi.fn().mockResolvedValue(true),
+    });
+    const user = userEvent.setup();
+
+    // #when
+    render(<ManagerApp />);
+    const sidebar = screen.getByTestId('manager-sidebar');
+    await user.click(within(sidebar).getByLabelText('Settings'));
+
+    // #then
+    expect(mockDispatch).toHaveBeenCalledWith({ type: 'NAVIGATE', to: 'settings' });
+  });
 });

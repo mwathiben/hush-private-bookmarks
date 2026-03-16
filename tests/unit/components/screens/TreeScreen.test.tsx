@@ -345,4 +345,21 @@ describe('TreeScreen', () => {
     expect(workFolder).toMatchObject({ type: 'folder', name: 'Work' });
     expect('children' in workFolder && workFolder.children).toHaveLength(2);
   });
+
+  it('Open Manager button calls browser.tabs.create with manager URL', async () => {
+    // #given
+    setupMock();
+    const createSpy = vi.fn().mockResolvedValue({ id: 1 });
+    browser.tabs.create = createSpy;
+    const user = userEvent.setup();
+
+    // #when
+    render(<TreeScreen />);
+    await user.click(screen.getByLabelText('Open Manager'));
+
+    // #then
+    expect(createSpy).toHaveBeenCalledWith({
+      url: browser.runtime.getURL('/manager.html'),
+    });
+  });
 });
