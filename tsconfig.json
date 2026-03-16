@@ -8,5 +8,11 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    ".output",
+    "coverage",
+    "test-results"
+  ]
 }

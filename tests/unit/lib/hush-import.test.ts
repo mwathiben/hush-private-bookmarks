@@ -9,7 +9,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import sjcl from 'sjcl';
 import { ImportError, InvalidPasswordError } from '@/lib/errors';
 import { decryptHushBlob, mapHushToTree, importHushData } from '@/lib/hush-import';
 
@@ -41,7 +40,7 @@ const HUSH_DATA = {
   ],
 };
 
-const VALID_BLOB = sjcl.encrypt(HUSH_PASSWORD, JSON.stringify(HUSH_DATA));
+const VALID_BLOB = '{"iv":"eX/LRJQmJ2jZA3tydUo+9g==","v":1,"iter":10000,"ks":128,"ts":64,"mode":"ccm","adata":"","cipher":"aes","salt":"Lm8LNey4kfM=","ct":"YMS8gLWxd/nUoMEmZ50VVCUH2ExW/ERLujJfQDYpOCq95AZe5lhQGZigXrAbcQQ0TkK0QY2BaLpKm6NjmVbUl6haUFf8HR2GiISKdd50d8nN6ntb995H1z+BkKWMRnMotMvY5hV649TYz9OMTOfGhOL9CzkBuScPacvkTsFNFAeDM50PBMu+3O/7oepOedKvOUj+iwmlRlS/k+YDbxyAN8BPpheJWwBQGwbnHo2Am5Ki8bVHcVySgq2zrDQ+HcK3HJ7GrYG5Ms6EJWSWlgm9ULbmpvBjUU80Qf3wFgdbRi9veZUjqbWqCw91syBcFdqTLl42HztYpqL996YD2PFlYGMOOG5+/mKkPpTDUZsNREXTPZRzRYhbWFH7t+BICZCxKvl2zf1yLwJXSlBZ9VBv8KeRjYfhjJ8LiqO23uyuEq0272f0QZ3ZckHRi4yGAR9Lfci3IUwycV3OFgJqxEveGoNoQgdEi2O9lgqNS5D0P68+u3azIgKQa7PAoHkIz5GWCgj8CnlnbF8b1LLIcF12xfhni9RgDM3y2cVELyQoWP2JULcwdGD28TuItiD/LBEaJyscqd8mlB9gS6BJQgSI+cEEesXfITIMTDBOkME5eA14zMdI9+huhZVjJE3tgQ=="}';
 
 const PRE_1_0_DATA = {
   bookmarks: [
@@ -63,15 +62,10 @@ describe('decryptHushBlob', () => {
   });
 
   it('throws ImportError for malformed blob', async () => {
-    await expect(decryptHushBlob('not-valid-sjcl-json', HUSH_PASSWORD))
-      .rejects.toThrow(ImportError);
-
-    try {
-      await decryptHushBlob('not-valid-sjcl-json', HUSH_PASSWORD);
-    } catch (error: unknown) {
-      expect(error).toBeInstanceOf(ImportError);
-      expect((error as ImportError).context.source).toBe('hush');
-    }
+    await expect(decryptHushBlob('not-valid-sjcl-json', HUSH_PASSWORD)).rejects.toMatchObject({
+      constructor: ImportError,
+      context: { source: 'hush' },
+    });
   });
 });
 

@@ -36,11 +36,60 @@ type HushImportResult = Result<
   ImportError | InvalidPasswordError
 >;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+function isHushBookmark(value: unknown): value is HushBookmark {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value['url'] === 'string' &&
+    typeof value['text'] === 'string' &&
+    typeof value['created'] === 'string'
+  );
+}
+
+function isHushFolder(value: unknown): value is HushFolder {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (typeof value['id'] !== 'string' || typeof value['title'] !== 'string') {
+    return false;
+  }
+
+  if (!Array.isArray(value['bookmarks'])) {
+    return false;
+  }
+
+  return value['bookmarks'].every(isHushBookmark);
+}
+
 function isHushExportData(data: unknown): data is HushExportData {
-  if (data === null || typeof data !== 'object') return false;
-  const record = data as Record<string, unknown>;
-  if ('folders' in data && Array.isArray(record['folders'])) return true;
-  if ('bookmarks' in data && Array.isArray(record['bookmarks'])) return true;
+  if (!isRecord(data)) {
+    return false;
+  }
+
+  const folders = data['folders'];
+  const bookmarks = data['bookmarks'];
+
+  if (folders !== undefined) {
+    if (!Array.isArray(folders) || !folders.every(isHushFolder)) {
+      return false;
+    }
+    return true;
+  }
+
+  if (bookmarks !== undefined) {
+    if (!Array.isArray(bookmarks) || !bookmarks.every(isHushBookmark)) {
+      return false;
+    }
+    return true;
+  }
+
   return false;
 }
 

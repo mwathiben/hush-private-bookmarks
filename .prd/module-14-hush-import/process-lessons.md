@@ -51,3 +51,30 @@ sjcl.exception.corrupt = function(a) { this.message = a; this.toString = ... }
 - No depth guard in `countImportedNodes` — acceptable because Hush format is flat (folders cannot contain sub-folders), but document why
 - Test assertions with `if` guards can silently skip — consider using `assert()` or unconditional `toMatchObject()` in future
 - Missing edge-case tests identified: empty URL, invalid date, empty text — consider adding in future iteration
+
+## CodeRabbit VSC Session Lessons (2026-03-16)
+
+### What CodeRabbit VSC got right
+- Stricter type guards (`isHushBookmark`, `isHushFolder`) validating individual item shapes — genuine improvement over shallow "is array" check
+- Removing redundant try/catch in test → replaced with `rejects.toMatchObject` — cleaner, fails properly
+- Static test fixture blob instead of runtime `sjcl.encrypt()` — eliminates sjcl import in test file
+- `tsconfig.json` exclude for `node_modules` — prevents phantom diagnostics from transiently installed packages
+- Correctly identified that SJCL cannot be replaced: AES-CCM is NOT in Web Crypto API, and `asmcrypto.js` has nonce format incompatibility with SJCL blobs
+
+### What CodeRabbit VSC got wrong (reverted/fixed)
+- **`@types/sjcl` addition**: `@types/sjcl` uses `export = sjcl` + global namespace. `sjcl.encrypt()` returns `SjclCipherEncrypted` (object type) not `string` — type mismatch. Our minimal `types/sjcl.d.ts` is correct and intentional.
+- **Redundant re-validation in `mapHushToTree`**: Added `isRecord(f)` + `Array.isArray(f.bookmarks)` checks inside `.filter()` on items already validated by `isHushExportData`. After the type guard passes, downstream code can trust the types. Removed as slop.
+- **`Array.isArray(f.bookmarks) ? f.bookmarks : []` ternary**: Same redundancy — type guard guarantees `bookmarks` is an array. Reverted to direct `f.bookmarks`.
+- **TODO comment about SJCL migration**: Unnecessary — decision is documented in plan and process-lessons. SJCL is the ONLY option for AES-CCM/PBKDF2 compatible with frozen Hush export format.
+- **Attempted `asmcrypto.js` installation**: Left `asmcrypto.js` package reference in node_modules causing phantom TS diagnostic. Fixed via tsconfig exclude.
+
+### Key takeaway
+AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issues. Always review with confirmation bias → 0: validate each change independently against the type system and existing validation guarantees. Type guards that validate at the boundary should be trusted by downstream code — re-validation is defensive slop.
+
+### SJCL is the only viable option (confirmed via research)
+- Web Crypto API: AES-GCM/CBC/CTR/KW only — NO AES-CCM support
+- `@noble/ciphers`: No CCM mode
+- `asmcrypto.js`: Has CCM but nonce/format incompatible with SJCL blobs
+- `crypto-js`, `node-forge`: No CCM mode
+- SJCL format is frozen (self-describing JSON). Only SJCL can decode its own blobs.
+- SJCL is deprecated (2016) but acceptable for import-only (read-only) use on frozen format.
