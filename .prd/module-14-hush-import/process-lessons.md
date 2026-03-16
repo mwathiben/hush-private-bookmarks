@@ -55,7 +55,7 @@ sjcl.exception.corrupt = function(a) { this.message = a; this.toString = ... }
 ## CodeRabbit VSC Session Lessons (2026-03-16)
 
 ### What CodeRabbit VSC got right
-- Stricter type guards (`isHushBookmark`, `isHushFolder`) validating individual item shapes — genuine improvement over shallow "is array" check
+- Stricter type guards (`isHushBookmark`, `isHushFolder`) validating individual item shapes — see **Type Guard Without `as` Casts** and CodeRabbit HUSH-001 for the boundary-validation rule
 - Removing redundant try/catch in test → replaced with `rejects.toMatchObject` — cleaner, fails properly
 - Static test fixture blob instead of runtime `sjcl.encrypt()` — eliminates sjcl import in test file
 - `tsconfig.json` exclude for `node_modules` — prevents phantom diagnostics from transiently installed packages
@@ -147,15 +147,18 @@ AI-generated reviews (CodeRabbit VSC) can introduce slop while fixing real issue
 - Running deslop on `git diff main...HEAD` includes ALL branch changes — findings may be from previous stories, not the current one
 - Fix: scope deslop to `git diff HEAD~1...HEAD` for single-story review, or list only the files changed in the current story
 - Lesson: always scope reviews to the work being verified, not the entire branch
-
-### Redundant type checks after type guards
-
-- `mapBookmarks` had `typeof b.url !== 'string'` despite `isHushBookmark` already validating `url` is a string
-- Type guards that validate at the boundary should be trusted by downstream code — re-checking is defensive slop
-- This is the same lesson as the CodeRabbit HUSH-001 finding about redundant `Array.isArray` checks
+- Cross-reference: the `mapBookmarks`/`isHushBookmark` redundancy lesson is already captured in **Type Guard Without `as` Casts** and CodeRabbit HUSH-001.
 
 ### BDD section spacing in E2E tests
 
 - HUSH-002 E2E tests were missing blank lines between `#given`, `#when`, `#then` sections
 - Project convention (per testing.md rules): BDD sections should be visually separated with blank lines
 - Applied consistently across all 3 HUSH-002 E2E test cases
+
+### CodeRabbit HUSH-003 Review Findings
+
+- **M-02 (fixed): `save()` return value ignored** — `useTree().save()` returns `Promise<boolean>` (false on failure). Component showed success even if save failed. Fixed by checking return value and showing error on `!saved`.
+- **M-01 (pre-existing): shallow type guard** — `isHushImportData` only checks `typeof === 'object'` for `tree` and `stats`. Same pattern as `isChromeImportData` in ImportSection. Not a regression — defer to a future hardening pass across all import guards.
+- **M-03 (deferred): no test for `tree === null` early return** — when `useTree()` returns null before initial load, `handleImport` bails silently. Low risk (button requires both fields filled). Add in HUSH-004 or future test pass.
+- **L-03 (deferred): no test for `sendMessage` rejection** — catch branch only tested via unit tests that mock resolved errors, not rejected promises. Add in future test pass.
+- **Verdict: Ship it** — 0 Critical, 1 High (SJCL E2E coupling — acceptable, documented), 4 Medium (1 fixed, 3 pre-existing/deferred), 5 Low/Info

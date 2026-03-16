@@ -67,7 +67,12 @@ export function HushImportSection(): React.JSX.Element {
       }
 
       const merged = appendImportedFolder(tree, response.data.tree);
-      await save(merged);
+      const saved = await save(merged);
+      if (!saved) {
+        setError('Failed to save imported bookmarks');
+        setStatus('idle');
+        return;
+      }
       setStats(response.data.stats);
       setPassword('');
       setStatus('success');
