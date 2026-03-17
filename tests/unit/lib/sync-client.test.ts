@@ -230,13 +230,14 @@ describe('downloadBlob', () => {
     fetchSpy.mockResolvedValue(new Response('', { status: 401 }));
 
     // #when / #then
-    await expect(downloadBlob(makeConfig())).rejects.toThrow(SyncError);
+    let caught: SyncError | undefined;
     try {
       await downloadBlob(makeConfig());
     } catch (err) {
-      expect(err).toBeInstanceOf(SyncError);
-      expect((err as SyncError).context.code).toBe('AUTH_FAILED');
+      caught = err as SyncError;
     }
+    expect(caught).toBeInstanceOf(SyncError);
+    expect(caught!.context.code).toBe('AUTH_FAILED');
   });
 
   it('throws SyncError SERVER_ERROR on 500', async () => {
@@ -252,12 +253,14 @@ describe('downloadBlob', () => {
     fetchSpy.mockRejectedValue(new TypeError('Failed to fetch'));
 
     // #when / #then
-    await expect(downloadBlob(makeConfig())).rejects.toThrow(SyncError);
+    let caught: SyncError | undefined;
     try {
       await downloadBlob(makeConfig());
     } catch (err) {
-      expect((err as SyncError).context.code).toBe('NETWORK_ERROR');
+      caught = err as SyncError;
     }
+    expect(caught).toBeInstanceOf(SyncError);
+    expect(caught!.context.code).toBe('NETWORK_ERROR');
   });
 
   it('throws SyncError SERVER_ERROR when X-Sync-Timestamp header is missing', async () => {
@@ -432,6 +435,35 @@ describe('getSyncStatus', () => {
     if (status.state === 'error') {
       expect(status.error).toBe('SERVER_ERROR');
     }
+  });
+
+  it('returns error with SERVER_ERROR on 403', async () => {
+    // #given
+    fetchSpy.mockResolvedValue(new Response('', { status: 403 }));
+
+    // #when
+    const status = await getSyncStatus(makeConfig());
+
+    // #then
+    expect(status.state).toBe('error');
+    if (status.state === 'error') {
+      expect(status.error).toBe('SERVER_ERROR');
+    }
+  });
+
+  it('returns error with NETWORK_ERROR for non-HTTPS backendUrl', async () => {
+    // #given
+    const config = makeConfig({ backendUrl: 'http://insecure.example.com' });
+
+    // #when
+    const status = await getSyncStatus(config);
+
+    // #then
+    expect(status.state).toBe('error');
+    if (status.state === 'error') {
+      expect(status.error).toBe('NETWORK_ERROR');
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('passes lastSyncAt through to idle state', async () => {

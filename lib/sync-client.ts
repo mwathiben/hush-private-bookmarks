@@ -128,9 +128,16 @@ export async function getSyncStatus(
     return { state: 'not_configured' };
   }
 
+  let url: string;
+  try {
+    url = buildUrl(config.backendUrl, '/sync/status');
+  } catch {
+    return { state: 'error', lastSyncAt: lastSyncAt ?? null, error: 'NETWORK_ERROR' };
+  }
+
   let response: Response;
   try {
-    response = await fetchWithTimeout(buildUrl(config.backendUrl, '/sync/status'), {
+    response = await fetchWithTimeout(url, {
       method: 'GET',
       headers: authHeaders(config),
     });
@@ -145,7 +152,7 @@ export async function getSyncStatus(
     return { state: 'error', lastSyncAt: lastSyncAt ?? null, error: 'AUTH_FAILED' };
   }
 
-  if (response.status >= 500) {
+  if (!response.ok) {
     return { state: 'error', lastSyncAt: lastSyncAt ?? null, error: 'SERVER_ERROR' };
   }
 

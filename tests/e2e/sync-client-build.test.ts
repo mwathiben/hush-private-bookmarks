@@ -6,18 +6,17 @@ test.describe('sync-client build integration', () => {
     extensionId,
   }) => {
     const page = await context.newPage();
+
+    const pageErrors: string[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
     await expect(
       page.locator('[data-testid="setup-screen"]'),
     ).toBeVisible({ timeout: 10_000 });
 
-    const errors = await page.evaluate(() => {
-      const errs: string[] = [];
-      window.addEventListener('error', (e) => errs.push(e.message));
-      return errs;
-    });
-    expect(errors.filter((e) => e.includes('sync-client'))).toHaveLength(0);
+    expect(pageErrors.filter((e) => e.includes('sync-client'))).toHaveLength(0);
 
     await page.close();
   });
@@ -30,11 +29,7 @@ test.describe('sync-client build integration', () => {
 
     const [sw] = context.serviceWorkers();
     expect(sw).toBeTruthy();
-
-    const swUrl = sw!.url();
-    expect(swUrl).toContain(extensionId);
-
-    await context.newPage();
+    expect(sw!.url()).toContain(extensionId);
 
     const consoleErrors: string[] = [];
     const page = await context.newPage();
