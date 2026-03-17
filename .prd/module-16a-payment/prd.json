@@ -107,8 +107,8 @@
             ],
             "verification": "npx vitest run tests/unit/hooks/useProGate.test.ts tests/unit/components/shared/UpgradePrompt.test.tsx && npx tsc --noEmit",
             "estimated_effort": "small",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": ["PAY-001"]
         },
         {
@@ -237,7 +237,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 1,
+        "passing_stories": 2,
         "build_plan_day": "Day 5",
         "estimated_test_count": "~15 unit + ~0 E2E (visual E2E deferred to 16c)",
         "session_protocol": "One Claude Code session. Research ExtensionPay FIRST — API, installation, types. Commit per story.",

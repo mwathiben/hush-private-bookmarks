@@ -26,4 +26,5 @@ test.describe('Pro-gate build integration', () => {
     workers = context.serviceWorkers();
     expect(workers.length).toBeGreaterThan(0);
   });
+
 });

@@ -30,7 +30,9 @@ export default [
       'no-empty': 'error',
       'no-console': 'warn',
       'prefer-const': 'error',
-      '@typescript-eslint/explicit-function-return-type': 'warn',
+      '@typescript-eslint/explicit-function-return-type': ['warn', {
+        allowExpressions: true,
+      }],
       '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
@@ -80,6 +82,25 @@ export default [
   {
     files: ['*.config.{ts,js}'],
     rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+
+  {
+    files: ['tests/screenshots/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        crypto: 'readonly',
+        TextEncoder: 'readonly',
+        btoa: 'readonly',
+        document: 'readonly',
+        chrome: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+    rules: {
+      'no-console': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
     },
   },

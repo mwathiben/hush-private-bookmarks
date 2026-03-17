@@ -43,11 +43,7 @@ function FolderNavItem({ name, path, children, depth, selectedPath, onSelectFold
         {hasSubfolders ? (
           <button
             type="button"
-<<<<<<< HEAD
             aria-label={`Toggle ${name}`}
-=======
-            aria-label="Toggle folder"
->>>>>>> 6016bcce501d9fe013d12e88b5cc89ebfc1fc7ff
             aria-expanded={expanded}
             className="shrink-0 rounded-md p-1 hover:bg-sidebar-accent/50"
             style={{ marginLeft: `${depth * 16 + 8}px` }}
@@ -63,10 +59,7 @@ function FolderNavItem({ name, path, children, depth, selectedPath, onSelectFold
         )}
         <button
           type="button"
-<<<<<<< HEAD
           aria-label={`Select folder ${name}`}
-=======
->>>>>>> 6016bcce501d9fe013d12e88b5cc89ebfc1fc7ff
           className={`flex min-w-0 flex-1 items-center gap-1 rounded-md px-2 py-1 text-sm ${
             isSelected ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'
           }`}

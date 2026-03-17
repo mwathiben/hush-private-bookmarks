@@ -43,3 +43,29 @@
 **What happened**: CodeRabbit identified that the `try { fn(); expect.fail('should have thrown'); } catch (err) { ... }` pattern is fragile — if someone removes the `expect.fail` line, the test silently passes even if the function never throws. The project had 8 instances of this pattern across crypto.test.ts and pro-gate.test.ts.
 
 **Rule**: For tests that verify a function throws and inspect the thrown error's properties, use `expect.assertions(n)` at the top of the test instead of `expect.fail` in the try block. `expect.assertions(n)` guarantees exactly `n` assertions run — if the catch block is skipped (function didn't throw), the test fails because the assertion count is wrong. This is structurally safer than a deletable sentinel line. Updated pro-gate.test.ts; crypto.test.ts instances are pre-existing (fix if touched).
+
+## PAY-002: useProGate hook and UpgradePrompt component
+
+### Lesson 8: happy-dom requires explicit cleanup() in afterEach for hook/component tests
+
+**What happened**: Component tests failed with "Found multiple elements with role button" because renders from prior tests persisted in the DOM. Hook tests showed inflated `checkProStatus` call counts because document-level event listeners from unmounted hooks fired on all accumulated instances.
+
+**Rule**: When using `// @vitest-environment happy-dom`, always add `afterEach(() => cleanup())` from `@testing-library/react` in every describe block. happy-dom does not auto-cleanup between tests. This is the established pattern in this codebase (useSession.test.ts, useSendMessage.test.ts).
+
+### Lesson 9: Use delta-based call count assertions for document-level events
+
+**What happened**: Asserting `toHaveBeenCalledTimes(2)` for visibilitychange tests was fragile because the initial fetch from `useEffect` counted as call 1, and the total count accumulated across tests even with cleanup. Recording `callsBefore = vi.mocked(fn).mock.calls.length` before the action and asserting the delta is exactly 1 is more robust.
+
+**Rule**: For tests that verify event-triggered calls on mocked functions, capture the call count before the action and assert the delta, not the absolute count. This isolates the test from setup calls and cross-test accumulation.
+
+### Lesson 10: Pre-existing merge conflicts and lint errors must be fixed immediately
+
+**What happened**: HEAD had committed merge conflict markers in ManagerSidebar.tsx and ManagerApp.tsx, plus ESLint errors in tests/screenshots/*.mjs (missing globals config for browser-evaluated code). These blocked `tsc --noEmit` and `eslint .` for the entire project.
+
+**Rule**: Always run full-project verification (`tsc --noEmit`, `eslint .`, `vitest run`) early in a session. Fix ALL pre-existing failures — not just ones caused by your changes. Added this rule to `.claude/rules/testing.md`.
+
+### Lesson 11: ESLint allowExpressions for useEffect cleanup arrow functions
+
+**What happened**: `explicit-function-return-type: 'warn'` flagged arrow functions returned from useEffect cleanup (`return () => { ... }`). These are expressions, not declarations — the rule's `allowExpressions: true` option correctly exempts them without weakening enforcement for actual function declarations.
+
+**Rule**: When `explicit-function-return-type` produces false positives on callback/cleanup arrow functions, use `allowExpressions: true` rather than turning the rule off for entire directories.
