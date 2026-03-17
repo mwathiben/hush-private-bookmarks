@@ -75,14 +75,18 @@ export async function handleSyncUpload(msg: SyncUploadMessage): Promise<Backgrou
     return { success: false, error: 'Invalid timestamp', code: 'SYNC_INVALID_INPUT' };
   }
 
-  const blob = base64ToUint8Array(msg.blob) as EncryptedBlob;
-  const result = await uploadBlob(config, blob, msg.timestamp);
+  try {
+    const blob = base64ToUint8Array(msg.blob) as EncryptedBlob;
+    const result = await uploadBlob(config, blob, msg.timestamp);
 
-  if (!result.success) {
-    return { success: false, error: result.error.message, code: result.error.context.code };
+    if (!result.success) {
+      return { success: false, error: result.error.message, code: result.error.context.code };
+    }
+
+    return { success: true, data: result.data };
+  } catch (err: unknown) {
+    return mapError(err);
   }
-
-  return { success: true, data: result.data };
 }
 
 export async function handleSyncDownload(): Promise<BackgroundResponse> {

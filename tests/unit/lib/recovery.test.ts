@@ -80,8 +80,10 @@ describe('validateMnemonic', () => {
   });
 
   it('returns false for reversed word order (breaks checksum)', () => {
-    // #given — valid mnemonic with words reversed
-    const phrase = generateMnemonic();
+    // #given — known mnemonic whose reversal has an invalid checksum
+    // Random mnemonics have ~1/16 chance of valid reversal, so use a deterministic phrase.
+    const phrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    expect(validateMnemonic(phrase)).toBe(true);
     const reversed = phrase.split(' ').reverse().join(' ');
     // #when
     const result = validateMnemonic(reversed);

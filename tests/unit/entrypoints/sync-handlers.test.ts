@@ -282,6 +282,18 @@ describe('sync-handlers: configured path', () => {
     });
   });
 
+  it('handleSyncUpload returns error for invalid base64 blob', async () => {
+    // #when
+    const result = await handleSyncUpload({ type: 'SYNC_UPLOAD', blob: '!!!invalid!!!', timestamp: 1000 });
+
+    // #then
+    expect(result).toEqual({
+      success: false,
+      error: 'Sync operation failed',
+    });
+    expect(mockUploadBlob).not.toHaveBeenCalled();
+  });
+
   it('handleSyncUpload calls uploadBlob and returns success', async () => {
     // #given
     mockUploadBlob.mockResolvedValue({
