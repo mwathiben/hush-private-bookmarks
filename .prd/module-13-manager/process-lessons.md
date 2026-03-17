@@ -41,6 +41,7 @@
 - Nested interactive elements (button inside button) are invalid HTML — refactor chevron toggle into a sibling `<button>` with `aria-label="Toggle folder"` and `aria-expanded`.
 - `role="alert"` must be consistent on all error containers for screen reader announcements. The top-level ManagerApp error div was missing it.
 - Never use `as SessionState` casts on `unknown` — use `isSessionState()` type guard for runtime validation before dispatching to context.
+<<<<<<< HEAD
 - Reducers must never throw — return unchanged state on invalid transitions. Do not use `console.warn` or silently ignore errors; instead, use non-console telemetry: dev-only logs behind a DEV/feature-flag check during local debugging, metrics counters for expected-but-interesting invalid transitions, and error-tracking breadcrumbs/exceptions for unexpected integrity/state issues.
 - Test names must match what the test actually asserts. "sends LOCK and returns to login" was renamed to "sends LOCK" since the test only checks the message call.
 
@@ -146,3 +147,7 @@
 
 - The stop hook correctly flagged that WebSearch/context7 research was not done BEFORE implementation. While the implementation turned out correct, the research-first workflow catches issues earlier and validates design decisions upfront.
 - For future stories: run context7 + WebSearch queries during the planning phase (before RED step), not after implementation.
+=======
+- Reducers must never throw — return unchanged state on invalid transitions. `console.warn` is also forbidden per project rules; silently ignore instead.
+- Test names must match what the test actually asserts. "sends LOCK and returns to login" was renamed to "sends LOCK" since the test only checks the message call.
+>>>>>>> 6016bcce501d9fe013d12e88b5cc89ebfc1fc7ff

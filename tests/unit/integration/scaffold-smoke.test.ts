@@ -23,9 +23,10 @@ import {
   ImportError,
   RecoveryError,
   SyncError,
+  ProGateError,
 } from '@/lib/errors';
 
-import type { StorageErrorContext, ImportErrorContext, RecoveryErrorContext, SyncErrorContext } from '@/lib/errors';
+import type { StorageErrorContext, ImportErrorContext, RecoveryErrorContext, SyncErrorContext, ProGateErrorContext } from '@/lib/errors';
 
 import {
   SENTRY_DSN,
@@ -128,7 +129,7 @@ import type {
 
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts', 'background-types.ts', 'hush-import.ts', 'sync-types.ts', 'sync-client.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts', 'background-types.ts', 'hush-import.ts', 'sync-types.ts', 'sync-client.ts', 'pro-gate.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -166,6 +167,7 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(new StorageError('test', { operation: 'read' })).toBeInstanceOf(Error);
     expect(new ImportError('test', { source: 'x' })).toBeInstanceOf(Error);
     expect(new SyncError('test', { code: 'NETWORK_ERROR' })).toBeInstanceOf(Error);
+    expect(new ProGateError('test', { code: 'SDK_UNAVAILABLE' })).toBeInstanceOf(Error);
   });
 
   it('sentry exports are callable', () => {
@@ -437,6 +439,7 @@ describe('scaffold integration: error class properties', () => {
     expect(new StorageError('x', {}).name).toBe('StorageError');
     expect(new ImportError('x', {}).name).toBe('ImportError');
     expect(new RecoveryError('x', { reason: 'invalid_blob' }).name).toBe('RecoveryError');
+    expect(new ProGateError('x', { code: 'SDK_UNAVAILABLE' }).name).toBe('ProGateError');
   });
 
   it('error classes support cause chaining', () => {
@@ -446,6 +449,7 @@ describe('scaffold integration: error class properties', () => {
     expect(new StorageError('x', {}, { cause }).cause).toBe(cause);
     expect(new ImportError('x', {}, { cause }).cause).toBe(cause);
     expect(new RecoveryError('x', { reason: 'invalid_blob' }, { cause }).cause).toBe(cause);
+    expect(new ProGateError('x', { code: 'SDK_UNAVAILABLE' }, { cause }).cause).toBe(cause);
   });
 
   it('StorageError exposes typed context', () => {
@@ -467,11 +471,16 @@ describe('scaffold integration: error class properties', () => {
     const ctx: SyncErrorContext = { code: 'AUTH_FAILED' };
     expect(new SyncError('x', ctx).context).toEqual(ctx);
   });
+
+  it('ProGateError exposes typed context', () => {
+    const ctx: ProGateErrorContext = { code: 'CHECK_FAILED' };
+    expect(new ProGateError('x', ctx).context).toEqual(ctx);
+  });
 });
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(16);
+    expect(LIB_MODULES).toHaveLength(17);
   });
 });
 
@@ -661,6 +670,44 @@ describe('scaffold integration: architecture constraints', () => {
     expect(content).not.toMatch(/from\s+['"]wxt\/browser['"]/);
     expect(content).not.toContain('chrome.');
     expect(content).not.toContain('browser.');
+  });
+
+  it('pro-gate.ts is within 150-line limit', () => {
+    const lines = readFileSync(resolve(ROOT, 'lib', 'pro-gate.ts'), 'utf-8').split('\n').length;
+    expect(lines).toBeLessThanOrEqual(150);
+  });
+
+  it('pro-gate.ts functions are within 50-line limit', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'pro-gate.ts'), 'utf-8');
+    const functionRegex = /^(?:export\s+)?(?:async\s+)?function\s+\w+/gm;
+    const lines = content.split('\n');
+    let match;
+    while ((match = functionRegex.exec(content)) !== null) {
+      const startLine = content.slice(0, match.index).split('\n').length;
+      let braceCount = 0;
+      let endLine = startLine;
+      for (let i = startLine - 1; i < lines.length; i++) {
+        for (const ch of lines[i]!) {
+          if (ch === '{') braceCount++;
+          if (ch === '}') braceCount--;
+        }
+        if (braceCount === 0 && i > startLine - 1) {
+          endLine = i + 1;
+          break;
+        }
+      }
+      const fnLength = endLine - startLine + 1;
+      expect(fnLength, `Function at line ${startLine} is ${fnLength} lines`).toBeLessThanOrEqual(50);
+    }
+  });
+
+  it('pro-gate.ts uses only extpay as external dependency', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'pro-gate.ts'), 'utf-8');
+    const importRegex = /from\s+['"]([^@./][^'"]*)['"]/g;
+    let match;
+    while ((match = importRegex.exec(content)) !== null) {
+      expect(match[1]).toBe('extpay');
+    }
   });
 
   it('background entrypoint files are within 300-line limit', () => {

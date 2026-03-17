@@ -104,6 +104,26 @@ export class SyncError extends Error {
   }
 }
 
+/** Pro gate operation metadata. Identifies failure mode, never PII or payment details. */
+export interface ProGateErrorContext {
+  readonly code: 'SDK_UNAVAILABLE' | 'NETWORK_ERROR' | 'CHECK_FAILED';
+}
+
+/** Thrown when Pro gate operations fail. Context identifies failure mode, never user data. */
+export class ProGateError extends Error {
+  readonly name = 'ProGateError' as const;
+  readonly context: ProGateErrorContext;
+
+  constructor(
+    message: string,
+    context: ProGateErrorContext,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.context = context;
+  }
+}
+
 /** Path and kind metadata for data model errors. Never contains bookmark content. */
 export interface DataModelErrorContext {
   readonly kind:

@@ -21,6 +21,10 @@ import { AddEditBookmarkDialog } from '@/components/shared/AddEditBookmarkDialog
 import { AddFolderDialog } from '@/components/shared/AddFolderDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { FolderPicker } from '@/components/shared/FolderPicker';
+<<<<<<< HEAD
+=======
+import { Button } from '@/components/ui/button';
+>>>>>>> 6016bcce501d9fe013d12e88b5cc89ebfc1fc7ff
 import { isSessionState } from '@/hooks/useSession';
 import { removeItem, moveItem, isFolder, getFolderByPath } from '@/lib/data-model';
 import type { BookmarkDialogMode } from '@/components/shared/AddEditBookmarkDialog';
@@ -142,6 +146,7 @@ function ManagerTreePanel(): React.JSX.Element {
 
   const handleLock = useCallback(async () => {
     try {
+<<<<<<< HEAD
       await sendMessage({ type: 'LOCK' });
       const response = await sendMessage({ type: 'GET_STATE' });
       if (response.success && isSessionState(response.data)) {
@@ -149,6 +154,26 @@ function ManagerTreePanel(): React.JSX.Element {
         return;
       }
       setActionError('Failed to lock session');
+=======
+      const lockResponse = await sendMessage({ type: 'LOCK' });
+      if (!lockResponse.success) {
+        setActionError(lockResponse.error || 'Failed to lock session');
+        return;
+      }
+
+      const response = await sendMessage({ type: 'GET_STATE' });
+      if (!response.success) {
+        setActionError(response.error || 'Failed to refresh session state');
+        return;
+      }
+
+      if (!isSessionState(response.data)) {
+        setActionError('Received invalid session state from background');
+        return;
+      }
+
+      dispatch({ type: 'SET_SESSION', session: response.data });
+>>>>>>> 6016bcce501d9fe013d12e88b5cc89ebfc1fc7ff
     } catch {
       setActionError('Failed to lock session');
     }

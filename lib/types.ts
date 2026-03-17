@@ -78,6 +78,14 @@ export interface CryptoConfig {
   readonly hashAlgorithm: string;
 }
 
+/** Pro subscription status. Maps from ExtensionPay User to app-level gating. */
+export interface ProStatus {
+  readonly isPro: boolean;
+  readonly expiresAt: number | null;
+  readonly trialDaysLeft: number | null;
+  readonly canTrial: boolean;
+}
+
 /** Type-safe success/failure wrapper. Discriminated on the `success` field. */
 export type Result<T, E = Error> =
   | { readonly success: true; readonly data: T }

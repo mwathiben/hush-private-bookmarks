@@ -26,6 +26,7 @@
     "@sentry/browser": "^10.40.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "extpay": "^3.1.2",
     "lucide-react": "^0.576.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",

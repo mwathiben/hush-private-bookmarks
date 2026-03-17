@@ -8,6 +8,7 @@ import {
   ImportError,
   DataModelError,
   SyncError,
+  ProGateError,
 } from '@/lib/errors';
 
 const ROOT = resolve(process.cwd());
@@ -161,6 +162,51 @@ describe('SyncError', () => {
   it('accepts CONFLICT code', () => {
     const err = new SyncError('conflict detected', { code: 'CONFLICT' });
     expect(err.context.code).toBe('CONFLICT');
+  });
+});
+
+describe('ProGateError', () => {
+  it('is an instance of Error', () => {
+    // #given
+    const err = new ProGateError('sdk failed', { code: 'SDK_UNAVAILABLE' });
+
+    // #then
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(ProGateError);
+  });
+
+  it('has name "ProGateError"', () => {
+    // #given
+    const err = new ProGateError('test', { code: 'NETWORK_ERROR' });
+
+    // #then
+    expect(err.name).toBe('ProGateError');
+  });
+
+  it('exposes typed context with code', () => {
+    // #given
+    const err = new ProGateError('check failed', { code: 'CHECK_FAILED' });
+
+    // #then
+    expect(err.context.code).toBe('CHECK_FAILED');
+  });
+
+  it('supports cause chaining', () => {
+    // #given
+    const cause = new Error('original');
+
+    // #when
+    const err = new ProGateError('wrapped', { code: 'SDK_UNAVAILABLE' }, { cause });
+
+    // #then
+    expect(err.cause).toBe(cause);
+  });
+
+  it('accepts all three error codes', () => {
+    // #given #when #then
+    expect(new ProGateError('a', { code: 'SDK_UNAVAILABLE' }).context.code).toBe('SDK_UNAVAILABLE');
+    expect(new ProGateError('b', { code: 'NETWORK_ERROR' }).context.code).toBe('NETWORK_ERROR');
+    expect(new ProGateError('c', { code: 'CHECK_FAILED' }).context.code).toBe('CHECK_FAILED');
   });
 });
 
