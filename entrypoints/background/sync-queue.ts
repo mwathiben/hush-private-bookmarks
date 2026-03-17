@@ -177,15 +177,6 @@ export async function drain(
             continue;
           }
 
-          item.retryCount++;
-          if (item.retryCount >= MAX_RETRIES) {
-            toRemove.add(i);
-            failed++;
-            continue;
-          }
-
-          item.nextRetryAt = now + calculateBackoffMs(item.retryCount);
-          break;
         }
 
         item.retryCount++;

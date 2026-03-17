@@ -27,8 +27,15 @@ test.describe('sync-queue build integration', () => {
   }) => {
     expect(extensionId).toBeTruthy();
 
+    if (context.serviceWorkers().length === 0) {
+      await context.waitForEvent('serviceworker', { timeout: 10_000 });
+    }
+
     const [sw] = context.serviceWorkers();
-    expect(sw).toBeTruthy();
+    expect(
+      sw,
+      'Expected at least one registered service worker before sync-queue assertions',
+    ).toBeTruthy();
     expect(sw!.url()).toContain(extensionId);
 
     const consoleErrors: string[] = [];
@@ -56,7 +63,20 @@ test.describe('sync-queue build integration', () => {
       page.locator('[data-testid="setup-screen"]'),
     ).toBeVisible({ timeout: 10_000 });
 
-    const sw = context.serviceWorkers()[0]!;
+    if (context.serviceWorkers().length === 0) {
+      await context.waitForEvent('serviceworker', { timeout: 10_000 });
+    }
+    const workers = context.serviceWorkers();
+    expect(
+      workers.length,
+      'Expected at least one registered service worker before reading storage keys',
+    ).toBeGreaterThan(0);
+    const sw = workers[0];
+    if (!sw) {
+      throw new Error(
+        'No service worker registered after wait; cannot read storage keys',
+      );
+    }
     const storageKeys = await sw.evaluate(async () => {
       const all = await chrome.storage.local.get(null);
       return Object.keys(all);

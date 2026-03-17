@@ -113,3 +113,15 @@
 **What happened**: CodeRabbit identified that `drain()`'s error classification only handled `error instanceof SyncError`. If `result.error` was a plain `Error` (or any non-SyncError), the code fell through without incrementing retryCount or removing the item — creating permanently stuck queue items that never clear.
 
 **Rule**: After handling known error types, always add a fallback branch for unknown errors. In retry queues, treat unknown errors as retryable (increment retryCount, apply backoff, break) to prevent infinite stuck items.
+
+### Lesson 19: CodeRabbit VSC may propose design changes disguised as bug fixes
+
+**What happened**: CodeRabbit VSC flagged the stop-on-first-retryable-failure `break` as "head-of-line blocking" and changed it to `continue`. This is a legitimate design trade-off, but it contradicts the approved plan's explicit design decision ("saves network resources when offline") and breaks the existing test. The change was rejected.
+
+**Rule**: When an automated review tool proposes changing control flow (break/continue/return), evaluate whether it's a bug fix or a design change. If the current behavior is covered by an existing test and matches the approved design, the tool is proposing a design change — not fixing a bug. Design changes require explicit user approval.
+
+### Lesson 20: E2E tests for extensions should wait for service worker registration
+
+**What happened**: CodeRabbit VSC correctly identified that `context.serviceWorkers()` can return empty if called before the extension finishes registering. Added `waitForEvent('serviceworker')` guard with timeout before asserting on service worker properties.
+
+**Rule**: In Playwright extension E2E tests, always check `context.serviceWorkers().length` before accessing workers. If empty, use `await context.waitForEvent('serviceworker', { timeout: 10_000 })` to wait for registration. Add explicit error messages to assertions for debuggability in CI.

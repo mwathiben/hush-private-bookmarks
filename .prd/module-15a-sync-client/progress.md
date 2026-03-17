@@ -238,3 +238,48 @@ security audit: 11/11 items pass
 - Stop-on-first-retryable-failure: saves network resources when offline
 - Base64 helpers local to sync-queue.ts (not imported from crypto.ts internals)
 - _resetForTesting() export: resets module-level draining flag and storageLock between tests
+
+---
+
+## Session: 2026-03-17T16:00:00Z
+**Task**: SYNC-003 follow-up — Apply CodeRabbit review findings
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Ran CodeRabbit code review agent on SYNC-003 implementation
+- Fixed Issue #2: Added `isQueueItem()` type guard — `readQueue()` now validates element shape, filtering out malformed items instead of blindly casting `as QueueItem[]`
+- Fixed Issue #5: Non-SyncError errors in `result.error` now treated as retryable (was silently ignored, creating permanently stuck queue items)
+- Refactored duplicate retry logic: unified SyncError retryable path and non-SyncError fallback into single block (removed 9 lines of duplication)
+- Restored `break` after retryable failure (was accidentally changed to `continue`, breaking stop-on-first-retryable-failure design)
+- Added 3 new tests: malformed storage filtering, non-SyncError error handling, upload rejection behavior
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `entrypoints/background/sync-queue.ts` | Added `isQueueItem()` type guard (+12 lines), unified retry logic, restored `break` semantics. 223→214 lines. |
+| `tests/unit/entrypoints/sync-queue.test.ts` | Added 3 edge-case tests: malformed storage, non-SyncError error, upload throws (+56 lines). 27→30 tests. |
+| `.prd/module-15a-sync-client/process-lessons.md` | Added lessons 17-18 (storage validation, non-SyncError handling) |
+
+### CodeRabbit Findings Triage
+
+| Issue | Severity | Action |
+| --- | --- | --- |
+| #1 Math.random() for jitter | Low | No change — scheduling jitter, not crypto |
+| #2 `as QueueItem[]` on untrusted storage | Critical | FIXED — added `isQueueItem()` type guard |
+| #3 Head-of-line blocking | High | No change — deliberate design (stop-on-first-retryable-failure) |
+| #4 CONFLICT counted as processed | High | No change — matches plan's DrainResult interface |
+| #5 Non-SyncError fallthrough | Critical | FIXED — unified retry block handles all error types |
+| #6 withLock error chaining | Medium | No change — pattern is correct, subtle but intentional |
+
+### Verification Results
+
+```
+tsc --noEmit: clean (zero errors)
+vitest run (targeted): 30 tests pass (sync-queue: 30)
+vitest run (full suite): 1022 tests pass, 66 test files, 0 failures
+eslint: clean (zero errors)
+wxt build: success (855KB uncompressed)
+playwright E2E (sync-queue): 3 tests pass, 0 failures
+deslop review: removed duplicate retry logic, restored break semantics
+```
