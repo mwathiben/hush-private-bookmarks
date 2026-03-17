@@ -370,4 +370,30 @@ security audit: no authToken in error messages, no console.log, no type suppress
 
 **Architecture**: lib/ types → lib/ client → entrypoints/ queue → entrypoints/ handlers. Import direction strictly downward. Zero crypto in transport layer. All handlers return SYNC_NOT_CONFIGURED until Module 15b backend exists.
 
-**Key Lessons**: 20 process lessons documented in process-lessons.md. Critical patterns: fakeBrowser from wxt/testing (not vi.mock), storage data validation with type guards, non-SyncError fallback handling, separate handler files when at line limit.
+**Key Lessons**: 26 process lessons documented in process-lessons.md. Critical patterns: fakeBrowser from wxt/testing (not vi.mock), storage data validation with type guards, non-SyncError fallback handling, separate handler files when at line limit.
+
+---
+
+## Session: 2026-03-17T18:20:00Z
+**Task**: SYNC-004 — Post-review fixes (handleSyncUpload try/catch + flaky recovery test)
+**Status**: PASSED (follow-up)
+
+### Work Done
+- **handleSyncUpload**: Wrapped `base64ToUint8Array` + `uploadBlob` in try/catch with `mapError` — `globalThis.atob()` throws DOMException on invalid base64 input, which was unhandled (CodeRabbit H1 finding)
+- **recovery.test.ts**: Replaced random `generateMnemonic()` with deterministic BIP39 test vector for reversed-word-order test — random mnemonics have ~1/16 chance of valid checksum after reversal, causing intermittent failures
+- Added test for invalid base64 blob input in sync-handlers.test.ts
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `entrypoints/background/sync-handlers.ts` | Added try/catch in handleSyncUpload (101→105 lines) |
+| `tests/unit/entrypoints/sync-handlers.test.ts` | Added invalid-base64 test (427→439 lines, 29 tests) |
+| `tests/unit/lib/recovery.test.ts` | Deterministic BIP39 test vector for reversed-word test |
+| `.prd/module-15a-sync-client/process-lessons.md` | Added lessons 25-26 |
+
+### Verification Results
+- `tsc --noEmit`: exit 0
+- `vitest run`: 67 files, 1051/1051 passed
+- `eslint` (changed files): exit 0
+- `playwright test`: 210/210 passed
