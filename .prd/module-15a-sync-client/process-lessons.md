@@ -69,3 +69,15 @@
 **What happened**: Writing tests first (RED) for `uploadBlob` → implementing (GREEN) → then tests for `downloadBlob` revealed that the timestamp header validation needed `Number.isFinite()` instead of just `Number()` truthiness, because `Number('Infinity')` would pass a basic truthy check but is not a valid timestamp.
 
 **Rule**: The RED-GREEN cycle per function (not per file) catches subtle bugs that bulk-writing tests misses, because each GREEN implementation informs the next RED test.
+
+### Lesson 12: Distinguish transport errors from configuration errors in status checks
+
+**What happened**: `getSyncStatus` originally caught all SyncError(NETWORK_ERROR) uniformly and returned `{ state: 'offline' }`. But NETWORK_ERROR wraps two distinct causes: (1) `fetchWithTimeout` catching a real `TypeError` from fetch (DNS failure, no connectivity), and (2) `buildUrl` rejecting non-HTTPS URLs. The first is a transient network issue (offline); the second is a persistent configuration error that should surface to the user.
+
+**Rule**: When a single error code can originate from multiple sources, inspect `error.cause` to distinguish transient failures (→offline/retry) from configuration/validation errors (→surface to user). Don't flatten distinct failure modes into a single UX state.
+
+### Lesson 13: Cross-reference accuracy in process lessons
+
+**What happened**: Lesson 8 originally referenced "crypto OperationError (Lesson 4 from SYNC-001)" as a related pattern. But Lesson 4 is about `Uint8Array<ArrayBuffer>` explicit generics, not DOMException behavior. The actual related lesson is the crypto OperationError pattern documented in project memory, not in SYNC-001's process-lessons.
+
+**Rule**: When cross-referencing lessons, verify the target lesson number matches the actual content. Incorrect cross-references mislead future readers.
