@@ -142,7 +142,7 @@ describe('uploadBlob', () => {
   });
 
   it('returns error TIMEOUT when fetch throws TimeoutError', async () => {
-    // #given — jsdom may not preserve DOMException.name; use Error with name override
+    // #given
     const err = new Error('Signal timed out');
     err.name = 'TimeoutError';
     fetchSpy.mockRejectedValue(err);

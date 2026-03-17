@@ -54,7 +54,8 @@ export async function uploadBlob(
   try {
     url = buildUrl(config.backendUrl, '/sync/upload');
   } catch (err) {
-    return { success: false, error: err as SyncError };
+    if (err instanceof SyncError) return { success: false, error: err };
+    return { success: false, error: new SyncError('Unexpected error', { code: 'NETWORK_ERROR' }, { cause: err }) };
   }
 
   let response: Response;
@@ -69,7 +70,8 @@ export async function uploadBlob(
       body: blob,
     });
   } catch (err) {
-    return { success: false, error: err as SyncError };
+    if (err instanceof SyncError) return { success: false, error: err };
+    return { success: false, error: new SyncError('Unexpected error', { code: 'NETWORK_ERROR' }, { cause: err }) };
   }
 
   if (!response.ok) {
