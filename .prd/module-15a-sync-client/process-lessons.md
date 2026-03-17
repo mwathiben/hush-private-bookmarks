@@ -43,3 +43,29 @@
 **What happened**: CodeRabbit flagged `SyncConfig.authToken` as a plain `string` that could leak to Sentry if the config object is passed as error context. Also suggested a named `SyncErrorCode` type alias for greppability.
 
 **Rule**: When adding types that carry secrets or tokens, consider whether the type will be visible in error contexts. Branded types or opaque wrappers prevent accidental exposure. Named type aliases (not just indexed access types) improve greppability across the codebase.
+
+## SYNC-002: Sync client — HTTPS API client with conflict resolution
+
+### Lesson 8: DOMException name detection in test environments
+
+**What happened**: `new DOMException('msg', 'TimeoutError')` works in Node.js and real browsers, but when passed through vitest's mock system (`fetchSpy.mockRejectedValue(new DOMException(...))`), the `.name` property may not survive correctly. Using `new Error('msg')` with `.name = 'TimeoutError'` is the reliable test pattern.
+
+**Rule**: For error name-based detection (`error.name === 'TimeoutError'`), test with plain `Error` objects that have `.name` overridden. This matches what the production code checks and avoids environment-specific DOMException quirks. Same lesson as crypto OperationError (Lesson 4 from SYNC-001).
+
+### Lesson 9: fetch mock patterns — avoid double-call in catch verification
+
+**What happened**: Tests that used `await expect(fn()).rejects.toThrow(SyncError)` followed by a `try/catch` block calling the same function would fail because the first call consumed the mock response, leaving the second call with no mock configured.
+
+**Rule**: For tests that need to verify both that an error is thrown AND inspect its properties, use a single try/catch pattern with explicit assertions on the caught error. Don't call the function twice.
+
+### Lesson 10: HTTPS enforcement as defense-in-depth
+
+**What happened**: Security audit identified that auth tokens sent over HTTP are visible to network observers. Added a one-line `startsWith('https://')` check in `buildUrl()` that throws before any fetch call.
+
+**Rule**: When a function sends authentication credentials, validate the transport security before making the request. This is defense-in-depth — the backend should also reject HTTP, but the client should never send tokens over an insecure channel.
+
+### Lesson 11: Vertical TDD slice still catches real bugs
+
+**What happened**: Writing tests first (RED) for `uploadBlob` → implementing (GREEN) → then tests for `downloadBlob` revealed that the timestamp header validation needed `Number.isFinite()` instead of just `Number()` truthiness, because `Number('Infinity')` would pass a basic truthy check but is not a valid timestamp.
+
+**Rule**: The RED-GREEN cycle per function (not per file) catches subtle bugs that bulk-writing tests misses, because each GREEN implementation informs the next RED test.

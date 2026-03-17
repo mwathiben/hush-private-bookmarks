@@ -5,7 +5,7 @@
 | ID | Title | Status | Attempts |
 | --- | --- | --- | --- |
 | SYNC-001 | Sync types, SyncableFeature interface, and SyncError class | PASSED | 1 |
-| SYNC-002 | Sync client — HTTPS API client with conflict resolution | PENDING | 0 |
+| SYNC-002 | Sync client — HTTPS API client with conflict resolution | PASSED | 1 |
 | SYNC-003 | Offline sync queue with retry | PENDING | 0 |
 | SYNC-004 | Background sync handlers and integration verification | PENDING | 0 |
 
@@ -114,3 +114,64 @@ Deslop review: clean — zero slop detected
 - `SyncConfig.authToken` is plain `string` — consider branded `AuthToken` type or ensure it never reaches Sentry context
 - Consider extracting `SyncErrorCode = NonNullable<SyncErrorContext['code']>` named alias for greppability
 - `SyncConflict` blobs are `EncryptedBlob` (intentional — last-write-wins at encrypted level, no per-field merge planned)
+
+---
+
+## Session: 2026-03-17T13:00:00Z
+**Task**: SYNC-002 - Sync client — HTTPS API client with conflict resolution
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created `lib/sync-client.ts` — 152-line module with 4 exports + 4 private helpers
+- Exports: `uploadBlob`, `downloadBlob`, `resolveConflict`, `getSyncStatus`
+- Private: `buildUrl` (URL normalization + HTTPS enforcement), `authHeaders`, `fetchWithTimeout` (AbortSignal.timeout), `mapHttpError`
+- Created `tests/unit/lib/sync-client.test.ts` — 37 tests covering all exports + module purity
+- Created `tests/e2e/sync-client-build.test.ts` — 2 E2E tests (extension loads, service worker active)
+- Updated `tests/unit/integration/scaffold-smoke.test.ts` — added 'sync-client.ts' to LIB_MODULES, count 15→16
+- Security: HTTPS validation, generic error messages (no PII), Number.isFinite() timestamp validation, URL normalization
+- Error mapping: TypeError→NETWORK_ERROR, TimeoutError/AbortError→TIMEOUT, 401→AUTH_FAILED, 409→CONFLICT, 5xx→SERVER_ERROR
+- DOMException name detection: used `error.name` check (not `instanceof DOMException`) for jsdom compatibility
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| `lib/sync-client.ts` | HTTPS API client: uploadBlob, downloadBlob, resolveConflict, getSyncStatus |
+| `tests/unit/lib/sync-client.test.ts` | 37 unit tests with mocked fetch + module purity checks |
+| `tests/e2e/sync-client-build.test.ts` | 2 Playwright E2E tests: extension loads + service worker active |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `tests/unit/integration/scaffold-smoke.test.ts` | Added 'sync-client.ts' to LIB_MODULES array, toHaveLength(15)→toHaveLength(16) |
+
+### Acceptance Criteria Verification
+
+1. Exports: uploadBlob, downloadBlob, resolveConflict, getSyncStatus — PASS
+2. uploadBlob: POST with Bearer auth, octet-stream body, returns SyncResult — PASS
+3. downloadBlob: GET with Bearer auth, returns { blob, timestamp } | null — PASS
+4. resolveConflict: last-write-wins, local wins ties — PASS
+5. getSyncStatus: returns SyncStatus based on config + health check — PASS
+6. Zero crypto imports — sync client is opaque blob transport — PASS (module purity test)
+7. All network calls use fetch() — PASS
+8. Uses SyncError from lib/errors.ts with appropriate context codes — PASS
+
+### Verification Results
+
+```
+tsc --noEmit: clean (zero errors)
+vitest run (targeted): 37 tests pass (sync-client: 37)
+vitest run (full suite): 990 tests pass, 65 test files, 0 failures
+eslint (changed files): clean (zero errors)
+wxt build: success (855KB uncompressed)
+playwright E2E: 202 tests pass, 0 failures (was 200, +2 new)
+```
+
+### Research Applied
+- fetch API error classification: TypeError = network (rejects), DOMException TimeoutError/AbortError = timeout (rejects), HTTP errors resolve (check response.ok)
+- AbortSignal.timeout(30_000): Chrome 103+, Node 17.3+ — cleaner than manual AbortController
+- DOMException instanceof fails in jsdom — use error.name check (same lesson as crypto OperationError)
+- HTTPS enforcement: defense-in-depth, prevents auth token over HTTP
+- Number.isFinite() for X-Sync-Timestamp validation (catches NaN, Infinity)
+- URL normalization: strip trailing slash prevents //sync/upload

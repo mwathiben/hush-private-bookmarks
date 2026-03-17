@@ -94,8 +94,8 @@
             ],
             "verification": "npx vitest run tests/unit/lib/sync-client.test.ts && npx tsc --noEmit",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": ["SYNC-001"]
         },
         {
@@ -269,7 +269,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 0,
+        "passing_stories": 2,
         "build_plan_day": "Day 5",
         "estimated_test_count": "~20 unit",
         "session_protocol": "One Claude Code session. Research fetch() in service worker context. Commit per story.",
