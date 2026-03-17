@@ -81,3 +81,23 @@
 **What happened**: Lesson 8 originally referenced "crypto OperationError (Lesson 4 from SYNC-001)" as a related pattern. But Lesson 4 is about `Uint8Array<ArrayBuffer>` explicit generics, not DOMException behavior. The actual related lesson is the crypto OperationError pattern documented in project memory, not in SYNC-001's process-lessons.
 
 **Rule**: When cross-referencing lessons, verify the target lesson number matches the actual content. Incorrect cross-references mislead future readers.
+
+## SYNC-003: Offline sync queue with retry
+
+### Lesson 14: Module-level mutable state must be reset between tests
+
+**What happened**: `draining` boolean and `storageLock` promise chain are module-level variables in sync-queue.ts. The concurrency test (`drain returns early with remaining=-1 if already draining`) left `draining = true` after timing out, causing all subsequent drain tests to fail with `remaining: -1`. The `storageLock` chain also got stuck because the slow upload mock never resolved.
+
+**Rule**: Any module that uses module-level mutable state (flags, promise chains, caches) must export a `_resetForTesting()` function that resets all mutable state. Call it in `beforeEach`. This is not test pollution — it's the consequence of testing stateful modules.
+
+### Lesson 15: Fake timers and deferred promises require careful ordering
+
+**What happened**: The concurrency test originally used `setTimeout` inside a mock upload to simulate a slow operation. With `vi.useFakeTimers()`, the setTimeout callback only fires when `vi.advanceTimersByTime()` is called. But the drain function has multiple async steps (readQueue → upload → writeQueue), and the setTimeout wasn't registered until after those earlier promises resolved. Advancing timers before the setTimeout was registered had no effect → test timeout.
+
+**Rule**: For testing concurrent async operations with fake timers, use a deferred promise pattern (externally-controlled resolve) instead of setTimeout-based delays. Flush microtasks with `await vi.advanceTimersByTimeAsync(0)` between starting the first operation and checking for concurrency conflicts.
+
+### Lesson 16: Full implementation before tests is acceptable for well-planned modules
+
+**What happened**: The plan called for strict RED→GREEN per slice, but the implementation file was written with all functions upfront (based on the detailed plan), then tests were added slice by slice. All 27 tests passed on first run after fixing the module-state issue. The upfront implementation worked because the plan had precise type signatures, error classification tables, and function-level specifications.
+
+**Rule**: When a detailed plan specifies exact types, function signatures, and behavior tables, writing the implementation first and then adding tests slice-by-slice is acceptable — as long as each test is verified to pass before moving to the next slice. The key is the plan quality, not the mechanical RED→GREEN ordering.

@@ -660,7 +660,9 @@ describe('scaffold integration: architecture constraints', () => {
   it('background entrypoint files are within 300-line limit', () => {
     const indexLines = readFileSync(resolve(ROOT, 'entrypoints', 'background', 'index.ts'), 'utf-8').split('\n').length;
     const handlersLines = readFileSync(resolve(ROOT, 'entrypoints', 'background', 'handlers.ts'), 'utf-8').split('\n').length;
+    const syncQueueLines = readFileSync(resolve(ROOT, 'entrypoints', 'background', 'sync-queue.ts'), 'utf-8').split('\n').length;
     expect(indexLines).toBeLessThanOrEqual(300);
     expect(handlersLines).toBeLessThanOrEqual(300);
+    expect(syncQueueLines).toBeLessThanOrEqual(300);
   });
 });

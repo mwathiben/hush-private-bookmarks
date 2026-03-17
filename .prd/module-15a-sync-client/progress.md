@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | SYNC-001 | Sync types, SyncableFeature interface, and SyncError class | PASSED | 1 |
 | SYNC-002 | Sync client — HTTPS API client with conflict resolution | PASSED | 1 |
-| SYNC-003 | Offline sync queue with retry | PENDING | 0 |
+| SYNC-003 | Offline sync queue with retry | PASSED | 1 |
 | SYNC-004 | Background sync handlers and integration verification | PENDING | 0 |
 
 **Critical Path**: SYNC-001 → SYNC-002 → SYNC-003 → SYNC-004
@@ -175,3 +175,66 @@ playwright E2E: 202 tests pass, 0 failures (was 200, +2 new)
 - HTTPS enforcement: defense-in-depth, prevents auth token over HTTP
 - Number.isFinite() for X-Sync-Timestamp validation (catches NaN, Infinity)
 - URL normalization: strip trailing slash prevents //sync/upload
+
+---
+
+## Session: 2026-03-17T14:00:00Z
+**Task**: SYNC-003 - Offline sync queue with retry
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Created `entrypoints/background/sync-queue.ts` — 202 lines, module functions (not class), async mutex, full jitter backoff
+- Created `tests/unit/entrypoints/sync-queue.test.ts` — 27 tests across 11 TDD slices
+- Created `tests/e2e/sync-queue-build.test.ts` — 3 Playwright E2E tests (load, service worker, storage key conflict)
+- Updated `tests/unit/integration/scaffold-smoke.test.ts` — added sync-queue.ts to background file size check
+- TDD vertical slices: getQueueSize/clearQueue → enqueue → drain success → drain auth failure → drain retryable+backoff → drain backoff skip → drain concurrency/mutex → empty queue → CONFLICT → blobToBase64 → module purity
+
+### Files Created
+
+| File | Purpose |
+| --- | --- |
+| `entrypoints/background/sync-queue.ts` | Offline queue with retry, exponential backoff + full jitter, async mutex |
+| `tests/unit/entrypoints/sync-queue.test.ts` | 27 unit tests covering all queue behaviors |
+| `tests/e2e/sync-queue-build.test.ts` | 3 Playwright E2E tests for build integration |
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `tests/unit/integration/scaffold-smoke.test.ts` | Added sync-queue.ts to background file size check (line 662) |
+
+### Acceptance Criteria Verification
+
+1. File lives in entrypoints/background/ (NOT lib/) — PASS
+2. Persists to browser.storage.local (survives SW restart) — PASS
+3. Uses browser from wxt/browser — PASS (module purity test confirms)
+4. FIFO order for drain operations — PASS (test: processes items in FIFO order)
+5. Exponential backoff: 1s base, 2x multiplier, 300s max — PASS (with full jitter per AWS recommendation)
+6. Max queue depth: 50 — PASS (test: drops oldest when exceeding MAX_QUEUE_DEPTH)
+7. Max retries per operation: 10 — PASS (test: removes item after MAX_RETRIES)
+8. AUTH_FAILED not retried — PASS (test: removes AUTH_FAILED items, continues processing)
+9. Network errors retried with backoff — PASS (test: increments retryCount on NETWORK_ERROR)
+10. getQueueSize() returns current queue depth — PASS
+11. clearQueue() removes all pending operations — PASS
+
+### Verification Results
+
+```
+tsc --noEmit: clean (zero errors)
+vitest run (targeted): 27 tests pass (sync-queue: 27)
+vitest run (full suite): 1019 tests pass, 66 test files, 0 failures
+eslint: zero new errors (16 pre-existing in take-settings-screenshots.mjs)
+wxt build: success (855KB uncompressed)
+playwright E2E (sync-queue): 3 tests pass, 0 failures
+security audit: 11/11 items pass
+```
+
+### Design Decisions Applied
+- Module functions (not class) — matches codebase pattern (storage.ts, sync-client.ts)
+- Dependency injection: drain(config, upload) takes upload function as parameter
+- Async mutex (promise chain) — prevents read-then-write race on browser.storage.local
+- Full jitter: Math.floor(Math.random() * Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2**retryCount))
+- nextRetryAt field on queue items (not setTimeout) — testable with vi.useFakeTimers()
+- Stop-on-first-retryable-failure: saves network resources when offline
+- Base64 helpers local to sync-queue.ts (not imported from crypto.ts internals)
+- _resetForTesting() export: resets module-level draining flag and storageLock between tests
