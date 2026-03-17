@@ -151,3 +151,15 @@
 **What happened**: A session resumed from context compaction with all SYNC-004 code already written. The resumed session went directly to updating progress files and committing without invoking mandatory skills (verification-before-completion, module-boundaries, deslop, code-review) or executing pre-implementation research. The stop hook correctly blocked this.
 
 **Rule**: When resuming from a compacted context, re-execute ALL mandatory workflow steps even if the prior session completed them: (1) invoke applicable skills via the Skill tool, (2) run research via context7/WebSearch, (3) run fresh verification commands, (4) run deslop and code-review before commit. Prior session results are not visible in the current context and cannot be trusted without re-verification.
+
+### Lesson 25: BIP39 reversed mnemonics are probabilistically valid — use deterministic test data
+
+**What happened**: `recovery.test.ts` "returns false for reversed word order" used `generateMnemonic()` (random) then reversed the words, expecting `validateMnemonic(reversed)` to return false. BIP39 128-bit mnemonics have a 4-bit checksum → 1/16 (~6.25%) chance a reversed phrase still has a valid checksum. The test passed in isolation but failed intermittently under parallel full-suite execution due to different CSPRNG outputs.
+
+**Rule**: When testing that a transformation invalidates a checksum, use a hardcoded known-good input whose transformation is deterministically invalid. Never rely on random input for checksum-failure tests — the probability of accidental validity is non-zero.
+
+### Lesson 26: Pre-existing test failures must be fixed, not skipped
+
+**What happened**: The flaky recovery test was identified as "pre-existing" and initially deprioritized. The user explicitly corrected this: "Why are you leaving the test failure just because it's pre-existing? That's not what claude.md asks you to do."
+
+**Rule**: Fix pre-existing test failures found during analysis. The distinction between "my change" and "pre-existing" is irrelevant — broken tests in the suite undermine confidence in all verification results. CLAUDE.md's mandate to fix problems found during analysis applies regardless of origin.
