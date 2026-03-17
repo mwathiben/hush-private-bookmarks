@@ -101,3 +101,15 @@
 **What happened**: The plan called for strict RED→GREEN per slice, but the implementation file was written with all functions upfront (based on the detailed plan), then tests were added slice by slice. All 27 tests passed on first run after fixing the module-state issue. The upfront implementation worked because the plan had precise type signatures, error classification tables, and function-level specifications.
 
 **Rule**: When a detailed plan specifies exact types, function signatures, and behavior tables, writing the implementation first and then adding tests slice-by-slice is acceptable — as long as each test is verified to pass before moving to the next slice. The key is the plan quality, not the mechanical RED→GREEN ordering.
+
+### Lesson 17: Validate shape of untrusted storage data, not just Array.isArray
+
+**What happened**: CodeRabbit flagged that `readQueue()` used `as QueueItem[]` after only checking `Array.isArray(raw)`. If storage is corrupted (manual edit, schema migration, another extension), individual elements could be missing required fields, causing runtime crashes deep in `drain()`.
+
+**Rule**: When reading from `browser.storage.local`, validate the shape of each element — not just the container type. Use a type guard function that checks required fields exist with correct types. Filter out malformed items rather than crashing.
+
+### Lesson 18: Handle non-SyncError errors in result.error to prevent stuck queue items
+
+**What happened**: CodeRabbit identified that `drain()`'s error classification only handled `error instanceof SyncError`. If `result.error` was a plain `Error` (or any non-SyncError), the code fell through without incrementing retryCount or removing the item — creating permanently stuck queue items that never clear.
+
+**Rule**: After handling known error types, always add a fallback branch for unknown errors. In retry queues, treat unknown errors as retryable (increment retryCount, apply backoff, break) to prevent infinite stuck items.

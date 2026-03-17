@@ -44,11 +44,24 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
+function isQueueItem(value: unknown): value is QueueItem {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    v.type === 'upload' &&
+    typeof v.blob === 'string' &&
+    typeof v.timestamp === 'number' &&
+    typeof v.retryCount === 'number' &&
+    typeof v.enqueuedAt === 'number' &&
+    typeof v.nextRetryAt === 'number'
+  );
+}
+
 async function readQueue(): Promise<QueueItem[]> {
   const result = await browser.storage.local.get(STORAGE_KEY);
   const raw = result[STORAGE_KEY];
   if (!Array.isArray(raw)) return [];
-  return raw as QueueItem[];
+  return raw.filter(isQueueItem);
 }
 
 async function writeQueue(items: QueueItem[]): Promise<void> {
@@ -174,6 +187,15 @@ export async function drain(
           item.nextRetryAt = now + calculateBackoffMs(item.retryCount);
           break;
         }
+
+        item.retryCount++;
+        if (item.retryCount >= MAX_RETRIES) {
+          toRemove.add(i);
+          failed++;
+          continue;
+        }
+        item.nextRetryAt = now + calculateBackoffMs(item.retryCount);
+        break;
       }
 
       const remaining = items.filter((_, idx) => !toRemove.has(idx));

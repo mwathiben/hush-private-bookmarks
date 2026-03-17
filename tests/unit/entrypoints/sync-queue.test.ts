@@ -455,7 +455,61 @@ describe('SYNC-003: Offline sync queue with retry', () => {
     });
   });
 
-  // --- Slice 11: Module purity ---
+  // --- Slice 11: Edge cases (CodeRabbit findings) ---
+
+  describe('edge cases', () => {
+    it('filters out malformed items from corrupted storage', async () => {
+      // #given — storage contains a mix of valid and invalid items
+      const validItem = {
+        type: 'upload',
+        blob: 'dGVzdA==',
+        timestamp: 1_000_000,
+        retryCount: 0,
+        enqueuedAt: 1_000_000,
+        nextRetryAt: 0,
+      };
+      const malformed = [
+        { type: 'upload', blob: 'dGVzdA==' },
+        'not-an-object',
+        null,
+        { type: 'download', blob: 'x', timestamp: 1, retryCount: 0, enqueuedAt: 1, nextRetryAt: 0 },
+        validItem,
+      ];
+      await fakeBrowser.storage.local.set({ [STORAGE_KEY]: malformed });
+      // #when
+      const size = await getQueueSize();
+      // #then
+      expect(size).toBe(1);
+    });
+
+    it('treats non-SyncError result.error as retryable', async () => {
+      // #given
+      await enqueue(makeInput());
+      const upload = vi.fn<UploadFn>().mockResolvedValue({
+        success: false,
+        error: new Error('not a SyncError'),
+      } as SyncResult);
+      // #when
+      await drain(makeConfig(), upload);
+      // #then — item stays in queue with incremented retryCount
+      const result = await fakeBrowser.storage.local.get(STORAGE_KEY);
+      const items = result[STORAGE_KEY] as Array<Record<string, unknown>>;
+      expect(items).toHaveLength(1);
+      expect(items[0]!.retryCount).toBe(1);
+    });
+
+    it('drain rejects if upload throws, leaving queue intact', async () => {
+      // #given
+      await enqueue(makeInput());
+      const upload = vi.fn<UploadFn>().mockRejectedValue(new Error('network down'));
+      // #when / #then
+      await expect(drain(makeConfig(), upload)).rejects.toThrow('network down');
+      const size = await getQueueSize();
+      expect(size).toBe(1);
+    });
+  });
+
+  // --- Slice 12: Module purity ---
 
   describe('module purity', () => {
     it('has no React/DOM imports, no console.log, no crypto.subtle', async () => {
