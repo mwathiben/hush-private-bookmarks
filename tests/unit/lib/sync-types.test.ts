@@ -117,10 +117,13 @@ describe('SyncStatus', () => {
     expect(describeStatus(s)).toBe('idle');
   });
 
-  it('error state requires constrained error code from SyncErrorContext', () => {
-    const status: SyncStatus = { state: 'error', lastSyncAt: null, error: 'TIMEOUT' };
-    expect(status.error).toBe('TIMEOUT');
-  });
+  it.each(['AUTH_FAILED', 'CONFLICT', 'NETWORK_ERROR', 'SERVER_ERROR', 'TIMEOUT'] as const)(
+    'error state accepts %s code',
+    (code) => {
+      const status: SyncStatus = { state: 'error', lastSyncAt: null, error: code };
+      expect(status.error).toBe(code);
+    },
+  );
 
   it('idle state requires lastSyncAt as number (not null)', () => {
     const status: SyncStatus = { state: 'idle', lastSyncAt: 1710000000 };
