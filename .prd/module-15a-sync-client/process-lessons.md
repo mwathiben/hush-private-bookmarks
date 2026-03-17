@@ -145,3 +145,9 @@
 **What happened**: `handlers.ts` was at 299/300 lines — no room for 3 new sync handlers. Created `sync-handlers.ts` as a sibling module in `entrypoints/background/`, following the pattern already established by `sync-queue.ts`. The index.ts dispatcher imports from both.
 
 **Rule**: When a handler file hits its line limit, create a domain-specific sibling (e.g., `sync-handlers.ts`) rather than refactoring the existing file. This preserves existing test coverage and avoids a large diff.
+
+### Lesson 24: Resumed sessions must re-execute skills and research
+
+**What happened**: A session resumed from context compaction with all SYNC-004 code already written. The resumed session went directly to updating progress files and committing without invoking mandatory skills (verification-before-completion, module-boundaries, deslop, code-review) or executing pre-implementation research. The stop hook correctly blocked this.
+
+**Rule**: When resuming from a compacted context, re-execute ALL mandatory workflow steps even if the prior session completed them: (1) invoke applicable skills via the Skill tool, (2) run research via context7/WebSearch, (3) run fresh verification commands, (4) run deslop and code-review before commit. Prior session results are not visible in the current context and cannot be trusted without re-verification.
