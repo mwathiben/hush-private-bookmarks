@@ -86,7 +86,7 @@ export class RecoveryError extends Error {
 
 /** Sync operation metadata. Identifies failure mode, never PII or auth tokens. */
 export interface SyncErrorContext {
-  readonly code?: 'AUTH_FAILED' | 'NETWORK_ERROR' | 'SERVER_ERROR' | 'TIMEOUT';
+  readonly code?: 'AUTH_FAILED' | 'CONFLICT' | 'NETWORK_ERROR' | 'SERVER_ERROR' | 'TIMEOUT';
 }
 
 /** Thrown when sync operations fail. Context identifies failure mode, never user data. */

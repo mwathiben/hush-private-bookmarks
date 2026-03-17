@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type {
+  PlaintextBlob,
+  EncryptedBlob,
   SyncableFeature,
   SyncConfig,
   SyncStatus,
@@ -12,11 +14,27 @@ import { SyncError } from '@/lib/errors';
 
 const ROOT = resolve(process.cwd());
 
+describe('branded blob types', () => {
+  it('PlaintextBlob is usable via cast and behaves as Uint8Array', () => {
+    const blob = new Uint8Array([1, 2, 3]) as PlaintextBlob;
+    expect(blob).toBeInstanceOf(Uint8Array);
+    expect(blob.length).toBe(3);
+    expect(blob.byteLength).toBe(3);
+  });
+
+  it('EncryptedBlob is usable via cast and behaves as Uint8Array', () => {
+    const blob = new Uint8Array([4, 5, 6]) as EncryptedBlob;
+    expect(blob).toBeInstanceOf(Uint8Array);
+    expect(blob.length).toBe(3);
+    expect(blob.byteLength).toBe(3);
+  });
+});
+
 describe('SyncableFeature', () => {
   it('accepts a valid implementation with all required members', () => {
     const feature: SyncableFeature = {
       featureId: 'bookmarks',
-      serialize: () => Promise.resolve(new Uint8Array(0)),
+      serialize: () => Promise.resolve(new Uint8Array(0) as PlaintextBlob),
       deserialize: () => Promise.resolve(),
       requiresServer: () => false,
     };
@@ -26,8 +44,8 @@ describe('SyncableFeature', () => {
     expect(feature.requiresServer()).toBe(false);
   });
 
-  it('serialize returns Promise<Uint8Array>', async () => {
-    const data = new Uint8Array([1, 2, 3]);
+  it('serialize returns Promise<PlaintextBlob>', async () => {
+    const data = new Uint8Array([1, 2, 3]) as PlaintextBlob;
     const feature: SyncableFeature = {
       featureId: 'tags',
       serialize: () => Promise.resolve(data),
@@ -38,18 +56,18 @@ describe('SyncableFeature', () => {
     expect(result).toEqual(new Uint8Array([1, 2, 3]));
   });
 
-  it('deserialize accepts Uint8Array and returns Promise<void>', async () => {
-    let received: Uint8Array | null = null;
+  it('deserialize accepts PlaintextBlob and returns Promise<void>', async () => {
+    let received: PlaintextBlob | null = null;
     const feature: SyncableFeature = {
       featureId: 'dashboard',
-      serialize: () => Promise.resolve(new Uint8Array(0)),
-      deserialize: (data: Uint8Array) => {
+      serialize: () => Promise.resolve(new Uint8Array(0) as PlaintextBlob),
+      deserialize: (data: PlaintextBlob) => {
         received = data;
         return Promise.resolve();
       },
       requiresServer: () => false,
     };
-    const input = new Uint8Array([10, 20, 30]);
+    const input = new Uint8Array([10, 20, 30]) as PlaintextBlob;
     await feature.deserialize(input);
     expect(received).toEqual(input);
   });
@@ -69,13 +87,13 @@ describe('SyncConfig', () => {
 });
 
 describe('SyncStatus', () => {
-  it('accepts all 5 states', () => {
+  it('accepts all 5 states as discriminated union', () => {
     const states: SyncStatus[] = [
       { state: 'idle', lastSyncAt: Date.now() },
       { state: 'syncing', lastSyncAt: Date.now() },
-      { state: 'error', lastSyncAt: Date.now(), error: 'Network failure' },
+      { state: 'error', lastSyncAt: Date.now(), error: 'NETWORK_ERROR' },
       { state: 'offline', lastSyncAt: null },
-      { state: 'not_configured', lastSyncAt: null },
+      { state: 'not_configured' },
     ];
     expect(states).toHaveLength(5);
   });
@@ -95,13 +113,30 @@ describe('SyncStatus', () => {
           return 'not configured';
       }
     }
-    const s: SyncStatus = { state: 'idle', lastSyncAt: null };
+    const s: SyncStatus = { state: 'idle', lastSyncAt: Date.now() };
     expect(describeStatus(s)).toBe('idle');
   });
 
-  it('error state includes error message', () => {
-    const status: SyncStatus = { state: 'error', lastSyncAt: null, error: 'timeout' };
-    expect(status.error).toBe('timeout');
+  it('error state requires constrained error code from SyncErrorContext', () => {
+    const status: SyncStatus = { state: 'error', lastSyncAt: null, error: 'TIMEOUT' };
+    expect(status.error).toBe('TIMEOUT');
+  });
+
+  it('idle state requires lastSyncAt as number (not null)', () => {
+    const status: SyncStatus = { state: 'idle', lastSyncAt: 1710000000 };
+    expect(status.lastSyncAt).toBe(1710000000);
+  });
+
+  it('not_configured state has no lastSyncAt field', () => {
+    const status: SyncStatus = { state: 'not_configured' };
+    expect(status.state).toBe('not_configured');
+    expect('lastSyncAt' in status).toBe(false);
+  });
+
+  it('syncing state accepts lastSyncAt: null for first-ever sync', () => {
+    const status: SyncStatus = { state: 'syncing', lastSyncAt: null };
+    expect(status.state).toBe('syncing');
+    expect(status.lastSyncAt).toBeNull();
   });
 });
 
@@ -128,13 +163,15 @@ describe('SyncResult', () => {
 });
 
 describe('SyncConflict', () => {
-  it('accepts local/remote blobs with timestamps', () => {
+  it('accepts featureId + encrypted blobs with timestamps', () => {
     const conflict: SyncConflict = {
-      local: new Uint8Array([1, 2, 3]),
-      remote: new Uint8Array([4, 5, 6]),
+      featureId: 'bookmarks',
+      local: new Uint8Array([1, 2, 3]) as EncryptedBlob,
+      remote: new Uint8Array([4, 5, 6]) as EncryptedBlob,
       localTimestamp: 1710000000,
       remoteTimestamp: 1710000001,
     };
+    expect(conflict.featureId).toBe('bookmarks');
     expect(conflict.local).toEqual(new Uint8Array([1, 2, 3]));
     expect(conflict.remote).toEqual(new Uint8Array([4, 5, 6]));
     expect(conflict.remoteTimestamp).toBeGreaterThan(conflict.localTimestamp);

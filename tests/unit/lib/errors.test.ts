@@ -157,6 +157,11 @@ describe('SyncError', () => {
     const err = new SyncError('wrapped', { code: 'TIMEOUT' }, { cause });
     expect(err.cause).toBe(cause);
   });
+
+  it('accepts CONFLICT code', () => {
+    const err = new SyncError('conflict detected', { code: 'CONFLICT' });
+    expect(err.context.code).toBe('CONFLICT');
+  });
 });
 
 describe('lib/errors.ts module purity', () => {

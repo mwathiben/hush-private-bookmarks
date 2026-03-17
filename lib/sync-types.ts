@@ -1,5 +1,11 @@
 import type { Result } from '@/lib/types';
-import type { SyncError } from '@/lib/errors';
+import type { SyncError, SyncErrorContext } from '@/lib/errors';
+
+/** Branded Uint8Array for plaintext data before encryption. */
+export type PlaintextBlob = Uint8Array<ArrayBuffer> & { readonly __brand: 'PlaintextBlob' };
+
+/** Branded Uint8Array for encrypted data ready for transport. */
+export type EncryptedBlob = Uint8Array<ArrayBuffer> & { readonly __brand: 'EncryptedBlob' };
 
 /**
  * Contract for Pro features that support cross-device sync.
@@ -8,8 +14,8 @@ import type { SyncError } from '@/lib/errors';
  */
 export interface SyncableFeature {
   readonly featureId: string;
-  serialize(): Promise<Uint8Array<ArrayBuffer>>;
-  deserialize(data: Uint8Array<ArrayBuffer>): Promise<void>;
+  serialize(): Promise<PlaintextBlob>;
+  deserialize(data: PlaintextBlob): Promise<void>;
   requiresServer(): boolean;
 }
 
@@ -19,11 +25,12 @@ export interface SyncConfig {
   readonly syncIntervalMs: number;
 }
 
-export type SyncStatus = {
-  readonly state: 'idle' | 'syncing' | 'error' | 'offline' | 'not_configured';
-  readonly lastSyncAt: number | null;
-  readonly error?: string;
-};
+export type SyncStatus =
+  | { readonly state: 'idle'; readonly lastSyncAt: number }
+  | { readonly state: 'syncing'; readonly lastSyncAt: number | null }
+  | { readonly state: 'error'; readonly lastSyncAt: number | null; readonly error: NonNullable<SyncErrorContext['code']> }
+  | { readonly state: 'offline'; readonly lastSyncAt: number | null }
+  | { readonly state: 'not_configured' };
 
 export type SyncResult = Result<
   { readonly timestamp: number; readonly bytesTransferred: number },
@@ -31,8 +38,9 @@ export type SyncResult = Result<
 >;
 
 export interface SyncConflict {
-  readonly local: Uint8Array<ArrayBuffer>;
-  readonly remote: Uint8Array<ArrayBuffer>;
+  readonly featureId: string;
+  readonly local: EncryptedBlob;
+  readonly remote: EncryptedBlob;
   readonly localTimestamp: number;
   readonly remoteTimestamp: number;
 }

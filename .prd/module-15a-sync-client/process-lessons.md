@@ -14,11 +14,11 @@
 
 **Rule**: Every types-only lib/ module should have a purity test suite that asserts: zero runtime exports, zero React/DOM imports, zero browser.storage references, import type only.
 
-### Lesson 3: Branded types deferred but documented
+### Lesson 3: Research findings should update the PRD, not be deferred
 
-**What happened**: Research identified `PlaintextBlob`/`EncryptedBlob` branded types as a best practice for compile-time encryption boundary enforcement. Decided to defer to SYNC-002+ since it would affect all 4 stories and isn't in PRD scope.
+**What happened**: Research identified branded types, discriminated union SyncStatus, and constrained error codes as improvements. Initially deferred because "not in PRD scope." User correctly pushed back — the PRD is a living document that should evolve based on research. All 4 improvements were implemented with zero blast radius (types-only, no production code affected).
 
-**Rule**: When research reveals a valuable pattern that exceeds current story scope, document it as a future enhancement in process-lessons.md and the plan. Don't scope-creep.
+**Rule**: When research reveals a valuable pattern, present pros/cons to the user and recommend implementation. Update the PRD to reflect the improvement. The PRD serves the system, not the other way around.
 
 ### Lesson 4: Uint8Array<ArrayBuffer> explicit generic is load-bearing
 
@@ -36,4 +36,10 @@
 
 **What happened**: CodeRabbit flagged that `SyncStatus.error` is `string` — could carry PII if a caller sets it carelessly. Also noted `SyncConflict` lacks `featureId` (needed when multiple SyncableFeature implementations exist).
 
-**Action for SYNC-002+**: Add JSDoc to `SyncStatus.error` noting "Must not contain URLs, tokens, or bookmark content." Consider adding `featureId` to `SyncConflict` when implementing conflict resolution.
+**Action for SYNC-002+**: Add JSDoc to `SyncStatus.error` noting "Must not contain URLs, tokens, or bookmark content." ~~Consider adding `featureId` to `SyncConflict` when implementing conflict resolution.~~ (Done in follow-up session.)
+
+### Lesson 7: CodeRabbit PII review catches type-level concerns early
+
+**What happened**: CodeRabbit flagged `SyncConfig.authToken` as a plain `string` that could leak to Sentry if the config object is passed as error context. Also suggested a named `SyncErrorCode` type alias for greppability.
+
+**Rule**: When adding types that carry secrets or tokens, consider whether the type will be visible in error contexts. Branded types or opaque wrappers prevent accidental exposure. Named type aliases (not just indexed access types) improve greppability across the codebase.

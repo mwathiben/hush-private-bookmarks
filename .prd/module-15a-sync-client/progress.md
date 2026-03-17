@@ -71,3 +71,46 @@ Deslop review: "Clean" — zero slop detected
 - Discriminated union vs simpler SyncStatus — followed PRD (simpler type sufficient for dormant v1.0)
 - Branded types (PlaintextBlob/EncryptedBlob) — deferred to SYNC-002+ as future enhancement
 - import type for SyncError reference maintains types-only purity
+
+---
+
+## Session: 2026-03-17T12:00:00Z
+**Task**: SYNC-001 follow-up — Apply research findings to sync types
+**Status**: PASSED (attempt 1)
+
+### Work Done
+- Added branded types `PlaintextBlob` and `EncryptedBlob` for compile-time encryption boundary enforcement
+- Converted flat `SyncStatus` to 5-variant discriminated union eliminating impossible states
+- Changed `SyncStatus.error` from free-form `string` to `NonNullable<SyncErrorContext['code']>` (single source of truth, PII-safe)
+- Added `featureId: string` to `SyncConflict` for multi-feature conflict identification
+- Added `'CONFLICT'` to `SyncErrorContext.code` union in `lib/errors.ts`
+- Updated `SyncableFeature.serialize/deserialize` to use `PlaintextBlob`
+- Updated `SyncConflict.local/remote` to use `EncryptedBlob`
+- Updated all tests: 6 new tests added (branded blob types, CONFLICT code, first-ever sync, constrained error code, idle lastSyncAt, not_configured no lastSyncAt)
+
+### Files Modified
+
+| File | Changes |
+| --- | --- |
+| `lib/sync-types.ts` | Added PlaintextBlob/EncryptedBlob branded types, discriminated union SyncStatus, featureId on SyncConflict, updated SyncableFeature to use PlaintextBlob |
+| `lib/errors.ts` | Added 'CONFLICT' to SyncErrorContext.code union (line 89) |
+| `tests/unit/lib/sync-types.test.ts` | Added branded blob tests, updated SyncableFeature/SyncConflict/SyncStatus tests (19 tests total, was 14) |
+| `tests/unit/lib/errors.test.ts` | Added CONFLICT code test (27 tests total, was 26) |
+
+### Verification Results
+
+```
+tsc --noEmit: clean (zero errors)
+vitest run (targeted): 168 tests pass (sync-types: 19, errors: 27, scaffold-smoke: 123)
+vitest run (full suite): 944 tests pass, 64 test files, 0 failures
+eslint: clean (zero errors)
+wxt build: success (855KB uncompressed)
+playwright E2E: 200 tests pass, 0 failures
+CodeRabbit review: no blockers — noted authToken PII concern for SYNC-002, SyncErrorCode alias nice-to-have
+Deslop review: clean — zero slop detected
+```
+
+### CodeRabbit Findings for Future Stories
+- `SyncConfig.authToken` is plain `string` — consider branded `AuthToken` type or ensure it never reaches Sentry context
+- Consider extracting `SyncErrorCode = NonNullable<SyncErrorContext['code']>` named alias for greppability
+- `SyncConflict` blobs are `EncryptedBlob` (intentional — last-write-wins at encrypted level, no per-field merge planned)
