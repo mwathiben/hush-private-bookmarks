@@ -50,7 +50,7 @@
 
 **What happened**: `new DOMException('msg', 'TimeoutError')` works in Node.js and real browsers, but when passed through vitest's mock system (`fetchSpy.mockRejectedValue(new DOMException(...))`), the `.name` property may not survive correctly. Using `new Error('msg')` with `.name = 'TimeoutError'` is the reliable test pattern.
 
-**Rule**: For error name-based detection (`error.name === 'TimeoutError'`), test with plain `Error` objects that have `.name` overridden. This matches what the production code checks and avoids environment-specific DOMException quirks. Same lesson as crypto OperationError (Lesson 4 from SYNC-001).
+**Rule**: For error name-based detection (`error.name === 'TimeoutError'`), test with plain `Error` objects that have `.name` overridden. This matches what the production code checks and avoids environment-specific DOMException quirks.
 
 ### Lesson 9: fetch mock patterns — avoid double-call in catch verification
 

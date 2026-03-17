@@ -145,6 +145,15 @@ export async function getSyncStatus(
     if (err instanceof SyncError && err.context.code === 'TIMEOUT') {
       return { state: 'error', lastSyncAt: lastSyncAt ?? null, error: 'TIMEOUT' };
     }
+    if (err instanceof SyncError && err.context.code === 'NETWORK_ERROR') {
+      if (err.cause instanceof TypeError) {
+        return { state: 'offline', lastSyncAt: lastSyncAt ?? null };
+      }
+      return { state: 'error', lastSyncAt: lastSyncAt ?? null, error: 'NETWORK_ERROR' };
+    }
+    if (err instanceof SyncError && err.context.code) {
+      return { state: 'error', lastSyncAt: lastSyncAt ?? null, error: err.context.code };
+    }
     return { state: 'offline', lastSyncAt: lastSyncAt ?? null };
   }
 
