@@ -84,6 +84,26 @@ export class RecoveryError extends Error {
   }
 }
 
+/** Sync operation metadata. Identifies failure mode, never PII or auth tokens. */
+export interface SyncErrorContext {
+  readonly code?: 'AUTH_FAILED' | 'NETWORK_ERROR' | 'SERVER_ERROR' | 'TIMEOUT';
+}
+
+/** Thrown when sync operations fail. Context identifies failure mode, never user data. */
+export class SyncError extends Error {
+  readonly name = 'SyncError' as const;
+  readonly context: SyncErrorContext;
+
+  constructor(
+    message: string,
+    context: SyncErrorContext,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.context = context;
+  }
+}
+
 /** Path and kind metadata for data model errors. Never contains bookmark content. */
 export interface DataModelErrorContext {
   readonly kind:

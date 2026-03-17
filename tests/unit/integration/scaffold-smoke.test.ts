@@ -22,9 +22,10 @@ import {
   StorageError,
   ImportError,
   RecoveryError,
+  SyncError,
 } from '@/lib/errors';
 
-import type { StorageErrorContext, ImportErrorContext, RecoveryErrorContext } from '@/lib/errors';
+import type { StorageErrorContext, ImportErrorContext, RecoveryErrorContext, SyncErrorContext } from '@/lib/errors';
 
 import {
   SENTRY_DSN,
@@ -127,7 +128,7 @@ import type {
 
 const ROOT = resolve(process.cwd());
 
-const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts', 'background-types.ts', 'hush-import.ts'];
+const LIB_MODULES = ['types.ts', 'errors.ts', 'sentry.ts', 'utils.ts', 'crypto.ts', 'storage.ts', 'data-model.ts', 'bookmark-import.ts', 'bookmark-backup.ts', 'password-sets.ts', 'recovery.ts', 'incognito.ts', 'background-types.ts', 'hush-import.ts', 'sync-types.ts'];
 
 describe('scaffold integration: lib/ imports resolve', () => {
   it('all lib/ modules exist on disk', () => {
@@ -164,6 +165,7 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(new InvalidPasswordError('test')).toBeInstanceOf(Error);
     expect(new StorageError('test', { operation: 'read' })).toBeInstanceOf(Error);
     expect(new ImportError('test', { source: 'x' })).toBeInstanceOf(Error);
+    expect(new SyncError('test', { code: 'NETWORK_ERROR' })).toBeInstanceOf(Error);
   });
 
   it('sentry exports are callable', () => {
@@ -454,11 +456,16 @@ describe('scaffold integration: error class properties', () => {
     const ctx: RecoveryErrorContext = { reason: 'invalid_blob' };
     expect(new RecoveryError('x', ctx).context).toEqual(ctx);
   });
+
+  it('SyncError exposes typed context', () => {
+    const ctx: SyncErrorContext = { code: 'AUTH_FAILED' };
+    expect(new SyncError('x', ctx).context).toEqual(ctx);
+  });
 });
 
 describe('scaffold integration: imports lib/ modules successfully', () => {
   it('all lib/ modules imported successfully without hanging', () => {
-    expect(LIB_MODULES).toHaveLength(14);
+    expect(LIB_MODULES).toHaveLength(15);
   });
 });
 
@@ -624,6 +631,27 @@ describe('scaffold integration: architecture constraints', () => {
 
   it('background-types.ts has zero browser/chrome API imports', () => {
     const content = readFileSync(resolve(ROOT, 'lib', 'background-types.ts'), 'utf-8');
+    expect(content).not.toMatch(/from\s+['"]wxt\/browser['"]/);
+    expect(content).not.toContain('chrome.');
+    expect(content).not.toContain('browser.');
+  });
+
+  it('sync-types.ts is within 100-line limit', () => {
+    const lines = readFileSync(resolve(ROOT, 'lib', 'sync-types.ts'), 'utf-8').split('\n').length;
+    expect(lines).toBeLessThanOrEqual(100);
+  });
+
+  it('sync-types.ts has zero external dependencies', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'sync-types.ts'), 'utf-8');
+    const importRegex = /from\s+['"]([^@./][^'"]*)['"]/g;
+    let match;
+    while ((match = importRegex.exec(content)) !== null) {
+      throw new Error(`Unexpected external dependency: ${match[1]}`);
+    }
+  });
+
+  it('sync-types.ts has zero browser/chrome API imports', () => {
+    const content = readFileSync(resolve(ROOT, 'lib', 'sync-types.ts'), 'utf-8');
     expect(content).not.toMatch(/from\s+['"]wxt\/browser['"]/);
     expect(content).not.toContain('chrome.');
     expect(content).not.toContain('browser.');

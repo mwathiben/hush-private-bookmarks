@@ -7,6 +7,7 @@ import {
   StorageError,
   ImportError,
   DataModelError,
+  SyncError,
 } from '@/lib/errors';
 
 const ROOT = resolve(process.cwd());
@@ -125,6 +126,35 @@ describe('DataModelError', () => {
   it('supports cause chaining', () => {
     const cause = new Error('original');
     const err = new DataModelError('wrapped', { kind: 'type_mismatch' }, { cause });
+    expect(err.cause).toBe(cause);
+  });
+});
+
+describe('SyncError', () => {
+  it('is an instance of Error', () => {
+    const err = new SyncError('sync failed', { code: 'NETWORK_ERROR' });
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(SyncError);
+  });
+
+  it('has name "SyncError"', () => {
+    const err = new SyncError('test', { code: 'AUTH_FAILED' });
+    expect(err.name).toBe('SyncError');
+  });
+
+  it('exposes typed context with code', () => {
+    const err = new SyncError('server down', { code: 'SERVER_ERROR' });
+    expect(err.context.code).toBe('SERVER_ERROR');
+  });
+
+  it('accepts empty context', () => {
+    const err = new SyncError('unknown', {});
+    expect(err.context.code).toBeUndefined();
+  });
+
+  it('supports cause chaining', () => {
+    const cause = new Error('original');
+    const err = new SyncError('wrapped', { code: 'TIMEOUT' }, { cause });
     expect(err.cause).toBe(cause);
   });
 });
