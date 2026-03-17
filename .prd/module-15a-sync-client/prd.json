@@ -181,8 +181,8 @@
             ],
             "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": ["SYNC-001", "SYNC-002", "SYNC-003"]
         }
     ],
@@ -269,7 +269,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 3,
+        "passing_stories": 4,
         "build_plan_day": "Day 5",
         "estimated_test_count": "~20 unit",
         "session_protocol": "One Claude Code session. Research fetch() in service worker context. Commit per story.",

@@ -15,6 +15,9 @@ import {
   handleImportChromeBookmarks, handleImportBackup, handleExportBackup,
   handleImportHush,
 } from './handlers';
+import {
+  handleSyncUpload, handleSyncDownload, handleSyncStatus,
+} from './sync-handlers';
 
 initSentry();
 
@@ -42,7 +45,7 @@ const VALID_TYPES = new Set<string>([
   'GET_INCOGNITO_STATE', 'CHANGE_PASSWORD', 'UPDATE_AUTO_LOCK',
   'CREATE_SET', 'RENAME_SET', 'DELETE_SET', 'SWITCH_SET',
   'CLEAR_ALL', 'IMPORT_CHROME_BOOKMARKS', 'IMPORT_BACKUP', 'EXPORT_BACKUP',
-  'IMPORT_HUSH',
+  'IMPORT_HUSH', 'SYNC_UPLOAD', 'SYNC_DOWNLOAD', 'SYNC_STATUS',
 ]);
 
 function isBackgroundMessage(msg: unknown): msg is BackgroundMessage {
@@ -150,6 +153,12 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
       return handleExportBackup(msg, ctx);
     case 'IMPORT_HUSH':
       return handleImportHush(msg);
+    case 'SYNC_UPLOAD':
+      return handleSyncUpload(msg);
+    case 'SYNC_DOWNLOAD':
+      return handleSyncDownload();
+    case 'SYNC_STATUS':
+      return handleSyncStatus();
     default:
       msg satisfies never;
       throw new Error(`Unhandled BackgroundMessage type: ${(msg as { type: string }).type}`);

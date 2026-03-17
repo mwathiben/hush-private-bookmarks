@@ -100,6 +100,20 @@ export interface ImportHushMessage {
   readonly password: string;
 }
 
+export interface SyncUploadMessage {
+  readonly type: 'SYNC_UPLOAD';
+  readonly blob: string;
+  readonly timestamp: number;
+}
+
+export interface SyncDownloadMessage {
+  readonly type: 'SYNC_DOWNLOAD';
+}
+
+export interface SyncStatusMessage {
+  readonly type: 'SYNC_STATUS';
+}
+
 export type BackgroundMessage =
   | UnlockMessage
   | LockMessage
@@ -117,7 +131,10 @@ export type BackgroundMessage =
   | ImportChromeBookmarksMessage
   | ImportBackupMessage
   | ExportBackupMessage
-  | ImportHushMessage;
+  | ImportHushMessage
+  | SyncUploadMessage
+  | SyncDownloadMessage
+  | SyncStatusMessage;
 
 export type MessageType = BackgroundMessage['type'];
 

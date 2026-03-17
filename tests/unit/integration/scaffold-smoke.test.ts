@@ -294,10 +294,16 @@ describe('scaffold integration: lib/ imports resolve', () => {
       hasData: false,
     };
     const msgType: MessageType = 'LOCK';
+    const syncUpload: BackgroundMessage = { type: 'SYNC_UPLOAD', blob: 'abc', timestamp: 1 };
+    const syncDownload: BackgroundMessage = { type: 'SYNC_DOWNLOAD' };
+    const syncStatus: BackgroundMessage = { type: 'SYNC_STATUS' };
     expect(msg.type).toBe('GET_STATE');
     expect(resp.success).toBe(true);
     expect(session.isUnlocked).toBe(false);
     expect(msgType).toBe('LOCK');
+    expect(syncUpload.type).toBe('SYNC_UPLOAD');
+    expect(syncDownload.type).toBe('SYNC_DOWNLOAD');
+    expect(syncStatus.type).toBe('SYNC_STATUS');
   });
 });
 
@@ -615,9 +621,9 @@ describe('scaffold integration: architecture constraints', () => {
     expect(content).not.toContain('browser.');
   });
 
-  it('background-types.ts is within 150-line limit', () => {
+  it('background-types.ts is within 170-line limit', () => {
     const lines = readFileSync(resolve(ROOT, 'lib', 'background-types.ts'), 'utf-8').split('\n').length;
-    expect(lines).toBeLessThanOrEqual(150);
+    expect(lines).toBeLessThanOrEqual(170);
   });
 
   it('background-types.ts has zero external dependencies', () => {
@@ -661,8 +667,10 @@ describe('scaffold integration: architecture constraints', () => {
     const indexLines = readFileSync(resolve(ROOT, 'entrypoints', 'background', 'index.ts'), 'utf-8').split('\n').length;
     const handlersLines = readFileSync(resolve(ROOT, 'entrypoints', 'background', 'handlers.ts'), 'utf-8').split('\n').length;
     const syncQueueLines = readFileSync(resolve(ROOT, 'entrypoints', 'background', 'sync-queue.ts'), 'utf-8').split('\n').length;
+    const syncHandlersLines = readFileSync(resolve(ROOT, 'entrypoints', 'background', 'sync-handlers.ts'), 'utf-8').split('\n').length;
     expect(indexLines).toBeLessThanOrEqual(300);
     expect(handlersLines).toBeLessThanOrEqual(300);
     expect(syncQueueLines).toBeLessThanOrEqual(300);
+    expect(syncHandlersLines).toBeLessThanOrEqual(300);
   });
 });

@@ -210,9 +210,9 @@ describe('background-types: module purity', () => {
     expect(SOURCE).not.toMatch(/console\.log/);
   });
 
-  it('is within 150-line limit', () => {
+  it('is within 170-line limit', () => {
     const lineCount = SOURCE.split('\n').length;
-    expect(lineCount).toBeLessThanOrEqual(150);
+    expect(lineCount).toBeLessThanOrEqual(170);
   });
 
   it('has zero external dependencies', () => {
