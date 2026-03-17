@@ -16,7 +16,7 @@
 
 ### Lesson 3: Research findings should update the PRD, not be deferred
 
-**What happened**: Research identified branded types, discriminated union SyncStatus, and constrained error codes as improvements. Initially deferred because "not in PRD scope." User correctly pushed back — the PRD is a living document that should evolve based on research. All 4 improvements were implemented with zero blast radius (types-only, no production code affected).
+**What happened**: Research identified branded types, discriminated union SyncStatus, constrained error codes, and featureId on SyncConflict (with CONFLICT error code) as improvements. Initially deferred because "not in PRD scope." User correctly pushed back — the PRD is a living document that should evolve based on research. All 4 improvements were implemented with zero blast radius (types-only, no production code affected).
 
 **Rule**: When research reveals a valuable pattern, present pros/cons to the user and recommend implementation. Update the PRD to reflect the improvement. The PRD serves the system, not the other way around.
 
