@@ -60,6 +60,7 @@ const BASE_STATE: SessionState = {
   tree: null,
   incognitoMode: 'normal_mode',
   hasData: true,
+  proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
 };
 
 function makeProviderReturn(

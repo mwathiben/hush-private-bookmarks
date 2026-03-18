@@ -8,7 +8,7 @@
  * (at your option) any later version.
  */
 
-import type { BookmarkTree, PasswordSetInfo } from '@/lib/types';
+import type { BookmarkTree, PasswordSetInfo, ProStatus } from '@/lib/types';
 import type { IncognitoMode } from '@/lib/incognito';
 
 export interface UnlockMessage {
@@ -114,6 +114,10 @@ export interface SyncStatusMessage {
   readonly type: 'SYNC_STATUS';
 }
 
+export interface CheckProStatusMessage {
+  readonly type: 'CHECK_PRO_STATUS';
+}
+
 export type BackgroundMessage =
   | UnlockMessage
   | LockMessage
@@ -134,7 +138,8 @@ export type BackgroundMessage =
   | ImportHushMessage
   | SyncUploadMessage
   | SyncDownloadMessage
-  | SyncStatusMessage;
+  | SyncStatusMessage
+  | CheckProStatusMessage;
 
 export type MessageType = BackgroundMessage['type'];
 
@@ -149,4 +154,5 @@ export interface SessionState {
   readonly tree: BookmarkTree | null;
   readonly incognitoMode: IncognitoMode;
   readonly hasData: boolean;
+  readonly proStatus: ProStatus;
 }

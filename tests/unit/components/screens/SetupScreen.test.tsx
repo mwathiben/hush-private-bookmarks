@@ -46,6 +46,7 @@ const BASE_SESSION: SessionState = {
   sets: [],
   tree: null,
   incognitoMode: 'normal_mode',
+  proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
 };
 
 function setupMocks(

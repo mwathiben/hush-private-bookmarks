@@ -12,6 +12,17 @@ function isIncognitoMode(value: unknown): value is SessionState['incognitoMode']
   return value === 'incognito_active' || value === 'normal_mode' || value === 'incognito_not_allowed';
 }
 
+function isProStatus(value: unknown): value is SessionState['proStatus'] {
+  if (typeof value !== 'object' || value === null) return false;
+  if (Object.getPrototypeOf(value) !== Object.prototype) return false;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.isPro !== 'boolean') return false;
+  if (obj.expiresAt !== null && typeof obj.expiresAt !== 'number') return false;
+  if (obj.trialDaysLeft !== null && typeof obj.trialDaysLeft !== 'number') return false;
+  if (typeof obj.canTrial !== 'boolean') return false;
+  return true;
+}
+
 function isPasswordSetInfoArray(value: unknown): value is SessionState['sets'] {
   if (!Array.isArray(value)) return false;
 
@@ -44,6 +55,7 @@ export function isSessionState(data: unknown): data is SessionState {
     if (tree.type !== 'folder' || !Array.isArray(tree.children)) return false;
   }
   if (!('incognitoMode' in data) || !isIncognitoMode(data.incognitoMode)) return false;
+  if (!('proStatus' in data) || !isProStatus(data.proStatus)) return false;
 
   return true;
 }

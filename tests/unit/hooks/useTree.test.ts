@@ -35,6 +35,7 @@ const BASE_SESSION: SessionState = {
   sets: [{ id: 'default', name: 'Default', createdAt: 0, lastAccessedAt: 0, isDefault: true }],
   tree: TEST_TREE,
   incognitoMode: 'normal_mode',
+  proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
 };
 
 function setupMocks(overrides?: {

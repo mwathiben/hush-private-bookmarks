@@ -152,8 +152,8 @@
             ],
             "verification": "npx tsc --noEmit && npx eslint . && npx vitest run && npx wxt build",
             "estimated_effort": "medium",
-            "passes": false,
-            "attempt_count": 0,
+            "passes": true,
+            "attempt_count": 1,
             "depends_on": ["PAY-001", "PAY-002"]
         }
     ],
@@ -237,7 +237,7 @@
         }
     },
     "metadata": {
-        "passing_stories": 2,
+        "passing_stories": 3,
         "build_plan_day": "Day 5",
         "estimated_test_count": "~15 unit + ~0 E2E (visual E2E deferred to 16c)",
         "session_protocol": "One Claude Code session. Research ExtensionPay FIRST — API, installation, types. Commit per story.",

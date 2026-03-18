@@ -1,5 +1,6 @@
 import type { ProStatus } from '@/lib/types';
 import { ProGateError } from '@/lib/errors';
+import { captureException } from '@/lib/sentry';
 import ExtPay from 'extpay';
 
 export const TRIAL_DURATION_DAYS = 7;
@@ -16,11 +17,18 @@ function getExtPay(): ExtPayInstance {
   return extpayInstance;
 }
 
-const FREE_TIER_DEFAULT: Readonly<ProStatus> = Object.freeze({
+const ERROR_FALLBACK_STATUS: Readonly<ProStatus> = Object.freeze({
   isPro: false,
   expiresAt: null,
   trialDaysLeft: null,
   canTrial: false,
+});
+
+export const INITIAL_PRO_STATUS: Readonly<ProStatus> = Object.freeze({
+  isPro: false,
+  expiresAt: null,
+  trialDaysLeft: null,
+  canTrial: true,
 });
 
 function computeTrialDaysLeft(trialStartedAt: Date): number {
@@ -77,8 +85,9 @@ export async function checkProStatus(): Promise<ProStatus> {
     const extpay = getExtPay();
     const user = await extpay.getUser();
     return mapUserToProStatus(user);
-  } catch {
-    return { ...FREE_TIER_DEFAULT };
+  } catch (err) {
+    captureException(err);
+    return { ...ERROR_FALLBACK_STATUS };
   }
 }
 

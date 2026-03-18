@@ -34,6 +34,7 @@ const MOCK_SESSION: SessionState = {
   tree: { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 },
   incognitoMode: 'normal_mode',
   hasData: true,
+  proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
 };
 
 function setupMocks(overrides?: {

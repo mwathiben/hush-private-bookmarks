@@ -263,6 +263,31 @@ describe('pro-gate', () => {
     });
   });
 
+  describe('INITIAL_PRO_STATUS', () => {
+    it('has correct default values with canTrial true', async () => {
+      const { INITIAL_PRO_STATUS } = await import('@/lib/pro-gate');
+      expect(INITIAL_PRO_STATUS).toEqual({
+        isPro: false,
+        expiresAt: null,
+        trialDaysLeft: null,
+        canTrial: true,
+      });
+    });
+
+    it('is frozen (runtime immutable)', async () => {
+      const { INITIAL_PRO_STATUS } = await import('@/lib/pro-gate');
+      expect(Object.isFrozen(INITIAL_PRO_STATUS)).toBe(true);
+    });
+
+    it('differs from ERROR_FALLBACK_STATUS in canTrial', async () => {
+      mockGetUser.mockRejectedValue(new Error('network'));
+      const { checkProStatus, INITIAL_PRO_STATUS } = await import('@/lib/pro-gate');
+      const errorFallback = await checkProStatus();
+      expect(errorFallback.canTrial).toBe(false);
+      expect(INITIAL_PRO_STATUS.canTrial).toBe(true);
+    });
+  });
+
   describe('module purity', () => {
     it('has zero React imports', () => {
       const content = readFileSync(resolve(ROOT, 'lib/pro-gate.ts'), 'utf-8');

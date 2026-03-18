@@ -294,11 +294,13 @@ describe('scaffold integration: lib/ imports resolve', () => {
       tree: null,
       incognitoMode: 'normal_mode',
       hasData: false,
+      proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
     };
     const msgType: MessageType = 'LOCK';
     const syncUpload: BackgroundMessage = { type: 'SYNC_UPLOAD', blob: 'abc', timestamp: 1 };
     const syncDownload: BackgroundMessage = { type: 'SYNC_DOWNLOAD' };
     const syncStatus: BackgroundMessage = { type: 'SYNC_STATUS' };
+    const checkPro: BackgroundMessage = { type: 'CHECK_PRO_STATUS' };
     expect(msg.type).toBe('GET_STATE');
     expect(resp.success).toBe(true);
     expect(session.isUnlocked).toBe(false);
@@ -306,6 +308,7 @@ describe('scaffold integration: lib/ imports resolve', () => {
     expect(syncUpload.type).toBe('SYNC_UPLOAD');
     expect(syncDownload.type).toBe('SYNC_DOWNLOAD');
     expect(syncStatus.type).toBe('SYNC_STATUS');
+    expect(checkPro.type).toBe('CHECK_PRO_STATUS');
   });
 });
 

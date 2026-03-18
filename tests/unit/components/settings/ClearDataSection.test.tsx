@@ -24,6 +24,7 @@ const CLEARED_SESSION: SessionState = {
   tree: null,
   incognitoMode: 'normal_mode',
   hasData: false,
+  proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
 };
 
 function setupMocks(sendMessageImpl?: SendMessageFn): { sendMessage: SendMessageFn; dispatch: ReturnType<typeof vi.fn> } {

@@ -69,3 +69,29 @@
 **What happened**: `explicit-function-return-type: 'warn'` flagged arrow functions returned from useEffect cleanup (`return () => { ... }`). These are expressions, not declarations — the rule's `allowExpressions: true` option correctly exempts them without weakening enforcement for actual function declarations.
 
 **Rule**: When `explicit-function-return-type` produces false positives on callback/cleanup arrow functions, use `allowExpressions: true` rather than turning the rule off for entire directories.
+
+## PAY-003: Background payment status handler and integration verification
+
+### Lesson 12: Tracer bullet analysis prevents cascade failures
+
+**What happened**: Adding `proStatus: ProStatus` to `SessionState` interface caused 18 TypeScript compilation errors across 15 test files. Running tracer bullet analysis (grep for all `SessionState` literal constructions) BEFORE implementation identified every location that needed updating, preventing a frustrating whack-a-mole debugging cycle.
+
+**Rule**: Before modifying a shared interface used across many files, run a tracer bullet analysis: grep for all literal constructions of that type across the codebase. Update the plan with the full list before writing any code.
+
+### Lesson 13: Name constants by their policy, not their domain
+
+**What happened**: `FREE_TIER_DEFAULT` (error fallback, canTrial: false) and `DEFAULT_PRO_STATUS` (initial optimistic, canTrial: true) were easily confused because both names suggest "default free-tier value." Renamed to `ERROR_FALLBACK_STATUS` and `INITIAL_PRO_STATUS` to encode the *policy* (error degradation vs fresh session) rather than the *domain* (free tier vs pro).
+
+**Rule**: When two constants have the same shape but different behavioral policies, name them by the scenario that triggers their use, not the domain they belong to.
+
+### Lesson 14: Prototype check in runtime type guards prevents injection via crafted objects
+
+**What happened**: Security audit identified that `isProStatus()` accepted objects with non-standard prototypes. While Chrome's structured clone strips prototypes during message passing, adding `Object.getPrototypeOf(value) === Object.prototype` provides defense-in-depth against non-message-passing entry points (e.g., deserialized JSON from storage).
+
+**Rule**: Runtime type guards that validate untrusted data should include a prototype check (`Object.getPrototypeOf(value) === Object.prototype`) as defense-in-depth, even when the transport layer provides some protection.
+
+### Lesson 15: Silent catch blocks need Sentry observability
+
+**What happened**: `checkProStatus()` caught all errors silently and returned a fallback. Security audit noted this makes persistent SDK failures invisible. Added `captureException(err)` to the catch block — graceful degradation AND observability, not one or the other.
+
+**Rule**: When a catch block intentionally degrades gracefully (returns a fallback instead of rethrowing), still report the error to Sentry. Graceful degradation should not mean silent failure.

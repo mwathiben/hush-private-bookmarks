@@ -41,6 +41,11 @@ vi.mock('@/lib/hush-import', () => ({
   importHushData: vi.fn(),
 }));
 
+vi.mock('@/lib/pro-gate', () => ({
+  checkProStatus: vi.fn(),
+  INITIAL_PRO_STATUS: Object.freeze({ isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true }),
+}));
+
 import {
   handleMessage, onAlarmFired, registerContextMenu, onContextMenuClicked,
 } from '@/entrypoints/background';
@@ -57,6 +62,7 @@ import { InvalidPasswordError, StorageError, ImportError } from '@/lib/errors';
 import { convertChromeBookmarks } from '@/lib/bookmark-import';
 import { exportEncryptedBackup, importEncryptedBackup } from '@/lib/bookmark-backup';
 import { importHushData } from '@/lib/hush-import';
+import { checkProStatus } from '@/lib/pro-gate';
 
 const TEST_TREE: BookmarkTree = { type: 'folder', id: 'r', name: 'Root', children: [], dateAdded: 0 };
 
@@ -95,6 +101,19 @@ describe('handleMessage — UNLOCK', () => {
       expect(state.isUnlocked).toBe(true);
       expect(state.activeSetId).toBe('default');
       expect(state.tree).toEqual(TEST_TREE);
+    }
+  });
+
+  it('includes INITIAL_PRO_STATUS in unlocked SessionState', async () => {
+    // #given
+    mockSuccessfulUnlock();
+    // #when
+    const response = await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      const state = response.data as SessionState;
+      expect(state.proStatus).toEqual({ isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true });
     }
   });
 
@@ -501,6 +520,7 @@ describe('handleMessage — ADD_BOOKMARK', () => {
     const noTreeState: SessionState = {
       isUnlocked: true, activeSetId: 'default', sets: [],
       tree: null, incognitoMode: 'normal_mode', hasData: true,
+      proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
     };
     await browser.storage.session.set({ sessionState: noTreeState });
     // #when
@@ -793,6 +813,7 @@ describe('handleMessage — CREATE_SET', () => {
         sets: setsAfterCreate,
         tree: TEST_TREE,
         incognitoMode: 'normal_mode',
+        proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
       });
     }
     expect(vi.mocked(createSet)).toHaveBeenCalledWith('Work');
@@ -807,6 +828,7 @@ describe('handleMessage — CREATE_SET', () => {
       sets: setsAfterCreate,
       tree: TEST_TREE,
       incognitoMode: 'normal_mode',
+      proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
     });
   });
 
@@ -1130,5 +1152,62 @@ describe('handleMessage — IMPORT_HUSH', () => {
     if (!response.success) {
       expect(response.code).toBe('IMPORT_ERROR');
     }
+  });
+});
+
+describe('handleMessage — CHECK_PRO_STATUS', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    vi.clearAllMocks();
+  });
+
+  it('returns ProStatus from checkProStatus()', async () => {
+    // #given
+    const proResult = { isPro: true, expiresAt: null, trialDaysLeft: null, canTrial: false };
+    vi.mocked(checkProStatus).mockResolvedValue(proResult);
+    // #when
+    const response = await handleMessage({ type: 'CHECK_PRO_STATUS' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      expect(response.data).toEqual(proResult);
+    }
+    expect(checkProStatus).toHaveBeenCalledOnce();
+  });
+
+  it('returns free-tier defaults when checkProStatus returns fallback', async () => {
+    // #given
+    vi.mocked(checkProStatus).mockResolvedValue({
+      isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: false,
+    });
+    // #when
+    const response = await handleMessage({ type: 'CHECK_PRO_STATUS' });
+    // #then
+    expect(response.success).toBe(true);
+    if (response.success) {
+      expect(response.data).toEqual({
+        isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: false,
+      });
+    }
+  });
+
+  it('does not update stored SessionState (lazy-load design)', async () => {
+    // #given — unlock first to create a session
+    mockSuccessfulUnlock();
+    await handleMessage({ type: 'UNLOCK', password: 'test-pw' });
+    vi.mocked(checkProStatus).mockResolvedValue({
+      isPro: true, expiresAt: null, trialDaysLeft: null, canTrial: false,
+    });
+    // #when — check pro status (should NOT mutate session)
+    await handleMessage({ type: 'CHECK_PRO_STATUS' });
+    // #then — GET_STATE still has the original INITIAL_PRO_STATUS
+    const stateResponse = await handleMessage({ type: 'GET_STATE' });
+    expect(stateResponse.success).toBe(true);
+    if (stateResponse.success) {
+      const state = stateResponse.data as SessionState;
+      expect(state.proStatus).toEqual({ isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true });
+    }
+    // cleanup
+    await handleMessage({ type: 'LOCK' });
   });
 });

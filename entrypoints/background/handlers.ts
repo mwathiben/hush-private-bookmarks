@@ -8,6 +8,7 @@ import { InvalidPasswordError } from '@/lib/errors';
 import { convertChromeBookmarks, type ChromeBookmarkTreeNode } from '@/lib/bookmark-import';
 import { exportEncryptedBackup, importEncryptedBackup } from '@/lib/bookmark-backup';
 import { importHushData } from '@/lib/hush-import';
+import { checkProStatus, INITIAL_PRO_STATUS } from '@/lib/pro-gate';
 import type {
   AddBookmarkMessage, BackgroundResponse, ChangePasswordMessage,
   ClearAllMessage, CreateSetMessage, DeleteSetMessage,
@@ -41,6 +42,7 @@ async function activateSession(
     isUnlocked: true, activeSetId: setId, sets, tree,
     incognitoMode: determineMode({ isIncognitoContext: false, isAllowedIncognito }),
     hasData: true,
+    proStatus: INITIAL_PRO_STATUS,
   };
   await ctx.setSessionState(state);
   ctx.setCachedPassword(password);
@@ -205,7 +207,6 @@ export async function handleCreateSet(
   }
   return activateSession(setResult.data.id, msg.password, emptyTree, ctx);
 }
-
 export async function handleRenameSet(msg: RenameSetMessage): Promise<BackgroundResponse> {
   const result = await renameSet(msg.setId, msg.newName);
   if (!result.success) {
@@ -213,7 +214,6 @@ export async function handleRenameSet(msg: RenameSetMessage): Promise<Background
   }
   return { success: true };
 }
-
 export async function handleDeleteSet(msg: DeleteSetMessage): Promise<BackgroundResponse> {
   const result = await deleteSet(msg.setId);
   if (!result.success) {
@@ -221,7 +221,6 @@ export async function handleDeleteSet(msg: DeleteSetMessage): Promise<Background
   }
   return { success: true };
 }
-
 export async function handleSwitchSet(
   msg: SwitchSetMessage, ctx: HandlerContext,
 ): Promise<BackgroundResponse> {
@@ -249,7 +248,6 @@ export async function handleClearAll(
   await ctx.clearAlarm();
   return { success: true };
 }
-
 export async function handleImportChromeBookmarks(
   _msg: ImportChromeBookmarksMessage, ctx: HandlerContext,
 ): Promise<BackgroundResponse> {
@@ -261,7 +259,6 @@ export async function handleImportChromeBookmarks(
   }
   return { success: true, data: { tree: result.data.tree, stats: result.data.stats } };
 }
-
 export async function handleImportBackup(msg: ImportBackupMessage): Promise<BackgroundResponse> {
   const result = await importEncryptedBackup(msg.blob, msg.password);
   if (!result.success) {
@@ -272,7 +269,6 @@ export async function handleImportBackup(msg: ImportBackupMessage): Promise<Back
   }
   return { success: true, data: { tree: result.data } };
 }
-
 export async function handleImportHush(msg: ImportHushMessage): Promise<BackgroundResponse> {
   const result = await importHushData(msg.blob, msg.password);
   if (!result.success) {
@@ -283,7 +279,6 @@ export async function handleImportHush(msg: ImportHushMessage): Promise<Backgrou
   }
   return { success: true, data: { tree: result.data.tree, stats: result.data.stats } };
 }
-
 export async function handleExportBackup(
   _msg: ExportBackupMessage, ctx: HandlerContext,
 ): Promise<BackgroundResponse> {
@@ -296,4 +291,9 @@ export async function handleExportBackup(
   }
   const blob = await exportEncryptedBackup(state.tree, ctx.getCachedPassword()!);
   return { success: true, data: { blob } };
+}
+
+export async function handleCheckProStatus(): Promise<BackgroundResponse> {
+  const proStatus = await checkProStatus();
+  return { success: true, data: proStatus };
 }

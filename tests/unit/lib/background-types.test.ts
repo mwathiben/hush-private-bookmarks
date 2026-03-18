@@ -24,6 +24,10 @@ import type {
   ImportBackupMessage,
   ExportBackupMessage,
   ImportHushMessage,
+  SyncUploadMessage,
+  SyncDownloadMessage,
+  SyncStatusMessage,
+  CheckProStatusMessage,
 } from '@/lib/background-types';
 
 import type { BookmarkTree } from '@/lib/types';
@@ -32,7 +36,7 @@ const ROOT = resolve(process.cwd());
 const SOURCE = readFileSync(resolve(ROOT, 'lib', 'background-types.ts'), 'utf-8');
 
 describe('background-types: type compilation', () => {
-  it('all 16 message types construct correctly', () => {
+  it('all 21 message types construct correctly', () => {
     const tree: BookmarkTree = { type: 'folder', id: 'r', name: 'Root', children: [], dateAdded: 0 };
 
     const messages: BackgroundMessage[] = [
@@ -53,9 +57,13 @@ describe('background-types: type compilation', () => {
       { type: 'IMPORT_BACKUP', blob: 'base64data', password: 'p' },
       { type: 'EXPORT_BACKUP' },
       { type: 'IMPORT_HUSH', blob: 'sjcl-blob', password: 'p' },
+      { type: 'SYNC_UPLOAD', blob: 'data', timestamp: 1 },
+      { type: 'SYNC_DOWNLOAD' },
+      { type: 'SYNC_STATUS' },
+      { type: 'CHECK_PRO_STATUS' },
     ];
 
-    expect(messages).toHaveLength(17);
+    expect(messages).toHaveLength(21);
   });
 
   it('discriminated union narrows correctly in switch', () => {
@@ -110,6 +118,7 @@ describe('background-types: SessionState', () => {
       tree: null,
       incognitoMode: 'normal_mode',
       hasData: false,
+      proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
     };
     expect(state.isUnlocked).toBe(false);
     expect(state.tree).toBeNull();
@@ -123,21 +132,23 @@ describe('background-types: SessionState', () => {
       tree: { type: 'folder', id: 'r', name: 'Root', children: [], dateAdded: 0 },
       incognitoMode: 'incognito_active',
       hasData: true,
+      proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
     };
     expect(state.tree).not.toBeNull();
   });
 });
 
 describe('background-types: MessageType literal union', () => {
-  it('accepts all 16 type strings', () => {
+  it('accepts all 21 type strings', () => {
     const types: MessageType[] = [
       'UNLOCK', 'LOCK', 'SAVE', 'GET_STATE', 'ADD_BOOKMARK', 'GET_INCOGNITO_STATE',
       'CHANGE_PASSWORD', 'UPDATE_AUTO_LOCK', 'CREATE_SET', 'RENAME_SET',
       'DELETE_SET', 'SWITCH_SET', 'CLEAR_ALL',
       'IMPORT_CHROME_BOOKMARKS', 'IMPORT_BACKUP', 'EXPORT_BACKUP',
-      'IMPORT_HUSH',
+      'IMPORT_HUSH', 'SYNC_UPLOAD', 'SYNC_DOWNLOAD', 'SYNC_STATUS',
+      'CHECK_PRO_STATUS',
     ];
-    expect(types).toHaveLength(17);
+    expect(types).toHaveLength(21);
   });
 });
 
@@ -162,9 +173,13 @@ describe('background-types: individual message type exports', () => {
       { type: 'IMPORT_BACKUP', blob: 'b', password: 'p' } satisfies ImportBackupMessage,
       { type: 'EXPORT_BACKUP' } satisfies ExportBackupMessage,
       { type: 'IMPORT_HUSH', blob: 'b', password: 'p' } satisfies ImportHushMessage,
+      { type: 'SYNC_UPLOAD', blob: 'data', timestamp: 1 } satisfies SyncUploadMessage,
+      { type: 'SYNC_DOWNLOAD' } satisfies SyncDownloadMessage,
+      { type: 'SYNC_STATUS' } satisfies SyncStatusMessage,
+      { type: 'CHECK_PRO_STATUS' } satisfies CheckProStatusMessage,
     ];
 
-    expect(messages).toHaveLength(17);
+    expect(messages).toHaveLength(21);
   });
 });
 

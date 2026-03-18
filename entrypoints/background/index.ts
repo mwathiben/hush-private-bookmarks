@@ -13,11 +13,12 @@ import {
   handleUpdateAutoLock, handleCreateSet, handleRenameSet,
   handleDeleteSet, handleSwitchSet, handleClearAll,
   handleImportChromeBookmarks, handleImportBackup, handleExportBackup,
-  handleImportHush,
+  handleImportHush, handleCheckProStatus,
 } from './handlers';
 import {
   handleSyncUpload, handleSyncDownload, handleSyncStatus,
 } from './sync-handlers';
+import { INITIAL_PRO_STATUS } from '@/lib/pro-gate';
 
 initSentry();
 
@@ -37,7 +38,10 @@ async function buildLockedState(): Promise<SessionState> {
     const dataResult = await hasSetData(activeSetId);
     hasData = dataResult.success ? dataResult.data : false;
   }
-  return { isUnlocked: false, activeSetId, sets, tree: null, incognitoMode: 'normal_mode', hasData };
+  return {
+    isUnlocked: false, activeSetId, sets, tree: null,
+    incognitoMode: 'normal_mode', hasData, proStatus: INITIAL_PRO_STATUS,
+  };
 }
 
 const VALID_TYPES = new Set<string>([
@@ -45,7 +49,7 @@ const VALID_TYPES = new Set<string>([
   'GET_INCOGNITO_STATE', 'CHANGE_PASSWORD', 'UPDATE_AUTO_LOCK',
   'CREATE_SET', 'RENAME_SET', 'DELETE_SET', 'SWITCH_SET',
   'CLEAR_ALL', 'IMPORT_CHROME_BOOKMARKS', 'IMPORT_BACKUP', 'EXPORT_BACKUP',
-  'IMPORT_HUSH', 'SYNC_UPLOAD', 'SYNC_DOWNLOAD', 'SYNC_STATUS',
+  'IMPORT_HUSH', 'SYNC_UPLOAD', 'SYNC_DOWNLOAD', 'SYNC_STATUS', 'CHECK_PRO_STATUS',
 ]);
 
 function isBackgroundMessage(msg: unknown): msg is BackgroundMessage {
@@ -159,6 +163,8 @@ export function handleMessage(msg: BackgroundMessage): Promise<BackgroundRespons
       return handleSyncDownload();
     case 'SYNC_STATUS':
       return handleSyncStatus();
+    case 'CHECK_PRO_STATUS':
+      return handleCheckProStatus();
     default:
       msg satisfies never;
       throw new Error(`Unhandled BackgroundMessage type: ${(msg as { type: string }).type}`);

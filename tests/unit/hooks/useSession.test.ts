@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 
-import { useSession } from '@/hooks/useSession';
+import { useSession, isSessionState } from '@/hooks/useSession';
 import type { SendMessageFn } from '@/hooks/useSendMessage';
 import type { BackgroundResponse, SessionState } from '@/lib/background-types';
 
@@ -13,6 +13,7 @@ const LOCKED_STATE: SessionState = {
   tree: null,
   incognitoMode: 'normal_mode',
   hasData: true,
+  proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true },
 };
 
 const UNLOCKED_STATE: SessionState = {
@@ -122,5 +123,35 @@ describe('useSession', () => {
 
     // #then — no state update after unmount (no errors thrown)
     expect(result.current.loading).toBe(true);
+  });
+});
+
+describe('isSessionState', () => {
+  it('accepts valid SessionState with proStatus', () => {
+    // #given
+    const data = { ...LOCKED_STATE };
+    // #then
+    expect(isSessionState(data)).toBe(true);
+  });
+
+  it('rejects data missing proStatus', () => {
+    // #given
+    const { proStatus: _, ...withoutProStatus } = LOCKED_STATE;
+    // #then
+    expect(isSessionState(withoutProStatus)).toBe(false);
+  });
+
+  it('rejects data with invalid proStatus shape', () => {
+    // #given
+    const data = { ...LOCKED_STATE, proStatus: { isPro: 'yes' } };
+    // #then
+    expect(isSessionState(data)).toBe(false);
+  });
+
+  it('rejects data with proStatus missing canTrial', () => {
+    // #given
+    const data = { ...LOCKED_STATE, proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null } };
+    // #then
+    expect(isSessionState(data)).toBe(false);
   });
 });

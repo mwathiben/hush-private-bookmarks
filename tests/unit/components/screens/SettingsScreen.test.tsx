@@ -40,7 +40,7 @@ function setupMocks(): { dispatch: ReturnType<typeof vi.fn> } {
   vi.mocked(useSendMessage).mockReturnValue(vi.fn<SendMessageFn>());
   vi.mocked(useSessionState).mockReturnValue({
     screen: 'settings',
-    session: { isUnlocked: true, activeSetId: 'default', sets: [], tree: { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 }, incognitoMode: 'normal_mode', hasData: true },
+    session: { isUnlocked: true, activeSetId: 'default', sets: [], tree: { type: 'folder', id: 'root', name: 'Root', children: [], dateAdded: 0 }, incognitoMode: 'normal_mode', hasData: true, proStatus: { isPro: false, expiresAt: null, trialDaysLeft: null, canTrial: true } },
     loading: false,
     error: null,
   });
